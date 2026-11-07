@@ -12,8 +12,9 @@
 //     MIDI turned on by resumeMIDI comes before any click).
 //   wheelValue(p, cc, max?) maps the mod wheel onto a parameter: at rest (0) its default, fully up
 //   its maximum, so a wheel at rest never drags the instrument to the bottom of its range.
-//   touch() is the velocity curve the player chose (every page shares it, from the menu the #midi
-//   status opens once startMIDI turns MIDI on: midiMenu), touched(v) a MIDI velocity (0..1) through it; SOFT_PEDAL
+//   touch() is the velocity curve the player chose (every page shares it, from the MIDI settings:
+//   midiSettings, in the page's drawer, which the #midi status opens once startMIDI turns MIDI on),
+//   touched(v) a MIDI velocity (0..1) through it; SOFT_PEDAL
 //   scales the velocity of keys struck under CC67; createSostenuto() keeps the keys CC66 holds.
 //   mpeMode() is MPE's mode the player chose (shared/mpe.js: 'auto', 'on' or 'off'; every page
 //   shares it, from the same menu); pageMpe() decodes it for a page.
@@ -187,7 +188,7 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
     acc.onstatechange = bind;
     if (button) button.hidden = true;
     midiMenu();
-    if (keyShift()) import('./shell.js').then(({ toast }) => toast(`MIDI keys play ${shiftText()}: Octave and Transpose are in the MIDI menu`), () => {});
+    if (keyShift()) import('./shell.js').then(({ toast }) => toast(`MIDI keys play ${shiftText()}: Octave and Transpose are in the MIDI settings`), () => {});
   }, () => status('MIDI: permission denied'));
 }
 
@@ -251,14 +252,14 @@ export function createInput(send, controllers = {}, { shift = false } = {}) {
 let page = null;
 export function pageMIDI(handler) { if (handler) page = handler; return page; }
 
-// The MIDI settings, in a menu the MIDI status opens once MIDI is on: the velocity curve, MPE,
-// Octave and Transpose. The status says how far the keys are moved, in the accent, while they are.
-function midiMenu() {
-  const pill = document.querySelector('#midi');
-  if (!pill || document.querySelector('#midi-menu')) return;
-  const menu = document.createElement('div');
-  menu.id = 'midi-menu'; menu.className = 'forte-midi-menu'; menu.hidden = true;
-  menu.setAttribute('role', 'group'); menu.setAttribute('aria-label', 'MIDI settings');
+// The MIDI settings: the velocity curve, MPE, Octave and Transpose, each a labelled dropdown
+// (midiSettings, which the page's drawer shows, shared/layout.js). Once MIDI is on, the MIDI status
+// opens them: in the drawer, where the page has one, else in a menu under it. The status says how
+// far the keys are moved, in the accent, while they are.
+export function midiSettings() {
+  const box = document.createElement('div');
+  box.className = 'forte-midi-settings';
+  box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'MIDI settings');
   const steps = (n) => Array.from({ length: 2 * n + 1 }, (_, i) => [i - n, signed(i - n)]);
   for (const [id, name, title, options, value, set] of [
     ['touch', 'Touch', 'The velocity curve: how hard a MIDI key has to be struck. Soft makes a light touch louder, Hard asks for a firmer one.',
@@ -278,13 +279,29 @@ function midiMenu() {
     el.value = String(value);
     el.addEventListener('change', () => { set(el.value); unfocus(el); });
     row.append(Object.assign(document.createElement('span'), { textContent: name }), el);
-    menu.append(row);
+    box.append(row);
   }
-  pill.after(menu);
+  return box;
+}
+function midiMenu() {
+  const pill = document.querySelector('#midi');
+  if (!pill || pill.classList.contains('forte-midi-pill')) return;
   pill.classList.add('forte-midi-pill');
   pill.setAttribute('role', 'button'); pill.tabIndex = 0;
-  pill.setAttribute('aria-haspopup', 'true'); pill.setAttribute('aria-controls', menu.id); pill.setAttribute('aria-expanded', 'false');
   pill.title = 'MIDI settings: touch, MPE, octave and transpose';
+  const drawer = document.querySelector('#forte-drawer');
+  if (drawer) { // the drawer's MIDI section, opened (shared/layout.js)
+    pill.setAttribute('aria-controls', drawer.id);
+    const go = () => document.dispatchEvent(new CustomEvent('forte-drawer', { detail: 'midi' }));
+    pill.addEventListener('click', go);
+    pill.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); go(); } });
+    showShift();
+    return;
+  }
+  const menu = midiSettings();
+  menu.id = 'midi-menu'; menu.classList.add('forte-midi-menu'); menu.hidden = true;
+  pill.after(menu);
+  pill.setAttribute('aria-haspopup', 'true'); pill.setAttribute('aria-controls', menu.id); pill.setAttribute('aria-expanded', 'false');
   const open = (on) => {
     menu.hidden = !on;
     pill.setAttribute('aria-expanded', String(on));

@@ -36,6 +36,7 @@
 import { rotaryKnob } from './faces.js';
 import { focusedByPointer, unfocus } from './focus.js';
 import { inPlugin } from './in-plugin.js';
+import { midiSettings } from './midi.js';
 
 const body = document.body;
 const STORE = `forte/${body.dataset.instrument || 'page'}/layout/v1`;
@@ -641,7 +642,7 @@ const shortLabel = (t) => t.replace(/\s*\([^()]*\)\s*$/, '').replace(/\s+=\s.*$/
 function placeControls() {
   if (!sidebar) return;
   placePedal();
-  const fresh = sidebar.querySelectorAll('.param:not([data-placed])');
+  const fresh = [sidebar, drawerBody].flatMap((e) => (e ? [...e.querySelectorAll('.param:not([data-placed])')] : []));
   for (const p of fresh) {
     p.dataset.placed = '';
     speak(p);
@@ -729,7 +730,7 @@ function setMode(m) {
 const presets = sidebar?.querySelector('.preset-row');
 if (presets) {
   presets.classList.add('forte-presets');
-  bars.controls?.tools.appendChild(presets);
+  bars.controls?.tools.appendChild(presets); // (then into the drawer, below)
   // "Default settings": stop the page seeing it as a preset, and reset instead
   presets.addEventListener('change', (e) => {
     if (e.target.value !== '__default') return;
@@ -739,13 +740,157 @@ if (presets) {
     unfocus(e.target);
   }, true);
 }
+// ---------------------------------------------------------------------------
+// the drawer: at the left of every instrument page, what every instrument has alike. The
+// Presets menu (in Perform it goes above the keys instead), Morph, a Seaboard RISE while one is plugged in (shared/rise.js), the Output, Tuning and
+// Expression groups (moved here from the Controls panel, which keeps the instrument's own), and
+// the MIDI settings (shared/midi.js midiSettings, which the MIDI status opens). Each section folds,
+// as the browser remembers. On a desktop it is a column beside the views and the controls, folded
+// to a rail; in a narrower window (a tablet upright) the rail stays and the drawer opens over the
+// views; on a phone it is a sheet, opened from the header, over all but the keys. Either way the
+// keys stay playable while it is open, to try presets with. Docked, it stays as it was left (in
+// Discover open at first, in Perform folded); over the page, it opens only when asked.
+
+const DRAWER = 'forte/drawer/v1';
+const drawerPrefs = (() => {
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(DRAWER) || '{}') || {}; } catch { /* corrupt */ }
+  const bool = (v, d) => (typeof v === 'boolean' ? v : d);
+  const sections = Object.fromEntries(Object.entries(s.sections && typeof s.sections === 'object' ? s.sections : {}).filter(([, v]) => typeof v === 'boolean'));
+  return { open: bool(s.open, true), perform: bool(s.perform, false), sections };
+})();
+const saveDrawer = () => { try { localStorage.setItem(DRAWER, JSON.stringify(drawerPrefs)); } catch { /* storage unavailable */ } };
+const narrowQuery = matchMedia(inPlugin ? 'not all' : '(max-width: 1099px)'); // as shared/layout.css
+const drawerMode = () => (phoneQuery.matches ? 'sheet' : narrowQuery.matches ? 'over' : 'docked');
+// the groups every instrument has, by their titles, in the drawer's order (Morph: shared/morph.js)
+const SHARED = ['output', 'tuning', 'expression'];
+// each section's place in the drawer, and whether it starts open (a controller's panel, shared/rise.js
+// and the FC-300's, comes after the presets; a key not here goes last, open)
+const SECTIONS = { presets: [10, true], morph: [20, false], rise: [30, true], fc300: [35, true], output: [40, true], tuning: [50, false], expression: [60, false], midi: [70, false] };
+const SIDE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5"/></svg>';
+const PANEL = '<svg viewBox="0 0 18 16" aria-hidden="true"><rect x="1.5" y="2" width="15" height="12" rx="2"/><path d="M6.5 2v12M3.4 5.2h1.4M3.4 7.6h1.4M3.4 10h1.4"/></svg>';
+let drawer = null, drawerBody = null, floating = false, drawerOpener = null, drawerFold = null;
+const drawerIsOpen = () => !!drawer && (drawerMode() === 'docked' ? drawerPrefs[performing() ? 'perform' : 'open'] : floating);
+function setDrawer(on) {
+  if (!drawer) return;
+  if (drawerMode() === 'docked') { drawerPrefs[performing() ? 'perform' : 'open'] = on; saveDrawer(); } else floating = on;
+  showDrawer();
+}
+function showDrawer() {
+  if (!drawer) return;
+  const on = drawerIsOpen(), mode = drawerMode(), was = body.classList.contains('drawer-open');
+  body.classList.toggle('drawer-open', on);
+  for (const m of ['docked', 'over', 'sheet']) body.classList.toggle(`drawer-${m}`, m === mode);
+  const say = on ? 'Fold the presets and settings away' : 'Presets and settings';
+  for (const b of [drawerFold, drawerOpener]) { if (!b) continue; b.setAttribute('aria-expanded', String(on)); b.title = say; b.setAttribute('aria-label', say); }
+  drawerBody.inert = !on; // a rail, or a sheet out of sight: nothing in it to reach
+  if (mode === 'sheet') drawer.inert = !on;
+  else drawer.inert = false;
+  if (was !== on && mode === 'docked') window.dispatchEvent(new Event('resize')); // the views and the controls have a new width
+}
+// a section of the drawer: a fold of its own, open as it was left
+function drawerSection(key, det) {
+  const [order, open] = SECTIONS[key] ?? [80, true];
+  det.dataset.drawer = key;
+  det.dataset.order = String(order);
+  det.classList.add('forte-drawer-section');
+  if (det.tagName === 'DETAILS') {
+    det.open = drawerPrefs.sections[key] ?? open;
+    if (!det.dataset.remembers) {
+      det.dataset.remembers = '';
+      det.addEventListener('toggle', () => { drawerPrefs.sections[key] = det.open; saveDrawer(); });
+    }
+  }
+  const after = [...drawerBody.children].find((c) => c !== det && +c.dataset.order > order);
+  if (det.parentNode !== drawerBody || det.nextElementSibling !== (after ?? null)) drawerBody.insertBefore(det, after ?? null);
+}
+function details(key, name) {
+  const det = el('details', 'forte-drawer-own');
+  const sum = el('summary', '', name);
+  det.append(sum);
+  return det;
+}
+// the groups every instrument has, from the Controls panel into the drawer (each time the page
+// builds controls: Morph comes once the presets are ready)
+function placeDrawer() {
+  if (!drawer || !sidebar) return;
+  for (const det of sidebar.querySelectorAll('details.group')) {
+    const name = det.querySelector('summary')?.textContent.trim().toLowerCase() ?? '';
+    const key = det.classList.contains('forte-morph') ? 'morph' : SHARED.includes(name) ? name : null;
+    if (key) drawerSection(key, det);
+  }
+}
+if (mainEl && sidebar && !inPlugin) {
+  drawer = el('aside', 'forte-drawer');
+  drawer.id = 'forte-drawer';
+  drawer.setAttribute('aria-label', 'Presets and settings');
+  const head = el('div', 'forte-drawer-head');
+  drawerFold = button('');
+  drawerFold.className = 'forte-fold forte-drawer-fold';
+  drawerFold.innerHTML = SIDE;
+  drawerFold.setAttribute('aria-controls', drawer.id);
+  head.append(el('b', '', 'Presets and settings'), drawerFold);
+  drawerBody = el('div', 'forte-drawer-body');
+  drawer.append(head, drawerBody);
+  mainEl.prepend(drawer);
+  body.classList.add('has-drawer');
+  drawerFold.addEventListener('click', () => { setDrawer(!drawerIsOpen()); unfocus(drawerFold); });
+  // folded, the rail opens it wherever it is tapped
+  head.addEventListener('click', (e) => { if (!drawerIsOpen() && !drawerFold.contains(e.target)) setDrawer(true); });
+  // on a phone, the header opens it
+  if (header) {
+    drawerOpener = button('');
+    drawerOpener.className = 'forte-drawer-open';
+    drawerOpener.innerHTML = PANEL;
+    drawerOpener.setAttribute('aria-controls', drawer.id);
+    drawerOpener.addEventListener('click', () => { setDrawer(!drawerIsOpen()); unfocus(drawerOpener); });
+    (header.querySelector('.brand') ?? header).prepend(drawerOpener);
+  }
+  // over the page: a tap outside it (but on the keys) or Esc folds it
+  const shade = el('div', 'forte-drawer-shade');
+  shade.addEventListener('click', () => setDrawer(false));
+  mainEl.prepend(shade);
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || drawerMode() === 'docked' || !drawerIsOpen() || document.querySelector('dialog[open]')) return;
+    setDrawer(false);
+  });
+  // the presets, first: the page's own menu (placeTools puts it here in Discover)
+  if (presets) {
+    const name = presets.querySelector('select')?.getAttribute('aria-label');
+    const sec = el('div', 'forte-drawer-presets');
+    sec.append(el('h3', '', !name || name === 'Preset' ? 'Presets' : name));
+    drawerSection('presets', sec);
+  }
+  // the MIDI settings, where there is Web MIDI
+  if (navigator.requestMIDIAccess) {
+    const det = details('midi', 'MIDI');
+    det.append(midiSettings());
+    drawerSection('midi', det);
+  }
+  // shared/midi.js (the MIDI status: { section: 'midi' }) and shared/rise.js ({ section: 'rise', element })
+  document.addEventListener('forte-drawer', (e) => {
+    const d = typeof e.detail === 'string' ? { section: e.detail } : e.detail ?? {};
+    if (d.element) { drawerSection(d.section, d.element); return; }
+    const sec = drawerBody.querySelector(`[data-drawer="${d.section}"]`);
+    if (!sec) return;
+    if (sec.tagName === 'DETAILS') sec.open = true;
+    setDrawer(true);
+    requestAnimationFrame(() => sec.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
+  });
+  const reset = () => { floating = false; showDrawer(); };
+  phoneQuery.addEventListener('change', reset);
+  narrowQuery.addEventListener('change', reset);
+  showDrawer();
+}
+
 // In Perform the presets and More controls join the keyboard bar (once it's built), and the
 // controls' bar goes, so the views have its room; in Discover they go back. Not on a phone held
 // sideways: its keyboard bar has no room, and its controls' bar scrolls with the panel, out of sight.
 let kbTools = null, restack = () => {};
 function placeTools() {
   const perf = performing() && !!kbTools && !sidewaysQuery.matches;
-  if (presets && bars.controls) (perf ? kbTools : bars.controls.tools).appendChild(presets);
+  const home = drawerBody?.querySelector('[data-drawer="presets"]') ?? bars.controls?.tools;
+  if (presets && home) (perf ? kbTools : home).appendChild(presets);
   const f = bars.controls?.fold;
   if (f) (perf ? kbTools : bars.controls.bar).appendChild(f);
   body.classList.toggle('tools-below', perf && !!bars.controls);
@@ -782,9 +927,11 @@ if (header) {
 
 function apply() {
   placeControls();
+  placeDrawer();
   addDefaults();
   body.classList.toggle('perform', performing());
   placeTools();
+  showDrawer(); // (Perform has its own: folded at first)
   document.documentElement.classList.toggle('perform', performing()); // for :root's colours (shared/layout.css)
   for (const b of modeBtns) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
   body.classList.toggle('no-views', !shown.length);
@@ -812,10 +959,10 @@ function apply() {
 // apply() can run more than once.
 document.addEventListener('DOMContentLoaded', apply);
 window.addEventListener('load', apply);
-const unplaced = () => sidebar?.querySelector('.param:not([data-placed])')
+const unplaced = () => sidebar?.querySelector('.param:not([data-placed])') || drawerBody?.querySelector('.param:not([data-placed])')
   || (document.querySelector('#reset') && document.querySelector('#preset option[value=""]') && !document.querySelector('#preset option[value="__default"]'));
 const lateControls = new MutationObserver(() => { if (unplaced()) apply(); });
-for (const t of [sidebar, document.querySelector('#preset')]) if (t) lateControls.observe(t, { childList: true, subtree: true });
+for (const t of [sidebar, drawerBody, document.querySelector('#preset')]) if (t) lateControls.observe(t, { childList: true, subtree: true });
 phoneQuery.addEventListener('change', apply);
 sidewaysQuery.addEventListener('change', placeTools);
 tall.addEventListener('change', arrange);
@@ -835,6 +982,9 @@ if (window.ResizeObserver) {
 // ---------------------------------------------------------------------------
 // the keyboard bar (called by shared/keyboard.js once the page builds its keys)
 
+const KEYS = 'forte/keys/v1';
+// a keyboard's three white keys and two black ones, with the chevron that folds them (layout.css turns it)
+const KEYS_ICON = '<svg viewBox="0 0 22 16" aria-hidden="true"><rect class="k" x="1.5" y="3.5" width="13" height="10" rx="1.5"/><path class="k" d="M5.8 3.5v10M10.2 3.5v10"/><rect class="b" x="4.6" y="3.5" width="2.4" height="5.5"/><rect class="b" x="9" y="3.5" width="2.4" height="5.5"/><path class="c" d="M17 7l2.5 2.5L22 7" transform="translate(-1.5 -0.5)"/></svg>';
 export function attachKeyboard(kb) {
   const kbEl = document.querySelector('#keyboard');
   let row = document.querySelector('footer .kb-help');
@@ -986,8 +1136,28 @@ export function attachKeyboard(kb) {
   sizes.setAttribute('role', 'group');
   sizes.setAttribute('aria-label', 'Key size');
   sizes.append(smaller, larger);
-  // the keyboard's own tools on the left (key size, then which keys), what you play with on the right
-  bar.append(sizes, prev, map, next);
+  // The keys fold away (a MIDI keyboard plays, or nothing does), leaving the bar: the views and the
+  // controls take their room, and the computer keys still play. Every page remembers it alike.
+  const keysFold = button('');
+  keysFold.className = 'forte-keys-fold';
+  keysFold.innerHTML = KEYS_ICON;
+  keysFold.setAttribute('aria-controls', kbEl.id || 'keyboard');
+  const foldKeys = (on) => {
+    body.classList.toggle('keys-folded', on);
+    keysFold.setAttribute('aria-expanded', String(!on));
+    keysFold.title = on ? 'Show the keys' : 'Hide the keys: the views and the controls take their room';
+    keysFold.setAttribute('aria-label', keysFold.title);
+  };
+  keysFold.addEventListener('click', () => {
+    const on = !body.classList.contains('keys-folded');
+    try { localStorage.setItem(KEYS, JSON.stringify({ folded: on })); } catch { /* storage unavailable */ }
+    foldKeys(on); unfocus(keysFold);
+    if (!on) requestAnimationFrame(() => fit());
+    window.dispatchEvent(new Event('resize'));
+  });
+  foldKeys((() => { try { return JSON.parse(localStorage.getItem(KEYS) || '{}')?.folded === true; } catch { return false; } })());
+  // the keyboard's own tools on the left (whether it shows, key size, then which keys), what you play with on the right
+  bar.append(keysFold, sizes, prev, map, next);
   if (strip.parentNode === footer) bar.appendChild(strip); // the page's own strip, if any
 
   // The pedal: a button that presses Space, so pages need no touch-specific code.

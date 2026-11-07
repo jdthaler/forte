@@ -125,8 +125,8 @@ sostenuto and soft pedals, aftertouch and, where it means something, the
 mod wheel and pitch bend. Once MIDI is on, every other instrument page
 turns it on by itself.
 
-**The MIDI menu:** once MIDI is on, its status opens a menu with the
-velocity curve (Touch), MPE (below), Octave and Transpose. Octave and
+**The MIDI settings**, in the drawer (once MIDI is on, its status opens
+them there): the velocity curve (Touch), MPE (below), Octave and Transpose. Octave and
 Transpose move the MIDI keys up to four octaves and twelve semitones either
 way, so a 25-key controller reaches all 88 keys, or a piece fingered in C
 sounds in D. Every page keeps what you set there, and while the keys are
@@ -141,7 +141,7 @@ Seaboard, a LinnStrument, an Expressive E Osmose) bends, slides and presses
 each note alone, wherever the instrument can: a reed, a pipe, a string or a
 bow bends; a struck string, bar or bell bends only as far as a hand on it
 takes it (a semitone at most, a few cents for most bars), and its slide
-(CC74) moves what the mod wheel moves, for that note. MPE in the MIDI menu is on
+(CC74) moves what the mod wheel moves, for that note. MPE in the MIDI settings is on
 Auto, which turns MPE on when the controller announces it (its
 MPE Configuration Message) and leaves any other keyboard as it was; On
 reads channels 2–16 as MPE without the announcement, and Off never does.
@@ -357,32 +357,44 @@ play the plugins in a DAW with a small buffer.
 
 Each instrument page reads top to bottom. At the top, the instrument's
 name opens the menu of every instrument (and Forte's home page), next to
-**How it works**. In the middle are the views, pictures of the physics as
-it plays, and below them the rest of the controls, grouped. Each has a
-bar on top: the views' turns each view on or off and holds the mode, the
-controls' turns each group of controls on or off and holds the presets.
+**How it works**. At the left is the drawer, with the presets and what
+every instrument has alike (below). In the middle are the views, pictures
+of the physics as it plays, and below them the instrument's own controls,
+grouped. Each has a bar on top: the views' turns each view on or off and
+holds the mode, the controls' turns each group of controls on or off.
 The main views and every group are on at first, and the page remembers
 your choice. Drag the handle on the controls' bar to share the height
 between the two, all the way to either end, or fold either away with the
 chevron at the end of its bar. The few you reach for mid-phrase (the
 volume, the computer keys' velocity, a pedal) sit in the keyboard's own
 bar, right above the keys, each with its name and its value.
-Explanations wait behind ⓘ buttons.
+Explanations wait behind ⓘ buttons. The button at the left of that bar
+folds the keys away when a MIDI keyboard is doing the playing (the computer
+keys still play), and brings them back.
 
-**Your own presets** live in the same menu. *Save these settings…* keeps
+**The drawer** holds, from the top, the **Presets** menu, then Morph, a Seaboard RISE's panel while one is plugged
+in, and the groups every instrument has: Output (the room, the venue and the
+volume), Tuning, Expression, and the MIDI settings. Each folds away, and the
+page remembers which. On a desktop it is a column at the left, which its
+chevron folds to a thin rail (a tap on the rail opens it again); in a
+narrower window or on an iPad held upright it opens over the views from that
+rail, and on a phone from the button at the left of the header. Over the
+page it leaves the keys uncovered, so you can try presets as you play.
+
+**Your own presets** live in the drawer too. *Save these settings…* keeps
 the page's settings under a name in your browser, and *Copy a link to
 these settings* makes a link that opens the page playing them, to send
 to someone. *Your presets and files…* lists yours, and saves them to a
 file or opens one: the plugins read and write the same files.
 
-**Morph**, the last group of controls, slides from one preset to another:
+**Morph**, under the presets in the drawer, slides from one preset to another:
 pick *From* and *To* (Default settings, the instrument's presets or your
 own) and move the slider. Every setting the two give goes part of the way,
 a number smoothly and a choice or a switch halfway across; volume, the room
 and the tuning stay as you have them. Choosing a preset from the Presets
-menu makes it the one you morph from.
+list makes it the one you morph from.
 
-**Tuning**, among the controls, is the same on every instrument: the
+**Tuning**, in the drawer, is the same on every instrument: the
 **pitch** standard (A = 440 Hz, or 415 for baroque pitch, 392, 422.5, 430,
 435, 442, 443 or 466), the **temperament** (equal, ¼- and ⅙-comma
 meantone, Werckmeister III, Kirnberger III, Vallotti, Young, Pythagorean
@@ -408,8 +420,9 @@ There are two modes. **Discover** shows it all. **Perform** shows just
 the views you turned on, filling the screen, with no toggles and no text
 in them: for playing,
 or for a projector (**Full screen** fills it). The controls in the
-keyboard's bar stay where they are, the presets join them, and the
-chevron beside the presets (**More controls**) brings back the rest.
+keyboard's bar stay where they are, the presets menu joins them, and the
+chevron beside it (**More controls**) brings back the rest; the drawer
+starts folded to its rail.
 Once the audio is on, Perform keeps the screen from dimming and locking
 (where the browser can: Chrome, Edge, and Safari from iOS 16.4).
 
@@ -451,7 +464,7 @@ page, and in every page's menu): up to four, each on the keys you give it,
 so the same keys layer them and keys apart split the keyboard, with its
 own octave, preset and level ([combine/](combine/README.md)). On a
 phone the page scrolls between the header and the keys, which stay put, with the
-controls' bar and its presets just above the keys; turn it sideways
+controls' bar just above the keys, and the drawer opens from the header; turn it sideways
 for wider keys. Use
 *Share → Add to Home Screen* to run Forte as a full-screen app.
 
@@ -482,7 +495,7 @@ A plugin's window also shows the instrument's views from its page: press **Views
 the pedal, and they draw what the plugin plays, whether the notes come from the DAW, a MIDI
 keyboard or the window's keys.
 
-In a plugin's window the Presets menu has your own presets too: *Save these settings…* writes
+In a plugin's window (and the Forte app's) the drawer at the left holds Morph, Output, Tuning, Expression, MIDI and CPU, as a page's does, and the keys fold away from the button at the left of their bar. Its Presets menu has your own presets too: *Save these settings…* writes
 one as a file in a presets folder for that instrument (`~/Library/Audio/Presets/Forte/<id>` on a
 Mac, `%APPDATA%\Forte\Presets\<id>` on Windows, `~/.local/share/forte/presets/<id>` on
 Linux), and *Open the presets folder* shows it, so a file saved on the site can go there too.
