@@ -393,10 +393,9 @@ and say which in the footer help.
   `barTools('controls')` from `layout.js` is the element to append to.
 - **The drawer** (`#forte-drawer`), at the left: what every instrument
   has alike, each section folding (the browser remembers which). First the
-  presets, a button for each choice in the page's menu (`.preset-row`,
-  moved here from `#controls` and hidden; its menu gains "Default
-  settings", which presses the page's `#reset`), the one playing pressed;
-  then Morph, a Seaboard RISE's panel while one is plugged in (`rise.js`),
+  page's Presets menu (`.preset-row`, moved here from `#controls`, its
+  Reset hidden; the menu gains "Default settings", which presses the
+  page's `#reset`); then Morph, a Seaboard RISE's panel while one is plugged in (`rise.js`),
   the groups every instrument has (Output, Tuning and Expression, moved
   here from the Controls panel by their `<summary>`), and the MIDI settings
   (`midi.js` `midiSettings`; the MIDI status opens them). Wider than 1100px

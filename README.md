@@ -372,8 +372,7 @@ Explanations wait behind ⓘ buttons. The button at the left of that bar
 folds the keys away when a MIDI keyboard is doing the playing (the computer
 keys still play), and brings them back.
 
-**The drawer** holds, from the top, the **presets**, a tap each (the one
-playing is lit), then Morph, a Seaboard RISE's panel while one is plugged
+**The drawer** holds, from the top, the **Presets** menu, then Morph, a Seaboard RISE's panel while one is plugged
 in, and the groups every instrument has: Output (the room, the venue and the
 volume), Tuning, Expression, and the MIDI settings. Each folds away, and the
 page remembers which. On a desktop it is a column at the left, which its
@@ -496,7 +495,7 @@ A plugin's window also shows the instrument's views from its page: press **Views
 the pedal, and they draw what the plugin plays, whether the notes come from the DAW, a MIDI
 keyboard or the window's keys.
 
-In a plugin's window (and the Forte app's) the drawer at the left lists the presets and holds Morph, Output, Tuning, Expression, MIDI and CPU, as a page's does, and the keys fold away from the button at the left of their bar. Its Presets menu has your own presets too: *Save these settings…* writes
+In a plugin's window (and the Forte app's) the drawer at the left holds Morph, Output, Tuning, Expression, MIDI and CPU, as a page's does, and the keys fold away from the button at the left of their bar. Its Presets menu has your own presets too: *Save these settings…* writes
 one as a file in a presets folder for that instrument (`~/Library/Audio/Presets/Forte/<id>` on a
 Mac, `%APPDATA%\Forte\Presets\<id>` on Windows, `~/.local/share/forte/presets/<id>` on
 Linux), and *Open the presets folder* shows it, so a file saved on the site can go there too.
