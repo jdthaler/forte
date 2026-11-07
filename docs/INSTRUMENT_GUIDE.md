@@ -104,8 +104,8 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 Every page uses the shell. The five oldest (the Ribbon Piano, Tonewheel Organ, Tine Piano, and
 Black-Hole and Huygens Keyboards) predate it and moved onto it later; the organ's drawbars and
 switches are its `console`, which the shell keeps in P and shows to the plugin, presets and
-faders as parameters. A page that moves keeps its own name for its saved settings (`store`, from `registry.js`
-`paramsStore`). New instruments use the shell.
+faders as parameters. Every page keeps its settings in the browser as `forte/<id>/params/v1`
+(`registry.js` `paramsStore`). New instruments use the shell.
 
 The **Combinations** page (`combine/`, its README) plays several instruments at once from one
 keyboard, layered or split. It hosts each from its descriptor alone, as the Forte app does: the

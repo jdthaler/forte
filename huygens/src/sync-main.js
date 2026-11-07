@@ -10,7 +10,6 @@ import { wasmModel } from './huygens-wasm.js';
 import { SpectrumView, SpectrogramView, animate } from '../../shared/views.js';
 import { StairView, RasterView } from './sync-viz.js';
 import { FiringLog } from './lock-analysis.js';
-import { paramsStore } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
 const log = new FiringLog(3); // the last 3 s of every sounding lamp's firings
@@ -25,7 +24,6 @@ const { tunedFreq } = await wasmModel();
 let lastTable = 0;
 const shell = createShell({
   ...INSTRUMENT,
-  store: paramsStore('huygens'), // the page's own name for its settings, from before the shell
   arrows: { param: 'kick', step: 0.005 },
   noteData: (key, vel, P) => ({ f: tunedFreq(key, P) }), // the design frequency the views mark
   onAudio: (a) => spectrum.setAnalyser(a.analyser),

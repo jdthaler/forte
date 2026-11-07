@@ -578,36 +578,6 @@ TEST("parts: the state keeps every instrument, its keys, octave, level and on/of
   CHECK(d["parts"].size() == 2 && b.describe()["parts"][1]["slug"].getString() == "celesta" && d["parts"][0]["slug"].getString() == "carillon");
 }
 
-TEST("parts: a song saved with an earlier release's two instruments, layered or split, opens as the same two on the same keys") {
-  // an earlier release's state: the first's, then "forte-layer <slug> <layer|split> <split point> <part shown>" and the second's
-  auto own = [](const char *slug) {
-    App a;
-    a.call(std::string("[\"choose\", \"") + slug + "\"]");
-    a.run(512);
-    const std::string t = a.saveState();
-    return t.substr(t.find('\n') + 1);
-  };
-  const std::string carillon = own("carillon"), glass = own("glass");
-  App b;
-  CHECK(b.load("forte-suite carillon\n" + carillon + "forte-layer glass split 57 1\n" + glass));
-  b.run(512);
-  auto d = b.describe();
-  CHECK(d["parts"].size() == 2 && d["parts"][0]["slug"].getString() == "carillon" && d["parts"][1]["slug"].getString() == "glass" && d["focus"].get<int>() == 1);
-  CHECK(d["parts"][1]["lo"].get<int>() == 0 && d["parts"][1]["hi"].get<int>() == 56 && d["parts"][0]["lo"].get<int>() == 57 && d["parts"][0]["hi"].get<int>() == 127);
-  b.play({{56, true}, {57, true}});
-  CHECK(holds(b.part(1), 56) && !holds(b.part(1), 57) && holds(b.part(0), 57) && !holds(b.part(0), 56));
-  b.play({{56, false}, {57, false}});
-  CHECK(b.load("forte-suite carillon\n" + carillon + "forte-layer glass layer 60 0\n" + glass));
-  d = b.describe();
-  CHECK(d["parts"].size() == 2 && d["focus"].get<int>() == 0);
-  for (int j = 0; j < 2; j++) CHECK(d["parts"][(uint32_t)j]["lo"].get<int>() == 0 && d["parts"][(uint32_t)j]["hi"].get<int>() == 127);
-  // saved again, in today's words
-  const std::string again = b.saveState();
-  CHECK(again.find("\nforte-first 0 127 0 0 1 0\nforte-part glass 0 127 0 0 1\n") != std::string::npos && again.find("forte-layer") == std::string::npos);
-  CHECK(b.load("forte-suite carillon\n" + carillon + "forte-layer nonsense split 57 1\n" + glass));
-  CHECK(b.describe()["parts"].size() == 1 && b.slug() == "carillon");
-}
-
 // A song saved with an earlier release opens as it was saved: the instrument, and every value
 // (tools/contract.mjs says which changes break this; from 1.0 on they need a major version).
 TEST("suite: every saved state in tests/states loads into today's plugin with its values") {

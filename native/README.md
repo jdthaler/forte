@@ -191,9 +191,7 @@ parts as a `Rig`; the audio thread takes the latest at its next block, and the m
 what it let go of once it has. Its id is `net.jthaler.forte.suite`, its version Forte's, and its
 state `forte-suite <slug>` then the first instrument's own, then, with more, `forte-first <lo>
 <hi> <octave> <level> <on> <part shown>` and, for each other part, `forte-part <slug> <lo> <hi>
-<octave> <level> <on>` and its own, so the app reopens as it was. A state from an earlier release
-with `forte-layer <slug> <layer|split> <split point> <part shown>` opens as the same two parts:
-both on every key, or the second below the split point and the first from it up. It is only a standalone: a DAW keeps a plugin's parameters while it is
+<octave> <level> <on>` and its own, so the app reopens as it was. It is only a standalone: a DAW keeps a plugin's parameters while it is
 active, and these change with the instrument. The release ships it in the archives with every
 instrument (`Forte-plugins-<system>` and `Forte-plugins-app-<system>`), and alone in
 `Forte-app-<system>`.
