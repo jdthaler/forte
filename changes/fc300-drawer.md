@@ -1,0 +1,7 @@
+# the FC-300 in the drawer, and the volume pedal on the Volume control
+
+### Forte (minor)
+- **A Roland FC-300 in the drawer**: once a page hears its switches, the drawer draws it as it plays (each switch lit while down, each expression pedal as far down as it is, the number pedals' red and green lights), with what each pedal does on that instrument (an organ's Leslie, the tremolo on the mod wheel, the soft pedal where it does nothing).
+- **Forte can drive the FC-300**: *Let Forte drive it* puts it in its System Exclusive mode, from Roland's MIDI implementation in its manual. Every switch is then down only while held, as a piano's pedals are (no more latching); EXP 1's toe switch flips the soft pedal; ▲ and ▼ step through the presets, and the number pedals choose among the five around the one playing; its display shows the preset's number, its lights which pedal it is on, and its LCD the instrument and the preset. Nothing is written to it: switched off and on, it is as it came. Pages only (Chrome, Edge), after the browser's SysEx permission.
+- **A volume pedal (CC7) moves the Volume control on every instrument page**, as the mod wheel moves its control: toe down is the Volume's default, heel down silent. A song's CC7, and the expression pedal (CC11), still turn the output down after the limiter; the plugins keep CC7 as that gain too.
+- Moving the Volume, or another setting presets keep as it is (the room, the tuning), leaves the preset chosen in the menu and the drawer.
