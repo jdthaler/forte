@@ -38,4 +38,4 @@ request into `main` adds one when it changes the site or the plugins and changes
 Releasing `main` to `live` (`CLAUDE.md`) runs `node tools/release.mjs`, which gathers the notes
 into one `CHANGELOG.md` entry, bumps each version once by the largest kind its notes give,
 regenerates the plugins' `<slug>-info.cmake`, saves each new version's plugin state in
-`native/tests/states/` and deletes the notes. `--dry-run` shows it first.
+`native/tests/states/` (replacing an instrument's earlier one below 1.0) and deletes the notes. `--dry-run` shows it first.

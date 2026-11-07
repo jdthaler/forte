@@ -10,7 +10,6 @@ import { TinesWasmEngine, wasmModel } from './tines-wasm.js'; // the slow-motion
 import { MotionView, PickupView, SpectrumView, MODE_COLORS, modeKind } from './rhodes-viz.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { unfocus } from '../../shared/focus.js';
-import { paramsStore } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
 const [KEY_LO, KEY_HI] = INSTRUMENT.range;
@@ -26,7 +25,6 @@ const sent = new Map();
 let focusKey = 60, lastVel = 1.8, mcTimer = 0;
 const shell = createShell({
   ...INSTRUMENT,
-  store: paramsStore('tines'), // the page's own name for its settings, from before the shell
   arrows: { param: 'velocity' }, // a log parameter: ↑/↓ step by 1/24 of its range, about ×1.13
   noteData: (key) => {
     const data = keyData(key).packed;

@@ -10,7 +10,6 @@ import { SpectrogramView, animate } from '../../shared/views.js';
 import { drawPlane, drawKerr, WaveView, Lazy } from './ringdown-viz.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
 import { unfocus } from '../../shared/focus.js';
-import { paramsStore } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
 
@@ -25,7 +24,6 @@ const spectro = new SpectrogramView($('#spectrogram'), { fLo: 40, fHi: 12000, se
 let focusKey = 60, focusTimer = 0;
 const shell = createShell({
   ...INSTRUMENT,
-  store: paramsStore('blackhole'), // the page's own name for its settings, from before the shell
   arrows: { param: 'spinU', step: 0.25 },
   onAudio: (a) => {
     const an = a.ctx.createAnalyser(); an.fftSize = 2048; an.smoothingTimeConstant = 0;

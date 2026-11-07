@@ -12,7 +12,6 @@ import { GeneratorView, LeslieView, OutputView, drawScanner, BAR_COLORS, useMode
 import { controlOwns, focusedByPointer, unfocus } from '../../shared/focus.js';
 import { tuningRatio } from '../../shared/tuning.js';
 import { rotarySelector } from '../../shared/faces.js';
-import { paramsStore } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
 const NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
@@ -28,7 +27,6 @@ const GEN_KEYS = new Set(ALL_PARAMS.filter((p) => p.kind === 'gen').map((p) => p
 let focusKey = 60, lastState = null;
 const shell = createShell({
   ...INSTRUMENT,
-  store: paramsStore('organ'), // the page's own name for its settings, from before the shell
   keyVelocity: 100 / 127,      // the computer keys play MIDI 100
   arrows: { param: 'expression', step: 0.05 },
   onAudio: (a) => { a.analyser.smoothingTimeConstant = 0.6; output.setAnalyser(a.analyser); spectro.setAnalyser(a.analyser); },
