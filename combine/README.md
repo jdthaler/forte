@@ -68,8 +68,10 @@ sum, and its tooltip each instrument's share.
 * **Each instrument has its own room.** Two instruments in a hall are two halls, each with its own
   reverb, rather than one shared space.
 * **No pan or mix between them** beyond each one's level: the stereo is each instrument's own.
-* **Not in the plugins.** In a DAW, several Forte plugins on one MIDI track do this; the Forte app
-  layers or splits two instruments with **+** beside its Instrument menu.
+* **In the plugins, the Forte app.** It plays up to four the same way, each with its keys, octave,
+  level and on/off on a card under its header (**+** beside its Instrument menu adds one), but
+  starts from no combinations of its own. In a DAW, several Forte plugins on one MIDI track do it
+  too.
 
 ## Files
 

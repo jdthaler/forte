@@ -238,7 +238,7 @@ const FILES = {
   "clavier/src/clavier-wasm.js": '5c5fa215c2c8',
   "clavier/style.css": '45e8aab2efab',
   "clavier/wasm/clavier.wasm": 'a50cb53b1a6d',
-  "combine/README.md": 'aa1b380432bb',
+  "combine/README.md": 'af41498c8523',
   "combine/index.html": 'a857fb840b1c',
   "combine/src/combine-main.js": 'a033d79916c9',
   "combine/src/combine-params.js": '7ee5b0473bd5',
