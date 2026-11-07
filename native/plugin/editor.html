@@ -8,9 +8,9 @@
      set the custom temperament. In the Forte app up to four instruments play at once, as on the
      site's Combinations page (plugin.cpp, Suite): a card under the header for each gives its keys,
      octave, level and on/off, and picks whose controls the window shows. At the left, as on the
-     site's pages (shared/layout.js), a drawer with what every instrument has alike: the presets, a
-     tap each, then Morph, Output, Tuning, Expression, MIDI and CPU, each folding; its chevron folds it
-     to a rail, and while it is open the header's Presets menu gives way to its list. The keys fold
+     site's pages (shared/layout.js), a drawer with what every instrument has alike: Morph, Output,
+     Tuning, Expression, MIDI and CPU, each folding (the Presets menu stays in the header); its
+     chevron folds it to a rail. The keys fold
      away from the button at the left of their bar. Above the controls, the instrument's views (the shown part's):
      its own page from the site, served from the plugin (editor.h), in a frame that shows only them
      (shared/in-plugin.js), fed by the plugin's sound and its engine's messages; the Views button
@@ -120,14 +120,6 @@
   body.drawer-folded .drawer-head b { writing-mode: vertical-rl; transform: rotate(180deg); overflow: visible; }
   body.drawer-folded .drawer-head .fold svg { transform: rotate(180deg); }
   body.drawer-folded #drawer-body { display: none; }
-  body:not(.drawer-folded):has(#drawer:not([hidden])) #preset { display: none; } /* the drawer's list stands in */
-  .presets { display: grid; gap: 1px; }
-  .presets h3 { margin: 8px 0 2px; font-size: 10.5px; font-weight: 400; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
-  .presets .pick { display: block; width: 100%; text-align: left; padding: 4px 8px; border-color: transparent; background: transparent; }
-  .presets .pick:hover { border-color: var(--line); background: #1f1f24; }
-  .presets .pick[aria-pressed="true"] { border-color: var(--accent); background: #2a2520; color: var(--text); font-weight: 600; }
-  .presets .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .presets .acts button { padding: 2px 10px; border-radius: 999px; font-size: 12px; color: var(--muted); }
   /* the keys fold away, leaving their bar */
   #keys-btn { display: grid; place-items: center; width: 34px; padding: 2px 0; }
   #keys-btn svg { width: 22px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; stroke-linecap: round; }
@@ -233,8 +225,8 @@
 </header>
 <section id="parts" hidden aria-label="The instruments, each on its own keys"></section>
 <div id="middle">
-<aside id="drawer" hidden aria-label="Presets and settings">
-  <div class="drawer-head"><b>Presets and settings</b><button id="drawer-fold" class="fold" aria-controls="drawer-body"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5"/></svg></button></div>
+<aside id="drawer" hidden aria-label="Settings">
+  <div class="drawer-head"><b>Settings</b><button id="drawer-fold" class="fold" aria-controls="drawer-body"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5"/></svg></button></div>
   <div id="drawer-body"></div>
 </aside>
 <div id="stage">
@@ -569,13 +561,12 @@ function learn(m) {
 }
 
 // ---- the drawer: what every instrument has alike, as on the site's pages (shared/layout.js) ------
-// The presets, a tap each (from the Presets menu, which stays their source and gives way to the
-// list while the drawer is open), then the groups every instrument has, in this order, each a
-// section that folds as last left; the chevron folds the drawer to a rail (a narrow window starts so).
+// The groups every instrument has, in this order (the Presets menu stays in the header, by the
+// instrument's name), each a section that folds as last left; the chevron folds the drawer to a rail (a narrow window starts so).
 const DRAWER = ['Morph', 'Output', 'Tuning', 'Expression', 'MIDI', 'CPU'];
 const drawerBody = $('#drawer-body');
 const opened = () => prefs.sections ?? (prefs.sections = {});
-function section(title, open, first = false) {
+function section(title, open) {
   const det = document.createElement('details'), sum = document.createElement('summary');
   sum.textContent = title;
   det.append(sum);
@@ -583,52 +574,18 @@ function section(title, open, first = false) {
   det.open = opened()[title] ?? open;
   det.addEventListener('toggle', () => { opened()[title] = det.open; keep(); });
   // in the drawer's order, whichever comes first
-  const rank = (t) => (t === 'Presets' ? -1 : DRAWER.indexOf(t));
+  const rank = (t) => DRAWER.indexOf(t);
   const after = [...drawerBody.children].find((c) => rank(c.dataset.title) > rank(title));
-  drawerBody.insertBefore(det, first ? drawerBody.firstChild : after ?? null);
+  drawerBody.insertBefore(det, after ?? null);
   $('#drawer').hidden = false;
   return det;
 }
-const presetList = document.createElement('div');
-presetList.className = 'presets';
-function listPresets() {
-  const pick = (v, b) => { menu.dispatchEvent(new Event('focus')); menu.value = v; menu.dispatchEvent(new Event('change')); b.blur(); markPreset(); };
-  const out = [];
-  const add = (o, into) => {
-    if (o.value === '' || o.disabled) return;
-    const b = document.createElement('button');
-    b.textContent = o.textContent; b.dataset.value = o.value;
-    b.addEventListener('click', () => pick(o.value, b));
-    into.push(b);
-  };
-  for (const c of menu.children) {
-    if (c.tagName !== 'OPTGROUP') { add(c, out); continue; }
-    const items = [];
-    for (const o of c.children) add(o, items);
-    if (c === saveGroup) { const acts = document.createElement('div'); acts.className = 'acts'; acts.append(...items); out.push(acts); continue; }
-    const h = document.createElement('h3'); h.textContent = c.label;
-    out.push(h, ...items);
-  }
-  for (const b of out) if (b.tagName === 'BUTTON') b.className = 'pick';
-  presetList.replaceChildren(...out);
-  markPreset();
-}
-function markPreset() {
-  for (const b of presetList.querySelectorAll('.pick')) b.setAttribute('aria-pressed', String(menu.value !== '' && b.dataset.value === menu.value));
-}
 function buildDrawer() {
-  section('Presets', true, true).append(presetList);
-  new MutationObserver(listPresets).observe(menu, { childList: true, subtree: true });
-  // the menu's value, set by a pick, a preset of the host's or a poll: the list follows
-  const d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
-  Object.defineProperty(menu, 'value', { configurable: true, get() { return d.get.call(this); }, set(x) { d.set.call(this, x); markPreset(); } });
-  menu.addEventListener('change', markPreset);
-  listPresets();
   const fold = $('#drawer-fold');
   const folded = (on) => {
     document.body.classList.toggle('drawer-folded', on);
     fold.setAttribute('aria-expanded', String(!on));
-    fold.title = on ? 'Presets and settings' : 'Fold the presets and settings away';
+    fold.title = on ? 'Settings' : 'Fold the settings away';
     fold.setAttribute('aria-label', fold.title);
   };
   folded(typeof prefs.drawer === 'boolean' ? !prefs.drawer : innerWidth < 760);

@@ -107,7 +107,7 @@ const COUNT = () => {
     controlGroups: n('.forte-control-toggles button'),
     viewsOn: n('.forte-view-toggles button[aria-pressed="true"]'),
     mode: [...document.querySelectorAll('.forte-views-bar .forte-mode button')].filter((e) => e.checkVisibility()).length,
-    drawerPresets: n('#forte-drawer .forte-drawer-preset'),
+    drawerPresets: n('#forte-drawer [data-drawer="presets"]'),
     listen: n('button[data-src]'),
     quality: [...document.querySelectorAll('header #quality')].filter((e) => e.checkVisibility()).length,
     tour: [...document.querySelectorAll('body > header .forte-tour-start')].filter((e) => e.checkVisibility()).length,
@@ -221,14 +221,15 @@ async function remembered(tab) {
   return out;
 }
 
-// The drawer (shared/layout.js): it opens, from its rail or (on a phone) the header, with its
-// presets in sight; one of them plays, pressed in the list and named by the Presets menu (on the
+// The drawer (shared/layout.js): it opens, from its rail or (on a phone) the header, with
+// the Presets menu in sight; a preset picked from it plays and stays named by it (on the
 // Combinations page, which empties its menu once it has played one, neither); it folds
 // away again, and is left as it was. Then the keys fold away, leaving their bar, and come back.
 const DRAWER = () => ({
   open: document.body.classList.contains('drawer-open'),
   w: Math.round(document.querySelector('#forte-drawer')?.getBoundingClientRect().width ?? 0),
-  presets: [...document.querySelectorAll('.forte-drawer-preset')].filter((b) => b.checkVisibility()).length,
+  presets: document.querySelector('#forte-drawer #preset')?.checkVisibility() ? 1 : 0,
+  menu: document.querySelector('#preset')?.checkVisibility() ? 1 : 0, // (in Perform, above the keys)
 });
 async function drawerAndKeys(tab, combine) {
   const out = [];
@@ -236,21 +237,20 @@ async function drawerAndKeys(tab, combine) {
   const was = await tab.evaluate(DRAWER);
   if (!was.open) { await tab.locator(opener).click(CLICK).catch(() => {}); await tab.waitForTimeout(350); }
   const s = await tab.evaluate(DRAWER);
-  if (!s.open || s.w < 200 || !s.presets) out.push(`the drawer doesn't open with its presets in sight (${s.w}px wide, ${s.presets} presets shown)`);
+  if (!s.open || s.w < 200 || !s.menu) out.push(`the drawer doesn't open with the presets in sight (${s.w}px wide, the Presets menu ${s.menu ? 'shown' : 'hidden'})`);
   if (await tab.evaluate(WIDE) > 0) out.push('scrolls sideways with the drawer open');
-  const pick = tab.locator('.forte-drawer-preset:not([data-value="__default"])').first();
-  if (s.presets && await pick.count()) {
-    const v = await pick.getAttribute('data-value');
-    await pick.click(CLICK).catch(() => {});
+  const v = await tab.evaluate(() => [...(document.querySelector('#preset')?.options ?? [])].find((o) => o.value && !o.value.startsWith('__') && !o.disabled)?.value);
+  if (s.menu && v) {
+    await tab.locator('#preset').selectOption(v).catch(() => {});
     await tab.waitForTimeout(200);
-    const p = await tab.evaluate((x) => ({ menu: document.querySelector('#preset')?.value, pressed: document.querySelector(`.forte-drawer-preset[data-value="${x}"]`)?.getAttribute('aria-pressed') }), v);
+    const menu = await tab.evaluate(() => document.querySelector('#preset')?.value);
     // (the Combinations page empties its menu once it has combined the instruments)
-    if (combine ? p.menu !== '' : p.menu !== v || p.pressed !== 'true') out.push(`a preset from the drawer doesn't play (the menu says "${p.menu}", the list ${p.pressed === 'true' ? 'presses it' : 'doesn\'t press it'})`);
+    if (combine ? menu !== '' : menu !== v) out.push(`a preset from the drawer doesn't play (the menu says "${menu}")`);
   }
   await tab.locator('.forte-drawer-fold').click(CLICK).catch(() => {});
   await tab.waitForTimeout(350);
   const f = await tab.evaluate(DRAWER);
-  if (f.open || f.presets) out.push(`the drawer doesn't fold away (${f.presets} presets still shown)`);
+  if (f.open || f.presets) out.push(`the drawer doesn't fold away (the Presets menu still shown)`);
   if (await tab.evaluate(WIDE) > 0) out.push('scrolls sideways with the drawer folded');
   if (was.open) { await tab.locator(opener).click(CLICK).catch(() => {}); await tab.waitForTimeout(350); }
   const KEYS = () => document.querySelector('#keyboard')?.offsetHeight ?? 0;

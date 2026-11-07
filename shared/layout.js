@@ -742,8 +742,7 @@ if (presets) {
 }
 // ---------------------------------------------------------------------------
 // the drawer: at the left of every instrument page, what every instrument has alike. The
-// presets, as a list (the page's Presets menu stays its source: each one is a pick from it),
-// Morph, a Seaboard RISE while one is plugged in (shared/rise.js), the Output, Tuning and
+// Presets menu (in Perform it goes above the keys instead), Morph, a Seaboard RISE while one is plugged in (shared/rise.js), the Output, Tuning and
 // Expression groups (moved here from the Controls panel, which keeps the instrument's own), and
 // the MIDI settings (shared/midi.js midiSettings, which the MIDI status opens). Each section folds,
 // as the browser remembers. On a desktop it is a column beside the views and the controls, folded
@@ -821,46 +820,6 @@ function placeDrawer() {
     if (key) drawerSection(key, det);
   }
 }
-// the presets: a button for each choice in the page's menu, the one playing now pressed
-let presetList = null;
-function listPresets() {
-  const sel = presets?.querySelector('select');
-  if (!presetList || !sel) return;
-  const block = (label) => {
-    const g = el('div', 'forte-drawer-pgroup');
-    g.setAttribute('role', 'group');
-    if (label) { g.setAttribute('aria-label', label); g.append(el('h3', '', label)); }
-    presetList.append(g);
-    return g;
-  };
-  const pick = (v, b) => {
-    sel.dispatchEvent(new Event('focus')); // (shared/user-presets.js notes what was playing)
-    sel.value = v;
-    sel.dispatchEvent(new Event('change', { bubbles: true }));
-    unfocus(b);
-  };
-  const add = (o, into) => {
-    if (o.value === '' || o.disabled) return;
-    const action = o.value.startsWith('__') && o.value !== '__default' && !o.value.startsWith('__user:');
-    const b = button(o.text);
-    b.className = action ? 'forte-drawer-action' : 'forte-drawer-preset';
-    b.dataset.value = o.value;
-    if (o.value === '__default') b.title = 'Every control as it comes';
-    b.addEventListener('click', () => pick(o.value, b));
-    into.append(b);
-  };
-  presetList.replaceChildren();
-  let first = block(null);
-  for (const c of sel.children) {
-    if (c.tagName === 'OPTGROUP') { const g = block(c.label); for (const o of c.children) add(o, g); if (g.querySelector('.forte-drawer-action')) g.classList.add('actions'); }
-    else add(c, first);
-  }
-  markPreset();
-}
-function markPreset() {
-  const v = presets?.querySelector('select')?.value ?? '';
-  for (const b of presetList?.querySelectorAll('.forte-drawer-preset') ?? []) b.setAttribute('aria-pressed', String(v !== '' && b.dataset.value === v));
-}
 if (mainEl && sidebar && !inPlugin) {
   drawer = el('aside', 'forte-drawer');
   drawer.id = 'forte-drawer';
@@ -895,21 +854,12 @@ if (mainEl && sidebar && !inPlugin) {
     if (e.key !== 'Escape' || drawerMode() === 'docked' || !drawerIsOpen() || document.querySelector('dialog[open]')) return;
     setDrawer(false);
   });
-  // the presets, first
+  // the presets, first: the page's own menu (placeTools puts it here in Discover)
   if (presets) {
-    const sel = presets.querySelector('select');
-    const name = sel?.getAttribute('aria-label');
-    const det = details('presets', !name || name === 'Preset' ? 'Presets' : name);
-    presetList = el('div', 'forte-drawer-presets');
-    det.append(presetList);
-    drawerSection('presets', det);
-    if (sel) {
-      new MutationObserver(listPresets).observe(sel, { childList: true, subtree: true, characterData: true });
-      onAssign(sel, 'value', markPreset);
-      onAssign(sel, 'selectedIndex', markPreset);
-      sel.addEventListener('change', markPreset);
-    }
-    listPresets();
+    const name = presets.querySelector('select')?.getAttribute('aria-label');
+    const sec = el('div', 'forte-drawer-presets');
+    sec.append(el('h3', '', !name || name === 'Preset' ? 'Presets' : name));
+    drawerSection('presets', sec);
   }
   // the MIDI settings, where there is Web MIDI
   if (navigator.requestMIDIAccess) {
@@ -939,7 +889,7 @@ if (mainEl && sidebar && !inPlugin) {
 let kbTools = null, restack = () => {};
 function placeTools() {
   const perf = performing() && !!kbTools && !sidewaysQuery.matches;
-  const home = drawerBody?.querySelector('[data-drawer="presets"]') ?? bars.controls?.tools; // (hidden in the drawer: its list stands in)
+  const home = drawerBody?.querySelector('[data-drawer="presets"]') ?? bars.controls?.tools;
   if (presets && home) (perf ? kbTools : home).appendChild(presets);
   const f = bars.controls?.fold;
   if (f) (perf ? kbTools : bars.controls.bar).appendChild(f);
