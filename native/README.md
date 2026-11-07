@@ -173,21 +173,25 @@ instruments from what `forte_add_plugin()` recorded, so a new port joins it with
 instrument's `<slug>-instrument.cpp` is compiled again with `forte_instrument` renamed
 `forte_instrument_<slug>`, and a generated table lists them.
 
-It plays one instrument, or two: **+** beside the Instrument menu layers a second with the first
-(both play every key) or splits the keys between them (the second below the split point, the
-first from there up). The bar under the header picks Layer or Split and the split point, swaps
-the two, shows one's controls and presets at a time (the Instrument menu changes that one) and
-takes one away. In `plugin.cpp` a `Suite` holds the instruments' `Plugin`s and passes the host's
-calls on: the host sees the first's parameters; a note goes to the parts its key strikes and its
-end goes where it began; the pedals, the wheels, aftertouch and Panic reach both; a program change
-goes to the part the window shows; Quality and MPE are set on both. The second plays into a
-buffer of its own, added to the first's, and a limiter at −1 dB (no makeup gain) catches what the
-two add up to. A new instrument is made and activated on the main thread, which publishes the
+It plays one instrument, or up to four, as the site's Combinations page does (`combine/`):
+**+** beside the Instrument menu adds one, on every key, and a card under the header for each
+gives the keys it plays (MIDI's numbers, as pressed: the same keys layer instruments, keys apart
+split the keyboard; *Press a key…* takes the next one struck), its octave (±2), its level (−30 to
++6 dB) and whether it plays, shows one's controls and presets at a time (the Instrument menu
+changes that one), puts one first (⤒: the one whose parameters the host sees) and takes one
+away. In `plugin.cpp` a `Suite` holds the instruments' `Plugin`s and passes the host's calls on:
+the host sees the first's parameters; a note goes to the parts whose keys it is in and its end
+goes where it began, wherever the keys or the octave have moved since (a part's octave is one
+more shift in its `keyShift`, so its `moved` table remembers it); the window's keys go the same
+way; the pedals, the wheels, aftertouch and Panic reach every part; a program change goes to the
+part the window shows; Quality, MPE, Transpose and Octave are set on all. Each part after the
+first plays into a buffer of its own, added to the first's at its level, and a limiter at −1 dB
+(no makeup gain) catches what they add up to. A new instrument is made and activated on the main thread, which publishes the
 parts as a `Rig`; the audio thread takes the latest at its next block, and the main thread deletes
 what it let go of once it has. Its id is `net.jthaler.forte.suite`, its version Forte's, and its
-state `forte-suite <slug>` then the first instrument's own, then, with a second, `forte-layer
-<slug> <layer|split> <split point> <part shown>` and the second's own, so the app reopens as it
-was. It is only a standalone: a DAW keeps a plugin's parameters while it is
+state `forte-suite <slug>` then the first instrument's own, then, with more, `forte-first <lo>
+<hi> <octave> <level> <on> <part shown>` and, for each other part, `forte-part <slug> <lo> <hi>
+<octave> <level> <on>` and its own, so the app reopens as it was. It is only a standalone: a DAW keeps a plugin's parameters while it is
 active, and these change with the instrument. The release ships it in the archives with every
 instrument (`Forte-plugins-<system>` and `Forte-plugins-app-<system>`), and alone in
 `Forte-app-<system>`.

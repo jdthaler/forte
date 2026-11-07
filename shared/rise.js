@@ -1,5 +1,5 @@
-// rise.js — a ROLI Seaboard RISE, drawn at the left of an instrument page while one is plugged in
-// (as PhuzzBox draws its pedal there): its three touch faders and its XY pad, with the controls they
+// rise.js — a ROLI Seaboard RISE, drawn in the drawer at the left of an instrument page (shared/layout.js)
+// while one is plugged in (as PhuzzBox draws its pedal at the left): its three touch faders and its XY pad, with the controls they
 // move on this instrument; its keywave, a dot for each finger where it glides, slides and presses;
 // and the five dimensions of its touch (Strike, Glide, Slide, Press, Lift), each lit while it comes
 // in, with what it does on this instrument. shared/midi.js opens it when a Seaboard connects and
@@ -125,7 +125,7 @@ function meanings(I, params) {
   out.slide = !I ? '' : slide && wp ? `${wp.label}, for that note alone, as far as the finger slides from where it landed` : 'nothing here';
   out.press = !I ? '' : I.aftertouch ? I.aftertouch : 'nothing here';
   out.lift = !I ? '' : I.lift ? I.lift : 'nothing here: every note is let go alike'; // (the descriptor's lift, shared/expression.js)
-  if (mpeMode() === 'off') out.glide = out.slide = out.press = 'MPE is off in the MIDI menu: every note moves together';
+  if (mpeMode() === 'off') out.glide = out.slide = out.press = 'MPE is off in the MIDI settings: every note moves together';
   return out;
 }
 
@@ -209,10 +209,10 @@ export function risePanel() {
 
   const setFolded = (on) => {
     folded = on;
-    document.body.classList.toggle('rise-folded', on);
+    aside.classList.toggle('folded', on);
     fold.setAttribute('aria-expanded', String(!on));
     fold.setAttribute('aria-label', on ? 'Show the Seaboard RISE' : 'Fold the Seaboard RISE away');
-    fold.title = on ? 'Show the RISE panel' : 'Fold the RISE panel away';
+    fold.title = on ? 'Show the RISE' : 'Fold the RISE away';
     try { localStorage.setItem(STORE, JSON.stringify({ folded: on })); } catch { /* storage blocked */ }
     request();
   };
@@ -329,7 +329,7 @@ export function risePanel() {
     title.textContent = names.length === 1 ? names[0].replace(/^ROLI\s+/i, '') : 'Seaboard RISE';
     const on = mpeMode() !== 'off';
     note.textContent = model.single ? 'Its notes come on channel 1: it isn\'t sending MPE, so every note glides and presses together. Set it to MPE under On the RISE below (or in ROLI Dashboard).'
-      : !on ? 'MPE is off in the MIDI menu: turn it to Auto, and each finger bends, slides and presses its own note.'
+      : !on ? 'MPE is off in the MIDI settings below: turn it to Auto, and each finger bends, slides and presses its own note.'
       : `MPE: each finger its own channel${model.channels ? ` (${model.channels} so far)` : ''}, each glide up to ±${MEMBER_BEND} semitones.`;
     // keep drawing while something fades (Strike, Lift) or a finger is down
     if (fingers.length || t - model.when.strike < FLASH + 0.1 || t - model.when.lift < FLASH + 0.1) request();
@@ -340,9 +340,9 @@ export function risePanel() {
   const show = () => {
     const any = inputs.size > 0;
     if (any && !aside.isConnected) {
-      const main = document.querySelector('body > main');
-      if (!main) return;
-      main.prepend(aside);
+      // a section of the page's drawer (shared/layout.js), or without one at the left of the page
+      if (document.querySelector('#forte-drawer')) document.dispatchEvent(new CustomEvent('forte-drawer', { detail: { section: 'rise', element: aside } }));
+      else { const main = document.querySelector('body > main'); if (!main) return; main.prepend(aside); }
       setFolded(folded);
     }
     document.body.classList.toggle('rise', any);

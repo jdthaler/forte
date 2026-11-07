@@ -125,8 +125,8 @@ sostenuto and soft pedals, aftertouch and, where it means something, the
 mod wheel and pitch bend. Once MIDI is on, every other instrument page
 turns it on by itself.
 
-**The MIDI menu:** once MIDI is on, its status opens a menu with the
-velocity curve (Touch), MPE (below), Octave and Transpose. Octave and
+**The MIDI settings**, in the drawer (once MIDI is on, its status opens
+them there): the velocity curve (Touch), MPE (below), Octave and Transpose. Octave and
 Transpose move the MIDI keys up to four octaves and twelve semitones either
 way, so a 25-key controller reaches all 88 keys, or a piece fingered in C
 sounds in D. Every page keeps what you set there, and while the keys are
@@ -141,7 +141,7 @@ Seaboard, a LinnStrument, an Expressive E Osmose) bends, slides and presses
 each note alone, wherever the instrument can: a reed, a pipe, a string or a
 bow bends; a struck string, bar or bell bends only as far as a hand on it
 takes it (a semitone at most, a few cents for most bars), and its slide
-(CC74) moves what the mod wheel moves, for that note. MPE in the MIDI menu is on
+(CC74) moves what the mod wheel moves, for that note. MPE in the MIDI settings is on
 Auto, which turns MPE on when the controller announces it (its
 MPE Configuration Message) and leaves any other keyboard as it was; On
 reads channels 2–16 as MPE without the announcement, and Off never does.
@@ -330,7 +330,7 @@ messages, on the pages, in the plugins and in the Forte app:
 
 | On the FC-300 | It sends | In Forte |
 |---|---|---|
-| EXP 1 | CC7, volume | turns the instrument down (heel down: silent); full until it moves |
+| EXP 1 | CC7, volume | on the pages, moves the Volume control (toe down: its default; heel down: silent); in the plugins, turns the instrument down; full until it moves |
 | EXP 2 | CC1, the mod wheel | whatever the mod wheel moves (on the Electric Grand, Tine and Reed Pianos, the tremolo) |
 | CTL 1 | CC80 | the sustain pedal (or what Space is: hold, the Leslie) |
 | CTL 2 | CC81 | the sostenuto pedal |
@@ -348,6 +348,22 @@ it reaches a computer through a USB MIDI interface (or a keyboard's MIDI
 IN that passes it on). In a DAW, the host may take program changes for
 itself (MainStage switches patches with them).
 
+**The FC-300 in the drawer:** once a page hears the FC-300's switches, its
+drawer draws it: each switch lit while down, each expression pedal as far
+down as it is, the number pedals' lights as its own show a patch, and what
+each pedal does on that instrument. *Let Forte drive it* (the browser asks
+once to let the page talk SysEx to MIDI devices) puts it in its System
+Exclusive mode, from Roland's MIDI implementation in its manual: it then
+sends each pedal as the foot moves it, so CTL 1 and 2 are down only while
+held, as a piano's pedals are; EXP 1's toe switch puts the soft pedal down
+and the next press lifts it; ▲ and ▼ step to the next preset and the one
+before, and the number pedals choose among the five around the one playing;
+and its display shows the preset's number, its lights which pedal it is on,
+and its LCD the instrument and the preset. It sends nothing to other apps
+while Forte drives it: *Hand it back*, or switch it off and on, to play
+MainStage with it. Nothing is written to it (its own pedal settings are in a
+bulk-dump format Roland doesn't document). Pages only, in Chrome or Edge.
+
 **Latency:** play through wired headphones or speakers. Bluetooth ones
 delay every note by 100–200 ms, enough to make any instrument feel
 sluggish; a page warns you once when the browser reports that much (Safari
@@ -357,32 +373,44 @@ play the plugins in a DAW with a small buffer.
 
 Each instrument page reads top to bottom. At the top, the instrument's
 name opens the menu of every instrument (and Forte's home page), next to
-**How it works**. In the middle are the views, pictures of the physics as
-it plays, and below them the rest of the controls, grouped. Each has a
-bar on top: the views' turns each view on or off and holds the mode, the
-controls' turns each group of controls on or off and holds the presets.
+**How it works**. At the left is the drawer, with the presets and what
+every instrument has alike (below). In the middle are the views, pictures
+of the physics as it plays, and below them the instrument's own controls,
+grouped. Each has a bar on top: the views' turns each view on or off and
+holds the mode, the controls' turns each group of controls on or off.
 The main views and every group are on at first, and the page remembers
 your choice. Drag the handle on the controls' bar to share the height
 between the two, all the way to either end, or fold either away with the
 chevron at the end of its bar. The few you reach for mid-phrase (the
 volume, the computer keys' velocity, a pedal) sit in the keyboard's own
 bar, right above the keys, each with its name and its value.
-Explanations wait behind ⓘ buttons.
+Explanations wait behind ⓘ buttons. The button at the left of that bar
+folds the keys away when a MIDI keyboard is doing the playing (the computer
+keys still play), and brings them back.
 
-**Your own presets** live in the same menu. *Save these settings…* keeps
+**The drawer** holds, from the top, the **Presets** menu, then Morph, a Seaboard RISE's panel while one is plugged
+in, and the groups every instrument has: Output (the room, the venue and the
+volume), Tuning, Expression, and the MIDI settings. Each folds away, and the
+page remembers which. On a desktop it is a column at the left, which its
+chevron folds to a thin rail (a tap on the rail opens it again); in a
+narrower window or on an iPad held upright it opens over the views from that
+rail, and on a phone from the button at the left of the header. Over the
+page it leaves the keys uncovered, so you can try presets as you play.
+
+**Your own presets** live in the drawer too. *Save these settings…* keeps
 the page's settings under a name in your browser, and *Copy a link to
 these settings* makes a link that opens the page playing them, to send
 to someone. *Your presets and files…* lists yours, and saves them to a
 file or opens one: the plugins read and write the same files.
 
-**Morph**, the last group of controls, slides from one preset to another:
+**Morph**, under the presets in the drawer, slides from one preset to another:
 pick *From* and *To* (Default settings, the instrument's presets or your
 own) and move the slider. Every setting the two give goes part of the way,
 a number smoothly and a choice or a switch halfway across; volume, the room
 and the tuning stay as you have them. Choosing a preset from the Presets
-menu makes it the one you morph from.
+list makes it the one you morph from.
 
-**Tuning**, among the controls, is the same on every instrument: the
+**Tuning**, in the drawer, is the same on every instrument: the
 **pitch** standard (A = 440 Hz, or 415 for baroque pitch, 392, 422.5, 430,
 435, 442, 443 or 466), the **temperament** (equal, ¼- and ⅙-comma
 meantone, Werckmeister III, Kirnberger III, Vallotti, Young, Pythagorean
@@ -408,8 +436,9 @@ There are two modes. **Discover** shows it all. **Perform** shows just
 the views you turned on, filling the screen, with no toggles and no text
 in them: for playing,
 or for a projector (**Full screen** fills it). The controls in the
-keyboard's bar stay where they are, the presets join them, and the
-chevron beside the presets (**More controls**) brings back the rest.
+keyboard's bar stay where they are, the presets menu joins them, and the
+chevron beside it (**More controls**) brings back the rest; the drawer
+starts folded to its rail.
 Once the audio is on, Perform keeps the screen from dimming and locking
 (where the browser can: Chrome, Edge, and Safari from iOS 16.4).
 
@@ -451,7 +480,7 @@ page, and in every page's menu): up to four, each on the keys you give it,
 so the same keys layer them and keys apart split the keyboard, with its
 own octave, preset and level ([combine/](combine/README.md)). On a
 phone the page scrolls between the header and the keys, which stay put, with the
-controls' bar and its presets just above the keys; turn it sideways
+controls' bar just above the keys, and the drawer opens from the header; turn it sideways
 for wider keys. Use
 *Share → Add to Home Screen* to run Forte as a full-screen app.
 
@@ -473,15 +502,16 @@ together from **All Plugins** on the front page, or one instrument from **↓ Pl
 Debian, Ubuntu, Mint and Fedora, its **.deb** or **.rpm** package; otherwise, on macOS and
 Linux, `make install` and `make verify` in the unpacked folder. They are unsigned, so a Mac needs one Terminal command (`xattr`,
 which `make install` runs) before it loads them. The download with every instrument also has the
-Forte app, one standalone that plays any of them from its Instrument menu, or two at once:
-**+** beside the menu layers a second instrument with the first, or splits the keyboard between
-them.
+Forte app, one standalone that plays any of them from its Instrument menu, or up to four at
+once, as the [Combinations](combine/) page does: **+** beside the menu adds one, and its card gives
+it its keys (the same keys layer instruments, keys apart split the keyboard), its octave, its
+level, and on or off.
 
 A plugin's window also shows the instrument's views from its page: press **Views**, beside
 the pedal, and they draw what the plugin plays, whether the notes come from the DAW, a MIDI
 keyboard or the window's keys.
 
-In a plugin's window the Presets menu has your own presets too: *Save these settings…* writes
+In a plugin's window (and the Forte app's) the drawer at the left holds Morph, Output, Tuning, Expression, MIDI and CPU, as a page's does, and the keys fold away from the button at the left of their bar. Its Presets menu has your own presets too: *Save these settings…* writes
 one as a file in a presets folder for that instrument (`~/Library/Audio/Presets/Forte/<id>` on a
 Mac, `%APPDATA%\Forte\Presets\<id>` on Windows, `~/.local/share/forte/presets/<id>` on
 Linux), and *Open the presets folder* shows it, so a file saved on the site can go there too.

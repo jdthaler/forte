@@ -5,9 +5,13 @@
      goes through window.forte(method, …args) (plugin.cpp, "The editor's calls"). The Presets menu
      has the instrument's presets, then your own (files in the site's format, presets.h), saving
      them and their folder; under Temperament, Scala files from the Tunings folder (presets.h)
-     set the custom temperament. In the Forte app a second instrument can be layered with the first or
-     split from it (plugin.cpp, Suite): the bar under the header says how they share the keys and
-     whose controls the window shows. Above the controls, the instrument's views (the shown part's):
+     set the custom temperament. In the Forte app up to four instruments play at once, as on the
+     site's Combinations page (plugin.cpp, Suite): a card under the header for each gives its keys,
+     octave, level and on/off, and picks whose controls the window shows. At the left, as on the
+     site's pages (shared/layout.js), a drawer with what every instrument has alike: Morph, Output,
+     Tuning, Expression, MIDI and CPU, each folding (the Presets menu stays in the header); its
+     chevron folds it to a rail. The keys fold
+     away from the button at the left of their bar. Above the controls, the instrument's views (the shown part's):
      its own page from the site, served from the plugin (editor.h), in a frame that shows only them
      (shared/in-plugin.js), fed by the plugin's sound and its engine's messages; the Views button
      folds them away, and the handle under them shares the height with the controls. Opened as a
@@ -64,30 +68,67 @@
   /* the Forte app: the instrument's name is a menu of them all */
   #instrument { align-self: center; min-width: 140px; max-width: 260px; font-weight: 700; font-size: 14px; text-overflow: ellipsis; }
   .suite .brand b { flex: none; }
-  /* a second instrument: "+", a menu of them all */
-  #second { align-self: center; flex: none; width: 32px; padding: 4px 0; text-align: center; text-align-last: center; background-image: none; font-weight: 700; }
-  /* two instruments: how they share the keys, and whose controls are below */
+  /* another instrument: "+", a menu of them all */
+  #add { align-self: center; flex: none; width: 32px; padding: 4px 0; text-align: center; text-align-last: center; background-image: none; font-weight: 700; }
+  /* two instruments or more: a card for each, with its keys, octave, level and on/off */
   #parts {
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 14px;
-    background: var(--panel); border-bottom: 1px solid var(--line); color: var(--muted);
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 470px), 1fr)); gap: 6px;
+    padding: 6px 14px; background: var(--panel); border-bottom: 1px solid var(--line);
   }
   #parts[hidden] { display: none; }
-  #parts .grow { flex: 1; }
-  .seg { display: inline-flex; }
-  .seg button { border-radius: 0; margin-left: -1px; display: inline-flex; align-items: center; gap: 6px; }
-  .seg button:first-child { border-radius: 7px 0 0 7px; margin-left: 0; }
-  .seg button:last-child { border-radius: 0 7px 7px 0; }
-  .seg button[aria-pressed="true"] { position: relative; z-index: 1; }
-  #focus button[aria-pressed="true"] { background: #2a2a31; color: var(--text); border-color: var(--accent); }
-  #focus button i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-  #focus button small { color: var(--muted); font-size: 11px; }
-  #focus .x { color: var(--muted); padding: 0 2px; margin-right: -4px; border-radius: 4px; }
-  #focus .x:hover { color: var(--text); background: #3a3a44; }
-  @media (max-width: 760px) { #parts .label { display: none; } }
-  #split-at[hidden] { display: none; }
+  .part {
+    --accent: var(--part); display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; min-width: 0;
+    padding: 4px 6px 4px 8px; background: var(--card); color: var(--muted);
+    border: 1px solid var(--line); border-left: 3px solid var(--part); border-radius: 8px;
+  }
+  .part.shown { background: #222229; border-color: var(--part); }
+  .part .who { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 190px; padding: 2px 8px; font-weight: 600; }
+  .part .who span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .part .who i { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--part); }
+  .part.shown .who { color: var(--text); background: transparent; border-color: transparent; cursor: default; }
+  .part .tail { display: flex; align-items: center; gap: 8px; flex: 1 0 auto; }
+  .part.off .who span { text-decoration: line-through; color: var(--muted); }
+  .part label { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .part select { padding: 2px 20px 2px 6px; background-position: right 6px center; }
+  .part input[type=range] { width: 64px; margin: 0; }
+  .part .db { min-width: 48px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .part .grow { flex: 1; }
+  .part .tool { padding: 1px 7px; color: var(--muted); }
+  .part .tool:hover { color: var(--text); }
   .tools { display: flex; gap: 8px; align-items: center; color: var(--muted); }
 
   main { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 12px 14px; }
+  /* the drawer at the left, beside the views and the controls (as on the site's pages) */
+  #middle { flex: 1 1 0; min-height: 0; display: flex; }
+  #stage { flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  #drawer { flex: none; width: clamp(220px, 24vw, 290px); min-height: 0; overflow-y: auto; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); }
+  #drawer[hidden] { display: none; }
+  .drawer-head { display: flex; align-items: center; gap: 8px; padding: 7px 8px 7px 12px; }
+  .drawer-head b { flex: 1; min-width: 0; font-size: 11px; font-weight: 400; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fold { display: grid; place-items: center; width: 26px; height: 24px; padding: 0; color: var(--muted); background: transparent; }
+  .fold svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  #drawer-body { padding: 0 12px 14px; }
+  #drawer-body > details { border-top: 1px solid var(--line); padding: 2px 0 6px; }
+  #drawer-body > details > summary { list-style: none; display: flex; justify-content: space-between; padding: 7px 0 5px; cursor: pointer; font-weight: 600; }
+  #drawer-body > details > summary::-webkit-details-marker { display: none; }
+  #drawer-body > details > summary::after { content: "▾"; color: var(--muted); }
+  #drawer-body > details:not([open]) > summary::after { content: "▸"; }
+  #drawer-body .param select { width: 100%; }
+  body.drawer-folded #drawer { width: 34px; overflow: hidden; cursor: pointer; }
+  body.drawer-folded #drawer:hover { background: #1b1b20; }
+  body.drawer-folded .drawer-head { flex-direction: column-reverse; justify-content: flex-end; gap: 12px; padding: 7px 4px; }
+  body.drawer-folded .drawer-head b { writing-mode: vertical-rl; transform: rotate(180deg); overflow: visible; }
+  body.drawer-folded .drawer-head .fold svg { transform: rotate(180deg); }
+  body.drawer-folded #drawer-body { display: none; }
+  /* the keys fold away, leaving their bar */
+  #keys-btn { display: grid; place-items: center; width: 34px; padding: 2px 0; }
+  #keys-btn svg { width: 22px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; stroke-linecap: round; }
+  #keys-btn svg .b { fill: currentColor; stroke: none; }
+  #keys-btn svg .c { stroke-width: 1.7; transform-box: fill-box; transform-origin: center; }
+  body.keys-folded #keys-btn { color: var(--accent); border-color: var(--accent); }
+  body.keys-folded #keys-btn svg .c { transform: translate(-1.5px, -0.5px) rotate(180deg); }
+  body.keys-folded :is(#keyboard, #down, #up, #range) { display: none; }
+  body.keys-folded .kb-bar { margin-bottom: 0; }
   /* the views: the instrument's page, showing only them, above the controls; the handle on the
      controls' top edge shares the height (as the site's pages do) */
   #views-pane { flex: 0.6 1 0; min-height: 0; display: flex; background: var(--bg); border-bottom: 1px solid var(--line); }
@@ -142,13 +183,12 @@
   .bk.mapped { background: #26262c; }
   .wk.down { background: var(--key-down); }
   .bk.down { background: var(--accent); color: #000; }
-  /* split: which instrument each key plays, and the first key of the upper one */
-  .wk.part0::after, .wk.part1::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; }
-  .wk.part0::after { background: var(--part0); }
-  .wk.part1::after { background: var(--part1); }
-  .wk.edge, .bk.edge { box-shadow: inset 3px 0 0 var(--accent-2); }
-  .wk.down.other { background: var(--other-down); }
-  .bk.down.other { background: var(--other); }
+  /* the instruments each key plays: a band of stripes along its front edge, a row for each (as
+     the Combinations page's, shared/keyboard.js zones); held, in the colour of the one playing it */
+  .zoned::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: var(--zone-h); background: var(--zones); pointer-events: none; }
+  .bk.zoned::after { left: 2px; right: 2px; bottom: 3px; border-radius: 1px; }
+  .wk.down.other { background: var(--held-down); }
+  .bk.down.other { background: var(--held); }
   .wk .c-label { position: absolute; bottom: 18px; color: #8a8a85; font-size: 9px; }
   .k-label { pointer-events: none; }
 
@@ -175,7 +215,7 @@
 </head>
 <body>
 <header>
-  <div class="brand"><b id="name">Forte</b><select id="instrument" title="Instrument" hidden></select><select id="second" title="Layer or split a second instrument with this one" hidden></select><span id="version"></span></div>
+  <div class="brand"><b id="name">Forte</b><select id="instrument" title="Instrument" hidden></select><select id="add" title="Add an instrument, up to four: it comes onto every key, layered with the rest; give it its keys to split the keyboard" hidden></select><span id="version"></span></div>
   <select id="preset" title="Preset" hidden></select>
   <div class="tools">
     <button id="views-btn" hidden aria-pressed="false" title="Show or hide the instrument's views: what its physics is doing as it plays">Views</button>
@@ -183,19 +223,18 @@
     <button id="panic" title="Let go of every note">Panic</button>
   </div>
 </header>
-<nav id="parts" hidden>
-  <div class="seg" role="group" aria-label="How the two instruments share the keys">
-    <button data-mode="layer" title="Both instruments play every key">Layer</button><button data-mode="split" title="The second instrument plays the keys below the split, the first the rest">Split</button>
-  </div>
-  <label id="split-at" hidden>at <select id="split" title="The first key the upper instrument plays"></select></label>
-  <button id="swap" title="The two instruments change places">⇄ Swap</button>
-  <span class="grow"></span>
-  <span class="label">Controls</span>
-  <div class="seg" id="focus" role="group" aria-label="Whose controls are shown"></div>
-</nav>
+<section id="parts" hidden aria-label="The instruments, each on its own keys"></section>
+<div id="middle">
+<aside id="drawer" hidden aria-label="Settings">
+  <div class="drawer-head"><b>Settings</b><button id="drawer-fold" class="fold" aria-controls="drawer-body"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5"/></svg></button></div>
+  <div id="drawer-body"></div>
+</aside>
+<div id="stage">
 <section id="views-pane" hidden></section>
 <div id="views-grip" hidden tabindex="0" role="separator" aria-orientation="horizontal" aria-label="Share the height between the views and the controls" title="Drag to share the height between the views and the controls (double-click: as it was)"></div>
 <main><div id="groups"></div></main>
+</div>
+</div>
 <div id="save" hidden>
   <form>
     <label for="save-name">Save these settings as</label>
@@ -209,6 +248,7 @@
 <footer>
   <div id="perform"></div>
   <div class="kb-bar">
+    <button id="keys-btn" aria-controls="keyboard" aria-expanded="true" title="Hide the keys: the controls take their room"><svg viewBox="0 0 22 16" aria-hidden="true"><rect x="1.5" y="3.5" width="13" height="10" rx="1.5"/><path d="M5.8 3.5v10M10.2 3.5v10"/><rect class="b" x="4.6" y="3.5" width="2.4" height="5.5"/><rect class="b" x="9" y="3.5" width="2.4" height="5.5"/><path class="c" d="M17 7l2.5 2.5L22 7" transform="translate(-1.5 -0.5)"/></svg></button>
     <button id="down" title="Lower (←)">◀</button>
     <span id="range"></span>
     <button id="up" title="Higher (→)">▶</button>
@@ -341,6 +381,11 @@ function build() {
   });
   const root = $('#groups');
   for (const [title, list] of groups) {
+    if (DRAWER.includes(title)) { // in the drawer, each a section that folds
+      const det = section(title, title === 'Output' || title === 'Morph');
+      for (const i of list) { const [box, c] = control(i); det.appendChild(box); register(i, c); boxes.set(D.params[i].id, box); }
+      continue;
+    }
     const card = document.createElement('section');
     card.className = 'group';
     const h = document.createElement('h2');
@@ -353,6 +398,7 @@ function build() {
   // the controls a player reaches for while playing, above the keys too
   D.params.forEach((p, i) => { if (p.perform && i !== D.presets) { const [box, c] = control(i); $('#perform').appendChild(box); register(i, c); } });
   buildPresets();
+  buildDrawer();
   if (D.space === 'switch') { // Space and CC64 switch a choice (the organ's Leslie): a press flips it
     const b = $('#pedal'), [what, a, z] = D.switch;
     b.hidden = false;
@@ -369,23 +415,26 @@ function build() {
   }
 }
 
-// ---- the Forte app's second instrument: layered with the first or split from it (plugin.cpp, Suite) --
-// "+" beside the Instrument menu adds one. Then the bar under the header says how the two share the
-// keys (Layer, or Split at a key: the second below it), swaps them, and picks whose controls,
-// presets and pedal are below (the Instrument menu changes that one; × takes one away). The
-// keyboard shows each one's keys in its colour.
-let mode = 'layer', splitKey = 60, focus = 0, learning = false;
-const two = () => (D.parts?.length ?? 0) > 1;
-// the part key m plays: in a split, by its side; layered (or alone), the one shown
-const partOf = (m) => (two() && mode === 'split' ? (m >= splitKey ? 0 : 1) : focus);
+// ---- the Forte app's instruments: up to four at once, each on its own keys (plugin.cpp, Suite) ----
+// "+" beside the Instrument menu adds one, on every key. With two or more, a card for each says
+// which keys it plays (the same keys layer them, keys apart split the keyboard), its octave, its
+// level and whether it plays, and picks whose controls, presets and views are below (the
+// Instrument menu changes that one; ⤒ puts one first, whose controls the host sees; × takes one
+// away), as the site's Combinations page does. The keyboard shows each one's keys in its colour.
+const KEY_LO = 21, KEY_HI = 108; // the cards' keys: A0 to C8 (the ends mean every key below and above)
+let parts = [], focus = 0, learning = null, partKeys = [];
+const many = () => parts.length > 1;
+// whether part p plays key m (pressed there): on, in its keys, and moved into its instrument's
+const plays = (p, m) => p.on && m >= p.lo && m <= p.hi && m + 12 * p.oct >= p.keyLo && m + 12 * p.oct <= p.keyHi;
 function buildParts() {
-  const sel = $('#second'), parts = D.parts ?? [];
-  focus = D.focus ?? 0; mode = D.mode ?? 'layer'; splitKey = D.split ?? 60;
-  if (!parts[1]) {
+  parts = D.parts ?? [];
+  focus = D.focus ?? 0;
+  const sel = $('#add');
+  if (parts.length < (D.most ?? 1)) {
     const plus = option('+', '');
     plus.hidden = true;
     const add = document.createElement('optgroup');
-    add.label = 'Layer or split with';
+    add.label = many() ? 'Add an instrument' : 'Layer or split with';
     for (const { slug, name } of D.instruments) add.appendChild(option(name, slug));
     sel.append(plus, add);
     sel.value = '';
@@ -393,71 +442,166 @@ function buildParts() {
     sel.addEventListener('change', async () => {
       sel.blur();
       panic();
-      if (sel.value && await forte('second', sel.value)) location.reload();
+      if (sel.value && await forte('add', sel.value)) location.reload();
       else sel.value = '';
     });
-    return;
   }
-  // each part in its instrument's colour; two alike, the second in Forte's blue (or its amber)
+  if (!many()) return;
+  // each part in its instrument's colour; one too like an earlier one's, another
   const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) || 0);
   const apart = (a, b) => Math.hypot(...rgb(a).map((x, i) => x - rgb(b)[i])) > 90;
-  const colours = parts.map((p) => p.accent);
-  if (!apart(colours[0], colours[1])) colours[1] = apart(colours[0], '#7cb8ff') ? '#7cb8ff' : '#f0b35a';
-  parts.forEach((p, k) => { p.accent = colours[k]; });
+  const SPARE = ['#7cb8ff', '#f0b35a', '#e07aa8', '#8fd18a', '#b58cf0'];
+  parts.forEach((p, k) => {
+    const before = parts.slice(0, k).map((q) => q.accent);
+    if (before.some((c) => !apart(c, p.accent))) p.accent = SPARE.find((c) => before.every((b) => apart(b, c))) ?? p.accent;
+  });
   const root = document.documentElement.style;
-  parts.forEach((p, k) => root.setProperty(`--part${k}`, p.accent));
   root.setProperty('--accent', parts[focus].accent);
   root.setProperty('--key-down', lighter(parts[focus].accent, 0.55));
-  const other = parts[1 - focus].accent;
-  root.setProperty('--other', other);
-  root.setProperty('--other-down', lighter(other, 0.55));
-  $('#parts').hidden = false;
-  for (const b of $('#parts').querySelectorAll('[data-mode]')) b.addEventListener('click', () => { b.blur(); arrange(b.dataset.mode, splitKey); });
-  const split = $('#split');
-  for (let m = 24; m <= 96; m++) split.appendChild(option(noteName(m), m));
-  split.appendChild(option('Press a key…', 'learn'));
-  split.addEventListener('change', () => {
-    split.blur();
-    if (split.value !== 'learn') { arrange('split', +split.value); return; }
-    learning = true;
-    toast('Press the key the upper instrument starts on');
-  });
-  $('#swap').addEventListener('click', async (e) => { e.currentTarget.blur(); panic(); if (await forte('swap')) location.reload(); });
+  const box = $('#parts');
+  box.hidden = false;
   parts.forEach((p, k) => {
-    const b = document.createElement('button');
-    const dot = document.createElement('i');
-    dot.style.background = p.accent;
-    const where = document.createElement('small');
-    where.dataset.where = k;
-    const x = document.createElement('span');
-    x.className = 'x'; x.textContent = '×'; x.title = `Take the ${p.name} away`;
-    b.append(dot, p.name, where, x);
-    b.setAttribute('aria-pressed', String(k === focus));
-    b.title = `The ${p.name}’s controls and presets`;
-    b.addEventListener('click', async (e) => {
-      b.blur();
-      if (e.target === x) { panic(); if (await forte('drop', k)) location.reload(); return; }
-      if (k !== focus && await forte('focus', k)) location.reload();
-    });
-    $('#focus').appendChild(b);
+    const card = document.createElement('div');
+    card.className = 'part';
+    card.style.setProperty('--part', p.accent);
+    card.classList.toggle('shown', k === focus);
+    const who = document.createElement('button');
+    const dot = document.createElement('i'), name = document.createElement('span');
+    name.textContent = p.name;
+    who.className = 'who';
+    who.append(dot, name);
+    who.title = k === focus ? `The ${p.name}’s controls and presets are below` : `Show the ${p.name}’s controls and presets`;
+    who.setAttribute('aria-pressed', String(k === focus));
+    who.addEventListener('click', async () => { who.blur(); if (k !== focus && await forte('focus', k)) location.reload(); });
+    // its keys: the lowest and highest it plays; "Press a key…" takes the next one struck
+    const keys = document.createElement('label');
+    keys.append('Keys ');
+    const ends = {};
+    for (const end of ['lo', 'hi']) {
+      const el = document.createElement('select');
+      el.title = end === 'lo' ? 'The lowest key it plays (A0: every key up to the highest)' : 'The highest key it plays (C8: every key from the lowest)';
+      for (let m = KEY_LO; m <= KEY_HI; m++) el.appendChild(option(noteName(m), m));
+      el.appendChild(option('Press a key…', 'learn'));
+      el.addEventListener('change', () => {
+        el.blur();
+        if (el.value === 'learn') { learning = { k, end }; toast(`Press the ${end === 'lo' ? 'lowest' : 'highest'} key the ${p.name} plays`); return; }
+        rezone(k, { [end]: +el.value });
+      });
+      ends[end] = el;
+      if (end === 'hi') keys.append('–');
+      keys.append(el);
+    }
+    const oct = document.createElement('label');
+    oct.append('Octave ');
+    const octEl = document.createElement('select');
+    octEl.title = 'Where its keys sound: up or down an octave or two';
+    for (let o = -2; o <= 2; o++) octEl.appendChild(option(o > 0 ? `+${o}` : o < 0 ? `−${-o}` : '0', o));
+    octEl.addEventListener('change', () => { octEl.blur(); rezone(k, { oct: +octEl.value }); });
+    oct.append(octEl);
+    const lvl = document.createElement('label');
+    lvl.append('Level ');
+    const lvlEl = document.createElement('input'), db = document.createElement('span');
+    lvlEl.type = 'range'; lvlEl.min = -30; lvlEl.max = 6; lvlEl.step = 0.5;
+    lvlEl.title = 'How loud it joins the rest, in dB (double-click: 0 dB)';
+    db.className = 'db';
+    lvlEl.addEventListener('input', () => rezone(k, { level: +lvlEl.value }));
+    lvlEl.addEventListener('pointerup', () => lvlEl.blur());
+    lvlEl.addEventListener('dblclick', () => rezone(k, { level: 0 }));
+    lvl.append(lvlEl, db);
+    const on = document.createElement('label');
+    const onEl = document.createElement('input');
+    onEl.type = 'checkbox';
+    onEl.title = 'Whether it plays: off, it lets its notes ring out and takes no more';
+    onEl.addEventListener('change', () => { onEl.blur(); rezone(k, { on: onEl.checked }); });
+    on.append(onEl, 'On');
+    const grow = document.createElement('span'), tail = document.createElement('span');
+    grow.className = 'grow'; tail.className = 'tail';
+    tail.append(lvl, on, grow);
+    card.append(who, keys, oct, tail);
+    if (k > 0) {
+      const first = document.createElement('button');
+      first.className = 'tool'; first.textContent = '⤒';
+      first.title = `Put the ${p.name} first: the host sees and automates the first instrument’s controls`;
+      first.addEventListener('click', async () => { first.blur(); panic(); if (await forte('lead', k)) location.reload(); });
+      tail.append(first);
+    }
+    const x = document.createElement('button');
+    x.className = 'tool'; x.textContent = '×'; x.title = `Take the ${p.name} away`;
+    x.addEventListener('click', async () => { x.blur(); panic(); if (await forte('drop', k)) location.reload(); });
+    tail.append(x);
+    p.show = () => {
+      ends.lo.value = String(clamp(p.lo, KEY_LO, KEY_HI)); ends.hi.value = String(clamp(p.hi, KEY_LO, KEY_HI));
+      octEl.value = String(p.oct);
+      lvlEl.value = p.level; lvlEl.style.setProperty('--fill', `${(100 * (p.level + 30)) / 36}%`);
+      db.textContent = `${p.level > 0 ? '+' : p.level < 0 ? '−' : ''}${Math.abs(p.level).toFixed(1)} dB`;
+      onEl.checked = p.on;
+      card.classList.toggle('off', !p.on);
+    };
+    p.show();
+    box.appendChild(card);
   });
-  arranged();
 }
-async function arrange(m, key) {
-  learning = false;
-  if (!(await forte('arrange', m, key))) return;
-  mode = m; splitKey = key;
-  arranged();
-  paintAll();
+// part k's keys, octave, level or on/off changed: the plugin's, then the card's and the keyboard's
+async function rezone(k, change) {
+  const p = parts[k];
+  const z = { lo: p.lo, hi: p.hi, oct: p.oct, level: p.level, on: p.on, ...change };
+  if ('lo' in change && z.lo > z.hi) z.hi = z.lo; // the other end follows
+  if ('hi' in change && z.hi < z.lo) z.lo = z.hi;
+  const wire = (m, end) => (end === 'lo' && m <= KEY_LO ? 0 : end === 'hi' && m >= KEY_HI ? 127 : m);
+  z.lo = wire(z.lo, 'lo'); z.hi = wire(z.hi, 'hi');
+  if (await forte('zone', k, z.lo, z.hi, z.oct, z.level, z.on)) Object.assign(p, z);
+  p.show();
+  rebound();
 }
-// the bar and the keyboard as the two now share the keys
-function arranged() {
-  for (const b of $('#parts').querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
-  $('#split-at').hidden = mode !== 'split';
-  $('#split').value = String(splitKey);
-  $('#swap').title = mode === 'split' ? 'The two instruments change sides' : 'The two instruments change places (the host sees the first one’s controls)';
-  for (const w of $('#parts').querySelectorAll('[data-where]')) w.textContent = mode === 'split' ? (+w.dataset.where === 0 ? `from ${noteName(splitKey)}` : `below ${noteName(splitKey)}`) : '';
-  if (D) rebound();
+// a key struck while a card waits for one
+function learn(m) {
+  const { k, end } = learning;
+  learning = null;
+  rezone(k, { [end]: clamp(m, KEY_LO, KEY_HI) });
+}
+
+// ---- the drawer: what every instrument has alike, as on the site's pages (shared/layout.js) ------
+// The groups every instrument has, in this order (the Presets menu stays in the header, by the
+// instrument's name), each a section that folds as last left; the chevron folds the drawer to a rail (a narrow window starts so).
+const DRAWER = ['Morph', 'Output', 'Tuning', 'Expression', 'MIDI', 'CPU'];
+const drawerBody = $('#drawer-body');
+const opened = () => prefs.sections ?? (prefs.sections = {});
+function section(title, open) {
+  const det = document.createElement('details'), sum = document.createElement('summary');
+  sum.textContent = title;
+  det.append(sum);
+  det.dataset.title = title;
+  det.open = opened()[title] ?? open;
+  det.addEventListener('toggle', () => { opened()[title] = det.open; keep(); });
+  // in the drawer's order, whichever comes first
+  const rank = (t) => DRAWER.indexOf(t);
+  const after = [...drawerBody.children].find((c) => rank(c.dataset.title) > rank(title));
+  drawerBody.insertBefore(det, after ?? null);
+  $('#drawer').hidden = false;
+  return det;
+}
+function buildDrawer() {
+  const fold = $('#drawer-fold');
+  const folded = (on) => {
+    document.body.classList.toggle('drawer-folded', on);
+    fold.setAttribute('aria-expanded', String(!on));
+    fold.title = on ? 'Settings' : 'Fold the settings away';
+    fold.setAttribute('aria-label', fold.title);
+  };
+  folded(typeof prefs.drawer === 'boolean' ? !prefs.drawer : innerWidth < 760);
+  const toggle = () => { const on = document.body.classList.contains('drawer-folded'); prefs.drawer = on; keep(); folded(!on); };
+  fold.addEventListener('click', (e) => { e.stopPropagation(); toggle(); fold.blur(); });
+  $('#drawer').addEventListener('click', (e) => { if (document.body.classList.contains('drawer-folded')) toggle(); });
+  // the keys fold away, leaving their bar
+  const keysBtn = $('#keys-btn');
+  const keysFolded = (on) => {
+    document.body.classList.toggle('keys-folded', on);
+    keysBtn.setAttribute('aria-expanded', String(!on));
+    keysBtn.title = on ? 'Show the keys' : 'Hide the keys: the controls take their room';
+    keysBtn.setAttribute('aria-label', keysBtn.title);
+  };
+  keysFolded(prefs.keys === false);
+  keysBtn.addEventListener('click', () => { const on = !document.body.classList.contains('keys-folded'); prefs.keys = !on; keep(); keysFolded(on); keysBtn.blur(); if (!on) layoutKeys(); });
 }
 
 // ---- presets: the instrument's (its Preset parameter), then your own, then saving them -----------
@@ -591,9 +735,9 @@ function toast(text) {
 
 // ---- notes --------------------------------------------------------------------------------------
 const local = new Map(); // key → how many hands (pointer fingers, computer keys) hold it here
-let remote = new Set(), others = new Set(), pedal = false, pedalHere = false;
+let remote = new Set(), pedal = false, pedalHere = false;
 function down(key, vel) {
-  if (learning && two()) { arrange('split', clamp(key, 24, 96)); return; }
+  if (learning) { learn(key); return; }
   if (key < LO || key > HI) return;
   const n = (local.get(key) || 0) + 1;
   local.set(key, n);
@@ -614,13 +758,21 @@ function panic() { local.clear(); held.clear(); forte('panic'); pedal = pedalHer
 const kbRoot = $('#keyboard');
 let wLo = 48, wHi = 84, base = 48;
 const els = new Map();
-const isDown = (m) => local.has(m) || remote.has(m) || others.has(m);
-// held down, in the colour of the part it plays (the other part's: .other)
+const isDown = (m) => local.has(m) || remote.has(m);
+// the part whose colour a held key shows: the one shown if it plays it, else the first that does
+function holder(m) {
+  if (!many()) return focus;
+  const order = [focus, ...parts.keys()];
+  return order.find((j) => partKeys[j]?.has(m)) ?? (local.has(m) ? order.find((j) => plays(parts[j], m)) : undefined) ?? focus;
+}
+// held down, in the colour of the part it plays (another than the one shown: .other)
 function paintKey(m) {
   const el = els.get(m);
   if (!el) return;
-  el.classList.toggle('down', isDown(m));
-  el.classList.toggle('other', !remote.has(m) && (others.has(m) || (local.has(m) && partOf(m) !== focus)));
+  const down = isDown(m), j = down ? holder(m) : focus;
+  el.classList.toggle('down', down);
+  el.classList.toggle('other', j !== focus);
+  if (j !== focus) { el.style.setProperty('--held', parts[j].accent); el.style.setProperty('--held-down', lighter(parts[j].accent, 0.55)); }
 }
 function paintAll() { for (const m of els.keys()) paintKey(m); }
 function labels() {
@@ -649,12 +801,21 @@ function buildKeys() {
     lbl.className = 'k-label'; lbl.textContent = map.get(m) ?? '';
     el.appendChild(lbl);
     el.classList.toggle('mapped', map.has(m));
-    if (two() && mode === 'split') { el.classList.add(`part${partOf(m)}`); el.classList.toggle('edge', m === splitKey); }
+    if (many()) zone(el, m);
     kbRoot.appendChild(el); els.set(m, el);
     paintKey(m);
   }
-  $('#range').textContent = `${noteName(wLo)}–${noteName(wHi)}${two() && mode === 'split' ? ` · split at ${noteName(splitKey)}` : ''}`;
+  $('#range').textContent = `${noteName(wLo)}–${noteName(wHi)}`;
   $('#down').disabled = wLo <= LO; $('#up').disabled = wHi >= HI;
+}
+// the parts that play key m, a stripe each (none playing it: no band)
+function zone(el, m) {
+  const colours = parts.map((p) => (plays(p, m) ? p.accent : null));
+  if (!colours.some(Boolean)) return;
+  const row = parts.length > 2 ? 2 : 3;
+  el.classList.add('zoned');
+  el.style.setProperty('--zone-h', `${row * parts.length}px`);
+  el.style.setProperty('--zones', `linear-gradient(to bottom, ${colours.map((c, i) => `${c ?? 'transparent'} ${i * row}px ${(i + 1) * row}px`).join(', ')})`);
 }
 // as many keys as fit at about 24 px a white key, starting on a C, around the computer's keys
 function layoutKeys() {
@@ -670,7 +831,13 @@ function layoutKeys() {
 // the keys that play: a historical compass (D.compass: lo, hi and its toggle) or every key
 function bounds() {
   [LO, HI] = D.compass && !(values[D.compass[2]] > 0.5) ? D.compass : [D.keyLo, D.keyHi];
-  if (two()) { const o = D.parts[1 - (D.focus ?? 0)]; LO = Math.min(LO, o.keyLo); HI = Math.max(HI, o.keyHi); } // and the other part's keys
+  if (!many()) return;
+  // and the keys the others play, where they are pressed
+  for (const [j, p] of parts.entries()) {
+    if (j === focus) continue;
+    const lo = Math.max(p.lo, p.keyLo - 12 * p.oct, 0), hi = Math.min(p.hi, p.keyHi - 12 * p.oct, 127);
+    if (lo <= hi) { LO = Math.min(LO, lo); HI = Math.max(HI, hi); }
+  }
 }
 function rebound() {
   bounds();
@@ -768,11 +935,14 @@ async function poll() {
       for (const [i, x, text, v] of r.p) { show(i, x, text); texts[i] = text; naturals[i] = v; }
       last = r;
       for (const f of listeners) try { f(r); } catch { /* the views' trouble, not the window's */ }
-      const next = new Set(r.keys), nextOthers = new Set(r.other ?? []);
-      const changed = new Set([...next, ...remote, ...nextOthers, ...others].filter((k) => next.has(k) !== remote.has(k) || nextOthers.has(k) !== others.has(k)));
-      // a MIDI key struck while the split waits for one
-      if (learning) { const k = [...changed].find((m) => (next.has(m) || nextOthers.has(m)) && !local.has(m)); if (k !== undefined) arrange('split', clamp(k, 24, 96)); }
-      remote = next; others = nextOthers;
+      // the keys sounding: the part shown's, or with more parts each one's, where it was pressed
+      const nextParts = (r.parts ?? []).map((a) => new Set(a));
+      const next = r.parts ? new Set(r.parts.flat()) : new Set(r.keys);
+      const was = (j, m) => partKeys[j]?.has(m) ?? false;
+      const changed = new Set([...next, ...remote].filter((k) => next.has(k) !== remote.has(k) || nextParts.some((q, j) => q.has(k) !== was(j, k))));
+      // a MIDI key struck while a card waits for one
+      if (learning) { const k = [...next].find((m) => !remote.has(m) && !local.has(m)); if (k !== undefined) learn(k); }
+      remote = next; partKeys = nextParts;
       for (const k of changed) paintKey(k);
       if (D.space && D.space !== 'switch' && r.pedal !== pedal) { pedal = r.pedal; $('#pedal').setAttribute('aria-pressed', String(pedal)); }
     }
@@ -897,31 +1067,38 @@ function mockForte() {
     { slug: 'drums', name: 'Practice Drums', accent: '#e08a5a', keyLo: 36, keyHi: 84 },
     { slug: 'pipes', name: 'Practice Pipes', accent: '#b58cf0', keyLo: 36, keyHi: 96 },
   ];
-  let suite = { parts: ['mock'], focus: 0, mode: 'layer', split: 60 };
-  try { suite = JSON.parse(sessionStorage.getItem('forte-mock-suite')) || suite; } catch { /* none */ }
-  const keep = () => { try { sessionStorage.setItem('forte-mock-suite', JSON.stringify(suite)); } catch { /* none */ } };
+  const whole = { lo: 0, hi: 127, oct: 0, level: 0, on: true };
+  let suite = { parts: [{ slug: 'mock', ...whole }], focus: 0 };
+  try { suite = JSON.parse(sessionStorage.getItem('forte-mock-suite/v2')) || suite; } catch { /* none */ }
+  const keep = () => { try { sessionStorage.setItem('forte-mock-suite/v2', JSON.stringify(suite)); } catch { /* none */ } };
   const known = (slug) => INSTRUMENTS.some((x) => x.slug === slug);
   return async (m, ...a) => {
     if (m === 'describe') {
-      const shown = INSTRUMENTS.find((x) => x.slug === suite.parts[suite.focus]);
+      const shown = INSTRUMENTS.find((x) => x.slug === suite.parts[suite.focus].slug);
       const d = { slug: shown.slug, name: shown.name, version: '0.0.0', accent: shown.accent, keyLo: shown.keyLo, keyHi: shown.keyHi, compass: shown.slug === 'mock' ? [53, 89, 4] : undefined, space: 'sustain', presets: P, params };
       if (location.search.includes('suite')) {
         d.instruments = INSTRUMENTS.map(({ slug, name }) => ({ slug, name })).sort((x, y) => x.name.localeCompare(y.name));
-        d.parts = suite.parts.map((slug) => INSTRUMENTS.find((x) => x.slug === slug));
-        Object.assign(d, { focus: suite.focus, mode: suite.mode, split: suite.split });
+        d.parts = suite.parts.map((p) => ({ ...INSTRUMENTS.find((x) => x.slug === p.slug), ...p }));
+        Object.assign(d, { focus: suite.focus, most: 4 });
       }
       return d;
     }
-    if (m === 'choose') { if (!known(a[0])) return false; suite.parts[0] = a[0]; keep(); return true; }
-    if (m === 'second') {
-      if (a[0] && !known(a[0])) return false;
-      suite.parts = a[0] ? [suite.parts[0], a[0]] : [suite.parts[0]];
-      suite.focus = a[0] ? 1 : 0; keep(); return true;
-    }
+    if (m === 'choose') { if (!known(a[0])) return false; suite.parts[suite.focus].slug = a[0]; keep(); return true; }
+    if (m === 'add') { if (!known(a[0]) || suite.parts.length >= 4) return false; suite.parts.push({ slug: a[0], ...whole }); suite.focus = suite.parts.length - 1; keep(); return true; }
     if (m === 'focus') { if (!suite.parts[a[0]]) return false; suite.focus = a[0]; keep(); return true; }
-    if (m === 'arrange') { suite.mode = a[0]; suite.split = a[1] ?? suite.split; keep(); return true; }
-    if (m === 'swap') { if (suite.parts.length < 2) return false; suite.parts.reverse(); suite.focus = 1 - suite.focus; keep(); return true; }
-    if (m === 'drop') { if (suite.parts.length < 2) return false; suite.parts.splice(a[0], 1); suite.focus = 0; keep(); return true; }
+    if (m === 'zone') {
+      if (!suite.parts[a[0]] || suite.parts.length < 2) return false;
+      const [lo, hi] = [a[1], a[2]].sort((x, y) => x - y);
+      Object.assign(suite.parts[a[0]], { lo, hi, oct: clamp(a[3], -2, 2), level: clamp(a[4], -30, 6), on: !!a[5] }); keep(); return true;
+    }
+    if (m === 'lead') { if (!suite.parts[a[0]]) return false; const was = suite.parts[suite.focus]; suite.parts.unshift(...suite.parts.splice(a[0], 1)); suite.focus = suite.parts.indexOf(was); keep(); return true; }
+    if (m === 'drop') {
+      if (suite.parts.length < 2 || !suite.parts[a[0]]) return false;
+      suite.parts.splice(a[0], 1);
+      suite.focus = suite.focus === a[0] ? 0 : suite.focus - (suite.focus > a[0] ? 1 : 0);
+      if (suite.parts.length < 2) Object.assign(suite.parts[0], whole);
+      keep(); return true;
+    }
     if (m === 'set') { v[a[0]] = a[1]; sent[a[0]] = a[1]; return { x: a[1], text: text(a[0]) }; }
     if (m === 'note') { if (a[1] > 0) keys.add(a[0]); else keys.delete(a[0]); }
     // your own presets: in memory
@@ -946,9 +1123,9 @@ function mockForte() {
       const p = [];
       v.forEach((x, i) => { if (x !== sent[i]) { sent[i] = x; p.push([i, x, text(i)]); } });
       if (suite.parts.length < 2) return { p, keys: [...keys], pedal };
-      const side = (k) => (suite.mode === 'split' ? (k >= suite.split ? 0 : 1) : -1); // −1: both
-      const of = (part) => [...keys].filter((k) => side(k) < 0 || side(k) === part);
-      return { p, keys: of(suite.focus), other: of(1 - suite.focus), pedal };
+      const of = (q) => [...keys].filter((k) => q.on && k >= q.lo && k <= q.hi); // where they were pressed
+      const shown = suite.parts[suite.focus];
+      return { p, keys: of(shown).map((k) => k + 12 * shown.oct), parts: suite.parts.map(of), pedal };
     }
     return null;
   };

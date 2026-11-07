@@ -12,7 +12,7 @@
 //
 // Config: the instrument's descriptor (<slug>/src/<slug>-instrument.js: id, groups, presets, keep,
 // range, space, modWheel, wasm, noteData, chain), spread in, plus the page's own:
-//   id            instrument slug (localStorage key)
+//   id            instrument slug (its settings are kept in localStorage as forte/<id>/params/v1)
 //   groups        parameter groups: [{ title, open?, empty?, params: [{ id, label, min, max, def, step?, log?,
 //                 fmt?, hint?, type?: 'select' | 'checkbox', options?: [[value, name]…], showIf?(P),
 //                 perform?, strip? }] }]   perform: true marks a control you'd play with (the plugins'
@@ -34,8 +34,6 @@
 //   midiVelocity(v)  a note's velocity (0..1, after the velocity curve) in the engine's units, for an
 //                 engine that wants its own (MIDI and the on-screen keys; the Combinations page does the same)
 //   keyVelocity   the velocity the computer keys play when there is no `velocity` parameter (0.75)
-//   store         the localStorage key for the settings, for a page older than the shell that kept
-//                 its own (registry.js paramsStore); otherwise forte/<id>/params/v1
 //   console       { groups, defaults, get(P), put(values, P) }: state the page keeps in P in its own
 //                 shape (the organ's drawbars and switches, organ-params.js), and as plugin parameters
 //                 (its groups) through get and put: saved, in presets and links, the plugin's window
@@ -61,9 +59,9 @@
 
 import { createChain } from './chain.js';
 import { createKeyboard } from './keyboard.js';
-import { trimGain } from './registry.js';
+import { trimGain, paramsStore } from './registry.js';
 import { controlOwns, unfocus } from './focus.js';
-import { startMIDI, resumeMIDI, pageMIDI, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from './midi.js';
+import { startMIDI, resumeMIDI, pageMIDI, volumePedal, pedalVolume, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from './midi.js';
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
 import { dress, faceOf } from './faces.js';
@@ -97,8 +95,8 @@ export function createShell(cfg) {
   const DEFAULTS = { ...Object.fromEntries(ALL.map((p) => [p.id, p.def])), ...structuredClone(CON?.defaults ?? {}) };
   // a console's state as P keeps it: a stored value of the same shape as its default
   const sameShape = (v, d) => typeof v === typeof d && Array.isArray(v) === Array.isArray(d) && (!Array.isArray(d) || v.length === d.length);
-  const STORE = cfg.store ?? `forte/${cfg.id}/params/v1`;
-  // Stored settings may be from an older version: keep only known ids, with valid values.
+  const STORE = paramsStore(cfg.id);
+  // Stored settings may name parameters that are gone or values out of range: keep only known ids, with valid values.
   const valid = (p, v) => {
     if (p.type === 'select') return p.options.some(([k]) => k === v) ? v : p.def;
     if (p.type === 'checkbox') return typeof v === 'boolean' ? v : p.def;
@@ -317,6 +315,9 @@ export function createShell(cfg) {
   }
   const ccs = controllersOf(cfg), ccLast = {}; // the descriptor's controllers and faders
   pageMIDI({ onMIDI, controllers: ccs }); // a song played from a MIDI file (shared/songs.js) plays it as a keyboard would
+  // a volume pedal (CC7) moves the Volume control, as the mod wheel moves its control (shared/midi.js)
+  const volumeP = cfg.chain?.volume && ALL.find((q) => q.id === cfg.chain.volume);
+  if (volumeP) volumePedal((v) => shell.setParam(volumeP.id, pedalVolume(volumeP, v)));
   function onMIDI(ev) {
     const [st, d1, d2] = ev.data, cmd = st & 0xf0;
     const { own: its, with: own } = notes.midi(ev.data);
@@ -438,12 +439,21 @@ export function createShell(cfg) {
     for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(shell.P) : false;
     for (const [note, ids] of groupNotes) note.hidden = ids.some((id) => !controls.get(id)?.wrap.hidden);
   };
+  // a control moved: the menu no longer shows a preset, unless it was one a preset keeps as it was
+  // (the volume, the room: cfg.keep) and the chosen preset doesn't set it, as a volume pedal moves it
+  const kept = new Set(cfg.keep ?? []);
+  const unchoose = (ids) => {
+    const ps = $('#preset');
+    if (!ps) return;
+    const sets = cfg.presets?.[+ps.value]?.p ?? null;
+    if (ids.some((k) => !kept.has(k) || (sets && k in sets))) ps.value = '';
+  };
   shell.setParam = (id, v, dragging = false) => {
     if (shell.P[id] === v) return;
     shell.P[id] = v;
     if (id === cfg.compass?.param) rebound();
     refresh(id, dragging); refreshVisibility(); save(); updateHelp();
-    if ($('#preset')) $('#preset').value = '';
+    unchoose([id]);
     shell.applyMix(); sendParams();
     cfg.onParam?.(id, v, shell.P, ALL.find((q) => q.id === id), dragging);
   };
@@ -453,7 +463,7 @@ export function createShell(cfg) {
     if (!ids.length) return;
     for (const k of ids) { shell.P[k] = structuredClone(changes[k]); if (k === cfg.compass?.param) rebound(); refresh(k, dragging); }
     refreshVisibility(); save(); updateHelp();
-    if ($('#preset')) $('#preset').value = '';
+    unchoose(ids);
     shell.applyMix(); sendParams();
     if (ids.length === 1) cfg.onParam?.(ids[0], shell.P[ids[0]], shell.P, ALL.find((q) => q.id === ids[0]) ?? null, dragging);
     else cfg.onParam?.('*', null, shell.P, null, dragging);

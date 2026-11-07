@@ -208,7 +208,7 @@ async function mount(t) {
     play();
   }
 
-  // the page's saved settings (forte/<id>/params/v1, or an older page's own key), kept as they
+  // the page's saved settings (forte/<id>/params/v1), kept as they
   // were: a player who never changed a setting still has none saved after the tour, and so
   // gets a later version's defaults
   const STORED = /\/params\/v\d+$/;

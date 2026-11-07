@@ -11,7 +11,6 @@ import { MotionView, SpectrumView, drawSection, FAMILY } from './viz.js';
 import { SpectrogramView } from '../../shared/views.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
 import { unfocus } from '../../shared/focus.js';
-import { paramsStore } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
 const [KEY_LO, KEY_HI] = INSTRUMENT.range;
@@ -25,7 +24,6 @@ const sent = new Map(); // MIDI key → the voice data the engine holds for it (
 let focusKey = 60, mcTimer = 0;
 const shell = createShell({
   ...INSTRUMENT,
-  store: paramsStore('piano'), // the page's own name for its settings, from before the shell
   arrows: { param: 'velocity' }, // a log parameter: ↑/↓ step by 1/24 of its range, about ×1.14
   // What a note offers the engine: its key's voice data, packed by the model here, so that the
   // audio thread need not build it (unless it already holds it)

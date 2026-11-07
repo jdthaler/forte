@@ -12,8 +12,9 @@
 //     MIDI turned on by resumeMIDI comes before any click).
 //   wheelValue(p, cc, max?) maps the mod wheel onto a parameter: at rest (0) its default, fully up
 //   its maximum, so a wheel at rest never drags the instrument to the bottom of its range.
-//   touch() is the velocity curve the player chose (every page shares it, from the menu the #midi
-//   status opens once startMIDI turns MIDI on: midiMenu), touched(v) a MIDI velocity (0..1) through it; SOFT_PEDAL
+//   touch() is the velocity curve the player chose (every page shares it, from the MIDI settings:
+//   midiSettings, in the page's drawer, which the #midi status opens once startMIDI turns MIDI on),
+//   touched(v) a MIDI velocity (0..1) through it; SOFT_PEDAL
 //   scales the velocity of keys struck under CC67; createSostenuto() keeps the keys CC66 holds.
 //   mpeMode() is MPE's mode the player chose (shared/mpe.js: 'auto', 'on' or 'off'; every page
 //   shares it, from the same menu); pageMpe() decodes it for a page.
@@ -31,12 +32,17 @@
 //   A foot controller (a Roland FC-300 as it comes) works on every page, in startMIDI:
 //   - SWITCHES: its general-purpose switches CC80, 81 and 82 are the sustain, sostenuto and soft
 //     pedals (CC64, 66, 67), so they do whatever those do on each instrument;
-//   - the volume (CC7) and expression (CC11) pedals turn the page's output down (pedalGain, which
+//   - a device's volume pedal (CC7) moves the page's Volume control (volumePedal, pedalVolume:
+//     its default toe down, silent heel down); the expression pedal (CC11), and CC7 on a page
+//     without a Volume control or from a song, turn the page's output down (pedalGain, which
 //     shared/chain.js applies after the limiter): full until a pedal moves, silent heel down;
 //     an instrument that maps CC11 itself (an organ's swell) keeps it;
 //   - a program change n plays the menu's preset n + 1 (pedal 1 the first preset, then your own
-//     after the instrument's): choosePreset.
-//   The plugins do the same (native/plugin/plugin.cpp: kTouchGamma, kSoftPedal, sostenutoPedal,
+//     after the instrument's): choosePreset;
+//   - it gets a section of the page's drawer (shared/fc300.js) once its switches (CC80–83) are
+//     heard, or its interface's name is the one it came by before, which can drive it over SysEx.
+//   The plugins do the same, but for CC7, which stays a gain after the limiter there (the host has a
+//   volume of its own to show it on) (native/plugin/plugin.cpp: kTouchGamma, kSoftPedal, sostenutoPedal,
 //   kMpeId, kTransposeId, kOctaveId, moveOn, controller, footSwitch, levels, programChange; the
 //   faders reach them as the descriptor's controllers).
 
@@ -132,13 +138,48 @@ export function setLevel(cc, v) {
 export function choosePreset(n) {
   const sel = typeof document !== 'undefined' && document.querySelector('#preset');
   if (!sel) return;
-  const presets = [...sel.options].filter((o) => o.value !== '' && (!o.value.startsWith('__') || o.value.startsWith('__user:')));
+  const presets = presetChoices();
   const o = presets[n];
   import('./shell.js').then(({ toast }) => toast(o ? `Preset ${n + 1}: ${o.text}` : `No preset ${n + 1} here (there are ${presets.length})`), () => {});
   if (!o) return;
   sel.value = o.value;
   sel.dispatchEvent(new Event('change', { bubbles: true }));
 }
+
+/** The presets a program change counts (the menu's options, the instrument's then your own), and
+ *  which of them is chosen now (−1: none, as after a control is moved). */
+export function presetChoices() {
+  const sel = typeof document !== 'undefined' && document.querySelector('#preset');
+  if (!sel) return [];
+  return [...sel.options].filter((o) => o.value !== '' && (!o.value.startsWith('__') || o.value.startsWith('__user:')));
+}
+export const presetIndex = () => { const sel = typeof document !== 'undefined' && document.querySelector('#preset'); return sel ? presetChoices().findIndex((o) => o.value === sel.value) : -1; };
+
+/**
+ * A device's volume pedal (CC7) on the page's Volume control, where the page has one
+ * (shared/shell.js gives it: volumePedal(fn), fn(v) for each move), so the control moves with
+ * the pedal; without one, or from a song, CC7 turns the output down after the limiter (setLevel).
+ */
+let volumeTo = null;
+export function volumePedal(fn) { volumeTo = fn; }
+/** The Volume control p at a volume pedal's v (0..127): its default with the toe down, silent heel
+ *  down, (v/127)² between (General MIDI's 40·log10, as setLevel); in dB for a control in dB. */
+export function pedalVolume(p, v) {
+  const u = Math.min(1, Math.max(0, v / 127));
+  let x = p.min < 0 ? (u <= 0 ? p.min : p.def + 40 * Math.log10(u)) : p.def * u * u;
+  if (p.step) x = Math.round(x / p.step) * p.step;
+  return Math.min(p.max, Math.max(p.min, x));
+}
+
+// A Roland FC-300's section of the drawer (shared/fc300.js), loaded the first time one is seen:
+// an input that sends its switches (CC80–83), or one with the name the last one came by
+let footed = null;
+function foot(fn) {
+  footed ??= import('./fc300.js').then((m) => m.fc300Panel());
+  footed.then(fn, () => {});
+}
+const FOOT = 'forte/fc300/v1';
+const footName = () => { try { return JSON.parse(localStorage.getItem(FOOT) || '{}')?.name ?? null; } catch { return null; } };
 
 // A Seaboard's panel (shared/rise.js), loaded the first time one connects; fn(panel) once it is
 // there, each in the order it came (a message is drawn after the connection that brought it)
@@ -162,14 +203,27 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
     const letGo = (id) => { inputs.get(id)?.letGo(); inputs.delete(id); };
     // a device's keys follow Octave and Transpose (shift)
     const input = (id) => { let i = inputs.get(id); if (!i) inputs.set(id, (i = createInput(send, controllers, { shift: true }))); return i; };
-    const seaboards = new Set();
+    const seaboards = new Set(), feet = new Set();
+    const footed = (inp) => { if (feet.has(inp.id)) return; feet.add(inp.id); foot((f) => f.input(inp.id, inp.name, true)); };
     const bind = () => {
       const names = [];
       for (const inp of acc.inputs.values()) {
-        if (inp.state === 'disconnected') { letGo(inp.id); if (seaboards.delete(inp.id)) rise((r) => r.input(inp.id, inp.name, false)); continue; }
+        if (inp.state === 'disconnected') {
+          letGo(inp.id);
+          if (seaboards.delete(inp.id)) rise((r) => r.input(inp.id, inp.name, false));
+          if (feet.delete(inp.id)) foot((f) => f.input(inp.id, inp.name, false));
+          continue;
+        }
         names.push(inp.name);
         const board = /seaboard/i.test(inp.name ?? '');
-        inp.onmidimessage = (ev) => { if (board) rise((r) => r.midi(inp.id, ev.data)); input(inp.id).take(ev.data); };
+        if (inp.name && inp.name === footName()) footed(inp); // the FC-300 came by this interface before
+        inp.onmidimessage = (ev) => {
+          const d = ev.data;
+          if (board) rise((r) => r.midi(inp.id, d));
+          if ((d[0] & 0xf0) === 0xb0 && d[1] >= 80 && d[1] <= 83) footed(inp); // an FC-300's switches, as it comes
+          if (feet.has(inp.id)) foot((f) => f.midi(inp.id, d));
+          input(inp.id).take(d);
+        };
         // A Seaboard sends MPE (notes on channels 2–16, each bending ±48 semitones, ROLI
         // Dashboard's defaults) but may not say so: announce its lower zone of 15 for it, as the
         // MPE Configuration Message would (MPE on Auto then decodes it; Off still ignores it)
@@ -181,13 +235,14 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
       }
       for (const id of [...inputs.keys()]) if (!acc.inputs.has(id)) letGo(id);
       for (const id of [...seaboards]) if (!acc.inputs.has(id)) { seaboards.delete(id); rise((r) => r.input(id, '', false)); }
+      for (const id of [...feet]) if (!acc.inputs.has(id)) { feet.delete(id); foot((f) => f.input(id, '', false)); }
       status(names.length ? `MIDI: ${names.join(', ')}` : 'MIDI: no devices');
     };
     bind();
     acc.onstatechange = bind;
     if (button) button.hidden = true;
     midiMenu();
-    if (keyShift()) import('./shell.js').then(({ toast }) => toast(`MIDI keys play ${shiftText()}: Octave and Transpose are in the MIDI menu`), () => {});
+    if (keyShift()) import('./shell.js').then(({ toast }) => toast(`MIDI keys play ${shiftText()}: Octave and Transpose are in the MIDI settings`), () => {});
   }, () => status('MIDI: permission denied'));
 }
 
@@ -198,11 +253,12 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
  * its volume and expression pedals the page's output level, a program change a preset. With
  * shift (a device's), the keys move by the player's Octave and Transpose (keyShift); a note-off
  * and its poly pressure go where its note-on went. A song has fitted itself to the keys already.
- *   const input = createInput(send, controllers, { shift })
+ * A device's (device, as shift by default) volume pedal moves the page's Volume control (volumePedal).
+ *   const input = createInput(send, controllers, { shift, device })
  *   input.take(data)   one message
  *   input.letGo()      the source went away: its notes and pedals let go, its levels full again
  */
-export function createInput(send, controllers = {}, { shift = false } = {}) {
+export function createInput(send, controllers = {}, { shift = false, device = shift } = {}) {
   // notes: 'channel:key' → the key it plays (−1 when moved past MIDI's 0…127); pedals: 'channel:cc'; held: cc
   const notes = new Map(), pedals = new Set(), held = new Set();
   const mine = (cc) => Object.hasOwn(controllers, cc); // the instrument's own
@@ -215,7 +271,8 @@ export function createInput(send, controllers = {}, { shift = false } = {}) {
       const [st, d1, d2] = data, cmd = st & 0xf0, ch = st & 0x0f, nk = `${ch}:${d1}`;
       const off = (status, vel) => { const k = notes.get(nk); notes.delete(nk); if (k >= 0) send([status, k, vel]); };
       if (cmd === 0xc0) choosePreset(d1);
-      if (cmd === 0xb0 && (d1 === 7 || d1 === 11) && !mine(d1)) { setLevel(d1, d2); if (d2 < 127) held.add(d1); else held.delete(d1); }
+      if (cmd === 0xb0 && d1 === 7 && device && volumeTo && !mine(7)) volumeTo(d2); // the page's Volume control moves with the pedal
+      else if (cmd === 0xb0 && (d1 === 7 || d1 === 11) && !mine(d1)) { setLevel(d1, d2); if (d2 < 127) held.add(d1); else held.delete(d1); }
       if (cmd === 0xb0 && d1 === 121) { for (const cc of [7, 11]) if (!mine(cc)) setLevel(cc, 127); held.clear(); } // Reset All Controllers
       if (cmd === 0x90 && d2 > 0 && !mayPlay()) { needClick(); return; }
       if (cmd === 0x90 && d2 > 0) {
@@ -251,14 +308,14 @@ export function createInput(send, controllers = {}, { shift = false } = {}) {
 let page = null;
 export function pageMIDI(handler) { if (handler) page = handler; return page; }
 
-// The MIDI settings, in a menu the MIDI status opens once MIDI is on: the velocity curve, MPE,
-// Octave and Transpose. The status says how far the keys are moved, in the accent, while they are.
-function midiMenu() {
-  const pill = document.querySelector('#midi');
-  if (!pill || document.querySelector('#midi-menu')) return;
-  const menu = document.createElement('div');
-  menu.id = 'midi-menu'; menu.className = 'forte-midi-menu'; menu.hidden = true;
-  menu.setAttribute('role', 'group'); menu.setAttribute('aria-label', 'MIDI settings');
+// The MIDI settings: the velocity curve, MPE, Octave and Transpose, each a labelled dropdown
+// (midiSettings, which the page's drawer shows, shared/layout.js). Once MIDI is on, the MIDI status
+// opens them: in the drawer, where the page has one, else in a menu under it. The status says how
+// far the keys are moved, in the accent, while they are.
+export function midiSettings() {
+  const box = document.createElement('div');
+  box.className = 'forte-midi-settings';
+  box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'MIDI settings');
   const steps = (n) => Array.from({ length: 2 * n + 1 }, (_, i) => [i - n, signed(i - n)]);
   for (const [id, name, title, options, value, set] of [
     ['touch', 'Touch', 'The velocity curve: how hard a MIDI key has to be struck. Soft makes a light touch louder, Hard asks for a firmer one.',
@@ -278,13 +335,29 @@ function midiMenu() {
     el.value = String(value);
     el.addEventListener('change', () => { set(el.value); unfocus(el); });
     row.append(Object.assign(document.createElement('span'), { textContent: name }), el);
-    menu.append(row);
+    box.append(row);
   }
-  pill.after(menu);
+  return box;
+}
+function midiMenu() {
+  const pill = document.querySelector('#midi');
+  if (!pill || pill.classList.contains('forte-midi-pill')) return;
   pill.classList.add('forte-midi-pill');
   pill.setAttribute('role', 'button'); pill.tabIndex = 0;
-  pill.setAttribute('aria-haspopup', 'true'); pill.setAttribute('aria-controls', menu.id); pill.setAttribute('aria-expanded', 'false');
   pill.title = 'MIDI settings: touch, MPE, octave and transpose';
+  const drawer = document.querySelector('#forte-drawer');
+  if (drawer) { // the drawer's MIDI section, opened (shared/layout.js)
+    pill.setAttribute('aria-controls', drawer.id);
+    const go = () => document.dispatchEvent(new CustomEvent('forte-drawer', { detail: 'midi' }));
+    pill.addEventListener('click', go);
+    pill.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); go(); } });
+    showShift();
+    return;
+  }
+  const menu = midiSettings();
+  menu.id = 'midi-menu'; menu.classList.add('forte-midi-menu'); menu.hidden = true;
+  pill.after(menu);
+  pill.setAttribute('aria-haspopup', 'true'); pill.setAttribute('aria-controls', menu.id); pill.setAttribute('aria-expanded', 'false');
   const open = (on) => {
     menu.hidden = !on;
     pill.setAttribute('aria-expanded', String(on));

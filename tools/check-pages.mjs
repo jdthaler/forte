@@ -2,13 +2,14 @@
 // what a layout regression breaks: errors in the console, a page that scrolls sideways (as
 // loaded, with the menus, Controls and every view turned on, and with audio started), the
 // controls each page should place (the perform controls above the keys, the ⓘ buttons, "Default
-// settings" among the presets in the controls' bar, Discover | Perform in the views' bar, the keys,
+// settings" among the presets and the presets in the drawer, Discover | Perform in the views' bar, the keys,
 // the Quality choice in the header, set while audio plays), that each toggle turns its view or
 // group of controls off and on (and on the desktop, that what's turned on is still on after a
 // reload, that each bar's fold button folds its panel away and back, that the handle shares the
 // height, that every view shows in Perform, with the presets and More controls in the keyboard
 // bar instead of the controls' bar, and the screen kept awake there once audio runs, and not in
-// Discover), the guided tour (Tour in the header, each step showing its views, and every control
+// Discover), that the drawer opens (from its rail, or on a phone from the header), plays a preset
+// and folds away again, and that the keys fold away and come back, at every size, the guided tour (Tour in the header, each step showing its views, and every control
 // as it was once it ends; on the desktop and the phone), Songs (♪ in the header; a song plays its
 // keys and stops when closed; on the desktop and the phone), what a screen reader finds (every
 // control named in words, the views' canvases named, sliders' values said as shown; on the desktop
@@ -106,7 +107,7 @@ const COUNT = () => {
     controlGroups: n('.forte-control-toggles button'),
     viewsOn: n('.forte-view-toggles button[aria-pressed="true"]'),
     mode: [...document.querySelectorAll('.forte-views-bar .forte-mode button')].filter((e) => e.checkVisibility()).length,
-    barPresets: [...document.querySelectorAll('.forte-controls-bar .forte-presets select')].filter((e) => e.checkVisibility()).length,
+    drawerPresets: n('#forte-drawer [data-drawer="presets"]'),
     listen: n('button[data-src]'),
     quality: [...document.querySelectorAll('header #quality')].filter((e) => e.checkVisibility()).length,
     tour: [...document.querySelectorAll('body > header .forte-tour-start')].filter((e) => e.checkVisibility()).length,
@@ -217,6 +218,51 @@ async function remembered(tab) {
   await tab.waitForTimeout(150);
   if (!((await tab.evaluate(HEIGHTS))[1] > 0)) out.push('Perform: More controls in the keyboard bar doesn\'t open the controls');
   await more.click(CLICK).catch(() => {});
+  return out;
+}
+
+// The drawer (shared/layout.js): it opens, from its rail or (on a phone) the header, with
+// the Presets menu in sight; a preset picked from it plays and stays named by it (on the
+// Combinations page, which empties its menu once it has played one, neither); it folds
+// away again, and is left as it was. Then the keys fold away, leaving their bar, and come back.
+const DRAWER = () => ({
+  open: document.body.classList.contains('drawer-open'),
+  w: Math.round(document.querySelector('#forte-drawer')?.getBoundingClientRect().width ?? 0),
+  presets: document.querySelector('#forte-drawer #preset')?.checkVisibility() ? 1 : 0,
+  menu: document.querySelector('#preset')?.checkVisibility() ? 1 : 0, // (in Perform, above the keys)
+});
+async function drawerAndKeys(tab, combine) {
+  const out = [];
+  const opener = (await tab.locator('.forte-drawer-open').isVisible().catch(() => false)) ? '.forte-drawer-open' : '.forte-drawer-fold';
+  const was = await tab.evaluate(DRAWER);
+  if (!was.open) { await tab.locator(opener).click(CLICK).catch(() => {}); await tab.waitForTimeout(350); }
+  const s = await tab.evaluate(DRAWER);
+  if (!s.open || s.w < 200 || !s.menu) out.push(`the drawer doesn't open with the presets in sight (${s.w}px wide, the Presets menu ${s.menu ? 'shown' : 'hidden'})`);
+  if (await tab.evaluate(WIDE) > 0) out.push('scrolls sideways with the drawer open');
+  const v = await tab.evaluate(() => [...(document.querySelector('#preset')?.options ?? [])].find((o) => o.value && !o.value.startsWith('__') && !o.disabled)?.value);
+  if (s.menu && v) {
+    await tab.locator('#preset').selectOption(v).catch(() => {});
+    await tab.waitForTimeout(200);
+    const menu = await tab.evaluate(() => document.querySelector('#preset')?.value);
+    // (the Combinations page empties its menu once it has combined the instruments)
+    if (combine ? menu !== '' : menu !== v) out.push(`a preset from the drawer doesn't play (the menu says "${menu}")`);
+  }
+  await tab.locator('.forte-drawer-fold').click(CLICK).catch(() => {});
+  await tab.waitForTimeout(350);
+  const f = await tab.evaluate(DRAWER);
+  if (f.open || f.presets) out.push(`the drawer doesn't fold away (the Presets menu still shown)`);
+  if (await tab.evaluate(WIDE) > 0) out.push('scrolls sideways with the drawer folded');
+  if (was.open) { await tab.locator(opener).click(CLICK).catch(() => {}); await tab.waitForTimeout(350); }
+  const KEYS = () => document.querySelector('#keyboard')?.offsetHeight ?? 0;
+  const fold = tab.locator('.forte-keys-fold');
+  if (!(await fold.isVisible().catch(() => false))) { out.push('no button to fold the keys away'); return out; }
+  await fold.click(CLICK).catch(() => {});
+  await tab.waitForTimeout(250);
+  if (await tab.evaluate(KEYS)) out.push('the keys don\'t fold away');
+  if (await tab.evaluate(WIDE) > 0) out.push('scrolls sideways with the keys folded away');
+  await fold.click(CLICK).catch(() => {});
+  await tab.waitForTimeout(250);
+  if (!(await tab.evaluate(KEYS))) out.push('the keys don\'t come back');
   return out;
 }
 
@@ -389,6 +435,8 @@ async function viewPage(browser, url, page, size, at) {
     if (await toggles(tab, broken)) { await tab.waitForTimeout(250); await sideways('every view on'); }
     step('reloading, folding and Perform');
     if (name === 'desktop' && counts.views) broken.push(...await remembered(tab));
+    step('opening the drawer and folding the keys');
+    if (counts.drawerPresets) broken.push(...await drawerAndKeys(tab, page === 'combine/'));
     step('starting audio');
     if (await click('#start')) {
       await tab.waitForTimeout(500); await sideways('audio started');
@@ -429,7 +477,7 @@ function failures(r, instrument, combine = false) {
   if (!c.performControls) f.push('no perform controls above the keys');
   if (!c.views) f.push('no toggles for the views');
   if (!c.mode) f.push('no Discover | Perform in the views\' bar');
-  if (!c.barPresets) f.push('no presets in the controls\' bar');
+  if (!c.drawerPresets) f.push('no presets in the drawer');
   if (!c.quality) f.push('no Quality choice in the header');
   if (!c.tour && !combine) f.push('no Tour in the header (a guided tour: shared/tour.js)');
   if (!c.songs) f.push('no ♪ Songs in the header (shared/songs.js)');
