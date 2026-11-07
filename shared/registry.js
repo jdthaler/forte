@@ -16,11 +16,9 @@
 
 export const FORTE_VERSION = '0.47.0';
 
-// Where each instrument's page keeps its settings in the browser: forte/<id>/params/v1, but the
-// five pages older than shared/shell.js keep the names they had (and the Combinations page reads
-// an instrument's settings from there, as it was left on its own page).
-const OWN_STORES = { piano: 'ribbon-piano/params/v1', organ: 'tonewheel-organ/params/v1', tines: 'tine-piano/params/v1', huygens: 'huygens-keyboard/params/v1', blackhole: 'blackhole-keyboard/params/v1' };
-export const paramsStore = (id) => OWN_STORES[id] ?? `forte/${id}/params/v1`;
+// Where each instrument's page keeps its settings in the browser (the Combinations page reads an
+// instrument's settings from there, as it was left on its own page).
+export const paramsStore = (id) => `forte/${id}/params/v1`;
 
 export const SECTIONS = [
   { id: 'traditional', title: 'Traditional instruments', short: 'Traditional',
