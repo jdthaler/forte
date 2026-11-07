@@ -26,6 +26,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { loadInstrument, paramsOf } from './headless.mjs';
 import { INSTRUMENTS, TEMPLATE, FORTE_VERSION, byId } from '../shared/registry.js';
 import { PAGE_ONLY } from '../shared/wasm.js'; // parameters only a page uses: the computer keys' velocity
+import { EXPRESSION, EXPRESSION_IDS, unanswered, slideOf } from '../shared/expression.js'; // the Expression switches: last, those it answers to
 import { TUNING_KEEP as TUNING_IDS, CENTS } from '../shared/tuning.js';
 import { controllersOf } from '../shared/midi.js';
 
@@ -214,13 +215,16 @@ export async function generate(slug) {
   const ids = JSON.parse(readFileSync(new URL('native/ids.json', R), 'utf8'));
   if (!ids[slug]) throw new Error(`${slug} has no VST3 class id in native/ids.json`);
   const version = slug === 'template' ? FORTE_VERSION : reg.version ?? '0.0.0';
-  const pageOnly = I.pageOnly ?? PAGE_ONLY;
+  const pageOnly = [...(I.pageOnly ?? PAGE_ONLY), ...EXPRESSION_IDS];
   const params = [];
   for (const g of I.groups) for (const p of g.params) if (!pageOnly.includes(p.id)) params.push({ ...p, group: g.title });
   // a console (the organ's drawbars and switches): state the page keeps in P beside the groups,
   // plugin parameters after them; console.get(P) gives their values
   const consoleIds = new Set();
   for (const g of I.console?.groups ?? []) for (const p of g.params) { params.push({ ...p, group: g.title }); consoleIds.add(p.id); }
+  // the Expression switches it answers to, last: the plugin applies them, and the WebAssembly's
+  // parameters stop before them (shared/wasm.js, pluginParams; native/web/engine-api.cpp)
+  for (const p of EXPRESSION.params) if (!unanswered(I).includes(p.id)) params.push({ ...p, group: EXPRESSION.title });
   // the plugin's own parameters come after the instrument's, saved by these ids (plugin.cpp)
   for (const p of params) if (PLUGIN_IDS.includes(p.id)) throw new Error(`${slug}.${p.id}: the plugin saves its own ${p.id} parameter under that id; name it otherwise`);
   const index = new Map(params.map((p, i) => [p.id, i]));
@@ -323,6 +327,8 @@ export async function generate(slug) {
   const ch = I.chain || {}, at = (id) => (id && index.has(id) ? `p::${ident(id)}` : '-1');
   const mw = typeof I.modWheel === 'string' ? { param: I.modWheel } : I.modWheel;
   const mwParam = mw ? params[index.get(mw.param)] : null;
+  const sl = slideOf(I), slParam = sl ? params[index.get(sl.param)] : null; // what a note's own slide moves
+  if (sl && !slParam) throw new Error(`${slug}: its slide's parameter ${sl.param} is not one of its parameters`);
   const [lo, hi] = I.range || [36, 96];
   w('// The plugin\'s description. The port supplies its engine, and midiVelocity when the');
   w(`// descriptor maps MIDI velocity itself (${I.midiVelocity ? 'this one does' : 'this one does not'}).`);
@@ -337,6 +343,7 @@ export async function generate(slug) {
   const compass = I.compass ? ` .compassLo = ${I.compass.keys[0]}, .compassHi = ${I.compass.keys[1]}, .compass = p::${ident(I.compass.param)},` : '';
   w(`    .keyLo = ${lo}, .keyHi = ${hi},${compass} .space = Space::${I.space ?? 'none'},`);
   w(`    .modWheel = ${mw ? at(mw.param) : -1}, .modWheelMax = ${mwParam ? num(valueOf(mwParam, mw.max ?? mwParam.max)) : 0},`);
+  w(`    .slide = ${sl ? at(sl.param) : -1}, .slideMax = ${slParam ? num(valueOf(slParam, sl.max ?? slParam.max)) : 0},`);
   w(`    .controllers = kControllers, .controllerCount = ${ccs.length},`);
   const body = ch.body ? ` .body = ${at(ch.body.param)}, .bodySeconds = ${num(ch.body.seconds)}, .bodyDry = ${num(ch.body.dry)}, .bodyWet = ${num(ch.body.wet)},` : '';
   const L = ch.limiter || {};

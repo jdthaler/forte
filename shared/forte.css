@@ -79,6 +79,8 @@ body[data-instrument] .forte-edge { background-color: var(--panel, #151518); }
 .forte-menu-home b::before { content: "f"; }
 .forte-menu-home span { color: var(--muted, #9a9284); font-size: 11.5px; }
 .forte-menu-home:hover { background: rgba(255, 255, 255, 0.06); }
+.forte-menu-combine b::before { content: "⊕"; font-style: normal; font-weight: 400; }
+.forte-menu-combine.current { background: rgba(255, 255, 255, 0.06); }
 .forte-menu-sec { color: var(--muted, #9a9284); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.7px; margin: 8px 6px 4px; }
 .forte-menu-item {
   display: grid;

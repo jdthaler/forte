@@ -5,8 +5,9 @@
 //   fires at V_s and dumps it to V_e; firing times solved exactly within each sample
 //   a firing kicks every other lamp by K: one within K of striking fires in the same instant
 //   (and may set off others); the rest are left exactly as they were
-//   optional rail sag (source resistance and reservoir), drift of each resistor, and a slow
-//   supply servo that holds the average pitch
+//   optional rail sag (source resistance and reservoir, loaded by every key's resistor and
+//   integrated with that load in, so it is stable however hard it is loaded), drift of each
+//   resistor, and a slow supply servo that holds the average pitch
 //   output: each sawtooth band-limited with polyBLEP, keyed, through a 15 Hz coupling capacitor
 //
 // With V8's fdlibm for exp, log, pow, sin and cos and a seeded generator for the random phases
@@ -18,6 +19,7 @@
 #include <cstdint>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "forte/impulses.h"
 #include "huygens-model.h"
@@ -55,15 +57,20 @@ struct Osc {
   int key = 0;
   double fTarget = 0, C = 0, R = 0, tau = 0, V = 0;
   double gate = 0, power = 0;
+  double relA = 0; // its own release rate after a lift that wasn't middling (0: the usual; forte/lift.h)
+  double atkA = 0; // its own attack rate after a strike that wasn't the computer keys' (0: the usual)
   bool keyDown = false, dead = false;
   bool used = false;           // in the engine's list (the pool's slots)
   double fires[256] = {};
   int64_t nf = 0, sent = 0;
   double prevOut = 0, hx = 0, hy = 0, I = 0;
+  double G = 0;                  // dI/dS this sample: how the current drawn moves with the supply
   double drift = 0, driftCents = 0;
   double panL = 0, panR = 0;
   double supply = 0, V0 = 0, fireAt = -1;
   double bend = 1;               // the note's own bend: its timing resistor turned to R/bend
+  double loud = 1;               // its keyer's gain (Press: pressed further open, up to twice)
+  double couple = 0;             // how strongly a firing kicks it (Slide: the knob's, or its own)
   int64_t bentAt = INT64_MIN / 2; // when it last moved (the servo doesn't hear a lamp mid-bend)
 
   // what it is tuned to play: its design frequency, bent
@@ -91,9 +98,11 @@ class NeonEngine : public Engine {
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
-  // a note's bend: its lamp's timing resistor turned, gliding (the pulse coupling, the rail's, is
-  // every lamp's: no slide)
+  // a note's bend: its lamp's timing resistor turned, gliding; its slide, how strongly the others'
+  // firings kick its lamp; its press, how far its keyer opens
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
+  void slide(double value, int key) override { expr.setSlide(value, key); }
+  void pressure(double value, int key) override;
   // the key's bend for a lamp designed to play f: short of fs/4 (one already up there is not bent up)
   double bendOf(int key, double f) const;
   int voiceCount() const override { return nos; }
@@ -137,10 +146,13 @@ class NeonEngine : public Engine {
   std::array<Osc, kPool> pool;
   Osc *byKey[128] = {};
   Osc *order[kPool] = {};
-  double vr, Ilp = 0;
+  double vr, Ilp = 0, Glp = 0; // the rail, and the regulator's averages of its load
   int tuning = 0, tonic = 0;
   double mistune = 0;
-  forte::NoteExpression expr{48}; // each key's bend
+  forte::NoteExpression expr{48}; // each key's bend, and its slide (its lamp's coupling)
+  std::array<double, 128> press{}; // each key's pressure, and the channel's
+  double chanPress = 0;
+  double loudOf(int key) const;
   forte::Tuning keyboard; // the keyboard's tuning (forte/tuning.h), on top of the lamps' own
   // a key's design frequency: the lamps' tuning (equal or just, mistuned) times the keyboard's
   double keyTarget(int key) const { return tunedFreq(key, tuning, tonic, mistune) * keyboard.ratio(key); }

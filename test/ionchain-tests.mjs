@@ -251,6 +251,30 @@ await test('level: one note peaks 0.005–0.6 at full velocity on every octave a
 });
 
 // What the Quality setting trims (the README says it): fewer voices at once, and fewer modes a voice
+await test('Press: a held key\'s laser pushes its ions, making up the share of the resistor\'s loss it is pressed: pressed fully they ring on undiminished while held; let go, the cooling laser as before', () => {
+  const run = (press, key = 60, offAt = Infinity) => {
+    const e = new IonChainEngine(FS); e.setParams(P({ coolOn: true })); e.noteOn(60, 0.8);
+    const n = 3 * FS, L = new Float32Array(n), b = new Float32Array(128), c = new Float32Array(128);
+    for (let s = 0; s < n; s += 128) {
+      if (press !== undefined && s === 128 * 40) e.handle({ type: 'pressure', key, value: press });
+      if (s === 128 * Math.round(offAt * FS / 128)) e.noteOff(60);
+      e.process(b, c, 128); L.set(b.subarray(0, Math.min(128, n - s)), s);
+    }
+    return L;
+  };
+  const rms = (x, a, b) => { let s = 0; for (let i = Math.round(a * FS); i < Math.round(b * FS); i++) s += x[i] * x[i]; return Math.sqrt(s / ((b - a) * FS)); };
+  const plain = run(), full = run(1), half = run(0.5);
+  assert.deepEqual(run(0), plain, 'a press of none');
+  near(rms(full, 2.5, 2.9) / rms(full, 0.3, 0.7), 1, 0.01, 'pressed fully: no loss');
+  const lp = Math.log(rms(plain, 0.3, 0.7) / rms(plain, 2.5, 2.9)), lh = Math.log(rms(half, 0.3, 0.7) / rms(half, 2.5, 2.9));
+  assert.ok(lp > 0.05, `the resistor's loss shows: ${lp}`);
+  near(lh / lp, 0.5, 0.05, 'pressed halfway: half the loss');
+  assert.deepEqual(run(1, -1), full, 'the channel\'s pressure as the key\'s');
+  assert.deepEqual(run(1, 61), plain, 'another key\'s');
+  // let go: the cooling laser takes it, the press no longer counts
+  const off = run(1, 60, 1);
+  assert.ok(rms(off, 2.5, 2.9) < 0.1 * rms(full, 2.5, 2.9), 'cooled once let go');
+});
 await test('Quality: 32, 16 and 8 voices; Medium and Low leave out the modes the electrodes hardly hear, and keep the note\'s pitch and level', () => {
   const bL = new Float32Array(128), bR = new Float32Array(128);
   for (const [quality, cap] of [['high', 32], ['medium', 16], ['low', 8]]) {

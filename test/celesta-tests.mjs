@@ -168,6 +168,14 @@ test('the box makes the note louder, and shorter', () => {
   const f = keyFreq(72), decay = (x) => tone(x, f, 1.5 * FS - 8192, 1.5 * FS) / tone(x, f, 0.1 * FS, 0.1 * FS + 8192);
   assert.ok(decay(on) < 0.5 * decay(off), `${decay(on)} vs ${decay(off)}`);
 });
+test('the boxes add most low down: about 45 dB at C4, 35 at C5, down to about 16 at C8 (README)', () => {
+  const gain = (k) => 20 * Math.log10(rms(note(k, P({ pedalLock: true }), 0.8, 0.25)) / rms(note(k, P({ boxes: false, pedalLock: true }), 0.8, 0.25)));
+  const g = [60, 72, 84, 96, 108].map(gain), say = g.map((x) => x.toFixed(1)).join(', ');
+  for (let i = 1; i < g.length; i++) assert.ok(g[i] < g[i - 1] + 1, `the gain should fall up the compass: ${say} dB`);
+  assert.ok(g[0] > 38 && g[0] < 52, `C4: ${say} dB`);
+  assert.ok(g[1] > 29 && g[1] < 41, `C5: ${say} dB`);
+  assert.ok(g[4] > 10 && g[4] < 22, `C8: ${say} dB`);
+});
 test('pressed close, bar and box beat: two lines a few hertz apart, as the model says', () => {
   const k = 66, s = M.boxState(k, P({ gap: 2.5 })), f1 = M.bar(k, DEFAULTS.thick).modes[0].f;
   const pair = M.twoOscillator(f1 / Math.sqrt(s.M11), Math.sqrt(s.Ka / s.M22) / (2 * Math.PI), -s.M12 / Math.sqrt(s.M11 * s.M22));

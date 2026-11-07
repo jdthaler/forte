@@ -15,6 +15,7 @@ static constexpr double OUT = 0.05;      // output per mode at full velocity, be
 static constexpr double FADE = 0.03;     // s: a stolen voice fades out over this
 static constexpr double YOUNG = 0.05;    // s: a voice this young is never stolen
 static constexpr double GLIDE = 0.03;    // s: damping and output gains glide over this
+static constexpr double BEND_T = 0.02;   // s: a note's own bend glides as the instruments that bend glide theirs
 static constexpr double PRUNE = 3e-5;    // a mode below this × the voice's loudest is skipped (−90 dB)
 static constexpr double PULSE_MAX = 0.012; // s: the longest mallet pulse
 static double handSigma(double h) { return 60 * h * h; } // a hand h (0..1) on the coils: σ = 60h² s⁻¹
@@ -72,6 +73,11 @@ void SpringEngine::Bank::gains(const SpringEngine &eng, bool now) {
     if (now) G[i] = GT[i];
     KA[i] = (std::fabs(GT[i]) * 2 * fd::sin(0.5 * w * h)) / fd::sin(w * h);
   }
+}
+
+void SpringEngine::Bank::retune(const SpringEngine &eng, double r) {
+  const double h = 1 / eng.fs;
+  for (int i = 0; i < N; i++) { const double w = TAU * sp->f[i] * r; WD[i] = w; C[i] = fd::cos(w * h); }
 }
 
 void SpringEngine::Bank::compact() {
@@ -171,6 +177,8 @@ void SpringEngine::Voice::start(SpringEngine &eng, int k, Data::Ref r, uint64_t 
   age = 0; fade = 1; fading = false; dead = false; peak = 0; level = 0;
   released = false; dampGlide = GLIDE;
   extra = eng.handOf(key);
+  bent = eng.expr.bendOf(key); // stretched before it was struck
+  if (bent != 1) for (int s = 0; s < nBanks; s++) { banks[s].retune(eng, bent); banks[s].gains(eng, true); }
   for (int s = 0; s < nBanks; s++) banks[s].sigma(eng, extra); // a hand already on the spring
 }
 
@@ -209,8 +217,15 @@ void SpringEngine::Voice::render(float *L, float *R, int n, SpringEngine &eng) {
   for (int s = 0; s < n; s++) {
     if (pulseAt < pulseN) { force[s] = pulse[pulseAt++]; pushing = true; } else force[s] = 0;
   }
-  // the hand and the damper (once the key is up, unless the pedal holds it off): extra damping, gliding in
-  const double target = eng.handOf(key) + (released && !eng.sustain ? eng.dampSigma : 0);
+  // the hand and the damper (once the key is up, unless the pedal holds it off), or the hammer held
+  // into the coil as hard as the key is pressed (Press): extra damping, gliding in
+  const double target = eng.handOf(key) + (released ? (!eng.sustain ? eng.dampSigma : 0) : eng.presses.of(key) * eng.dampSigma);
+  bool retuned = false;
+  if (const double to = eng.expr.bendOf(key); bent != to) { // Glide: the coil stretched
+    bent = glideTo(bent, to, n / eng.fs, BEND_T); retuned = true;
+    for (int s = 0; s < nBanks; s++) { banks[s].retune(eng, bent); banks[s].gains(eng); }
+  }
+  if (retuned && target == extra && !eng.lossMoved) for (int s = 0; s < nBanks; s++) banks[s].sigma(eng, extra);
   if (target != extra || eng.lossMoved) {
     const double tg = target > extra && released ? dampGlide : GLIDE;
     extra += (1 - fd::exp(-n / (tg * eng.fs))) * (target - extra);
@@ -425,6 +440,7 @@ void SpringEngine::noteOff(int key, double velocity) {
 
 void SpringEngine::allNotesOff() {
   nPending = 0;
+  presses.clear();
   for (int i = 0; i < nVoices; i++) voices[i]->fading = true;
 }
 

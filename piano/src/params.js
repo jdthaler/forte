@@ -10,6 +10,9 @@ import { VENUE } from '../../shared/chain.js';
 import { TUNING_GROUP } from '../../shared/tuning.js';
 
 const x = (v) => `×${v < 1 ? v.toFixed(2) : v.toFixed(v < 10 ? 2 : 1)}`;
+// MIDI velocity (0..1) → the hammer's speed, 0.25 … 6 m/s (the descriptor's midiVelocity), and back
+export const hammerSpeed = (v) => 0.25 * 24 ** v;
+const touchOf = (speed) => Math.log(speed / 0.25) / Math.log(24);
 
 export const GROUPS = [
   {
@@ -57,8 +60,8 @@ export const GROUPS = [
       { id: 'hammerWidth', label: 'Contact width', kind: 'model', min: 0.1, max: 3, def: 1, log: true, fmt: x },
       { id: 'hysteresis', label: 'Felt hysteresis α', kind: 'model', min: 0, max: 4e-4, step: 1e-6, def: 5e-5,
         fmt: (v) => `${(v * 1e6).toFixed(0)} µs` },
-      { id: 'velocity', label: 'Velocity', perform: true, strip: true, kind: 'play', min: 0.2, max: 6, step: 0.05, def: 2.5,
-        fmt: (v) => `${v.toFixed(2)} m/s`, hint: '↑ / ↓ arrows. MIDI uses key velocity instead.' },
+      { id: 'velocity', label: 'Velocity', perform: true, strip: true, kind: 'play', min: 0.25, max: 6, step: 0.01, def: 2.5, log: true,
+        fmt: (v) => `${touchOf(v).toFixed(2)} · hammer ${v.toFixed(2)} m/s`, hint: 'The computer keys’ hammer speed, and the MIDI velocity that would give it. ↑ / ↓ arrows. MIDI uses key velocity instead.' },
       { id: 'unaCorda', label: 'Una corda (soft pedal)', pedal: true, perform: true, strip: true, kind: 'engine', type: 'checkbox', def: false,
         hint: 'Shifts the action so each hammer misses one string (2 of 3, or 1 of 2). The missed string is driven only through the bridge: softer, with a longer aftersound. MIDI CC 67.' },
     ],
@@ -79,7 +82,7 @@ export const GROUPS = [
     ],
   },
   {
-    id: 'output', title: 'Output',
+    id: 'output', title: 'Output', open: false,
     params: [
       { id: 'gainV', label: 'Vertical bridge force', kind: 'engine', min: 0, max: 1.5, step: 0.01, def: 1, fmt: (v) => v.toFixed(2) },
       { id: 'gainH', label: 'Horizontal bridge force', kind: 'engine', min: 0, max: 1.5, step: 0.01, def: 0.35, fmt: (v) => v.toFixed(2) },

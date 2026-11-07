@@ -5,12 +5,13 @@
 import { GROUPS, DEFAULTS, PRESETS } from './windharp-params.js';
 import { KEY_MIN, KEY_MAX, U_MAX } from './windharp-model.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'windharp',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys
@@ -18,10 +19,12 @@ export const INSTRUMENT = {
   modWheel: { param: 'wind', max: U_MAX }, // CC1: the wind, up to its top speed
   // MPE: each key's own bend tightens or slackens its strings alone, as the wheel does them all
   // (an octave either way: further up the tension would make it far louder, and snap the strings;
-  // bent out of its band a string moves to the harmonic the wake picks). No slide:
-  // one wind blows through every shutter.
-  mpe: { bend: 12 },
+  // bent out of its band a string moves to the harmonic the wake picks). One wind blows through
+  // every shutter, but a note's slide is how gusty it is at that key's strings: the same gusts,
+  // felt more or less, as the Gustiness knob would there.
+  mpe: { bend: 12, slide: { param: 'gust', max: 0.3 } },
   aftertouch: 'the wind blows harder', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how fast the shutter closes on the wind', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['gustTime', 'q', 'mass', 'gust', 'wind'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/windharp), built as WebAssembly
   wasm: { name: 'WindHarpWasmEngine', module: new URL('./windharp-wasm.js', import.meta.url).href, binary: new URL('../wasm/windharp.wasm', import.meta.url).href },

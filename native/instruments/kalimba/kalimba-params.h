@@ -17,7 +17,7 @@
 namespace forte::kalimba {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { back, thick, t60, damping, fullRange, pluck, thumb, ring, box, hole, cover, buzz, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { back, thick, t60, damping, fullRange, pluck, thumb, ring, box, hole, cover, buzz, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -85,30 +85,36 @@ inline const ParamInfo kParams[p::count] = {
   {"cents9", "Major 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
+  {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::thumb, 0.08}};
-inline const PresetValue kPreset2[] = {{p::thumb, 2.5}, {p::cover, 0.5}};
-inline const PresetValue kPreset3[] = {{p::buzz, 5}, {p::box, 6}, {p::hole, 90}, {p::thick, 1.4}, {p::t60, 8}};
-inline const PresetValue kPreset4[] = {{p::box, 25}, {p::hole, 90}, {p::thick, 2.5}, {p::t60, 10}, {p::fullRange, 1}};
-inline const PresetValue kPreset5[] = {{p::back, 0}};
-inline const PresetValue kPreset6[] = {{p::back, 1}};
-inline const PresetValue kPreset7[] = {{p::pluck, 0.71}};
-inline const PresetValue kPreset8[] = {{p::pluck, 0.4}};
-inline const PresetValue kPreset9[] = {{p::thick, 0.7}};
-inline const PresetValue kPreset10[] = {{p::buzz, 2}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}, {p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::thumb, 0.08}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::thumb, 2.5}, {p::cover, 0.5}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::buzz, 5}, {p::box, 6}, {p::hole, 90}, {p::thick, 1.4}, {p::t60, 8}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::box, 25}, {p::hole, 90}, {p::thick, 2.5}, {p::t60, 10}, {p::fullRange, 1}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::back, 0}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::back, 1}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::pluck, 0.71}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::pluck, 0.4}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::thick, 0.7}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::buzz, 2}};
 inline const Preset kPresets[] = {
-  {"Box kalimba", nullptr, 0},
-  {"Thumbnail ping", kPreset1, 1},
-  {"Soft thumb, hole half covered", kPreset2, 2},
-  {"Mbira with bottle caps", kPreset3, 5},
-  {"Marimbula (bass box)", kPreset4, 5},
-  {"Clamped at the bridge (6.27)", kPreset5, 1},
-  {"Back as long as the front (9th harmonic)", kPreset6, 1},
-  {"Plucked on the first overtone’s node", kPreset7, 1},
-  {"Plucked near the bridge: bright overtones", kPreset8, 1},
-  {"Thin tines: soft and quiet in the bass", kPreset9, 1},
-  {"Two bottle caps on a box kalimba", kPreset10, 1},
+  {"Box kalimba", kPreset0, 2},
+  {"Thumbnail ping", kPreset1, 3},
+  {"Soft thumb, hole half covered", kPreset2, 4},
+  {"Mbira with bottle caps", kPreset3, 7},
+  {"Marimbula (bass box)", kPreset4, 7},
+  {"Clamped at the bridge (6.27)", kPreset5, 3},
+  {"Back as long as the front (9th harmonic)", kPreset6, 3},
+  {"Plucked on the first overtone’s node", kPreset7, 3},
+  {"Plucked near the bridge: bright overtones", kPreset8, 3},
+  {"Thin tines: soft and quiet in the bass", kPreset9, 3},
+  {"Two bottle caps on a box kalimba", kPreset10, 3},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::buzz}, {109, p::hole}, {111, p::thumb}, {113, p::pluck}, {114, p::cover}};
@@ -131,6 +137,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 60, .compassHi = 88, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = p::cover, .modWheelMax = 1,
+    .slide = p::pluck, .slideMax = 0.5,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -4.5},
     .midiVelocity = midiVelocity, .create = create,

@@ -84,7 +84,7 @@ constexpr uint32_t kEditorWidth = 1000, kEditorHeight = 760, kEditorMinWidth = 6
 
 // what the editor asks of the audio thread
 struct UiEvent {
-  enum Type : uint8_t { param, begin, end, on, off, pedal, pressure, panic } type;
+  enum Type : uint8_t { param, begin, end, on, off, pedal, pressure, panic, swap } type; // swap: a preset's values follow (fade across them)
   int16_t i; // a parameter or a key
   double v;
 };
@@ -150,12 +150,27 @@ struct Plugin : Instance, MpeDecoder::Sink {
   // (shared/midi.js levelGain), full until a pedal moves; `level` follows it in 10 ms
   int volumePedal = 127, expressionPedal = 127;
   double level = 1, levelCoef = 0;
+  // a preset's change, faded across so it doesn't click (shared/worklet.js): the engine's sound fades
+  // out in 6 ms while its new parameters wait (dirty), takes them at the bottom, and fades back in
+  // in 12 ms, a raised cosine each way. state: 0 none, 1 out, 2 in; at: 0..1 of the fade
+  struct { int state = 0; double at = 0; } swap;
+  static constexpr double kSwapOut = 0.006, kSwapIn = 0.012;
   // MPE, and the per-note expression a host sends: the keys the engine was given their own bend or
   // slide, so a note struck there without them starts plain
   MpeDecoder mpe;
   Tuning tuning;         // the parameters' (a note's bend follows it)
   int tuningAt[3 + kCustomCents];
   bool expressed[128]{};
+  // The Expression switches (shared/expression.js): the instrument's parameters strikeOn, glideOn,
+  // slideOn, pressOn and liftOn (−1: it has none). Off, a note is struck at the window keys'
+  // velocity, its own bend and slide are held back, pressure is, and a release is at the
+  // instrument's own speed; a switch turned off lets go of what it held (switches()).
+  enum { kStrike, kGlide, kSlide, kPress, kLift, kSwitches };
+  int switchAt[kSwitches];
+  bool switchOn[kSwitches] = {true, true, true, true, true}; // as the engine last had them
+  bool pressed[129]{}; // the keys (and, at 128, the channel) the engine was given pressure for
+  static constexpr double kKeysVelocity = 0.75; // the window's keys, with no velocity parameter (editor.html)
+  bool on(int k) const { return switchAt[k] < 0 || P[switchAt[k]] >= 0.5; }
   std::array<double, 128> landed = [] { std::array<double, 128> a; a.fill(NAN); return a; }(); // a host's per-note brightness where the note began (NaN: not yet): its slide is from there
 
   // the editor: its events for the audio thread, what it shows, the keys sounding for it
@@ -200,6 +215,8 @@ struct Plugin : Instance, MpeDecoder::Sink {
     morphB.resize(I.paramCount);
     const char *tuningIds[3] = {"pitch", "temperament", "tuningRoot"};
     for (int k = 0; k < 3 + kCustomCents; k++) tuningAt[k] = paramIndex(k < 3 ? tuningIds[k] : ("cents" + std::to_string(k - 2)).c_str());
+    const char *switchIds[kSwitches] = {"strikeOn", "glideOn", "slideOn", "pressOn", "liftOn"};
+    for (int k = 0; k < kSwitches; k++) switchAt[k] = paramIndex(switchIds[k]);
     P.resize(nParams);
     pending.resize(nParams);
     shown.reset(new std::atomic<double>[nParams]);
@@ -234,6 +251,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
       int k = (int)std::lround(v);
       k = k < 0 ? 0 : k > I.presetCount ? I.presetCount : k;
       presetValues(k, morphA);
+      swapIn();
       for (int j = 0; j < I.paramCount; j++) if (morphA[j] != P[j]) { P[j] = morphA[j]; shown[j] = P[j]; tell(j, out); }
       P[i] = k; shown[i] = k;
       if (k == (int)P[toAt] && k != (int)P[fromAt]) put(morphAt, 1, out);
@@ -302,6 +320,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
     if (key < I.keyLo || key > I.keyHi || ch < 0 || ch > 15) return;
     if (I.compass >= 0 && P[I.compass] < 0.5 && (key < I.compassLo || key > I.compassHi)) return; // outside the compass
     if (fromMidi) vel = std::pow(vel, kTouchGamma[(int)P[touchAt]]) * (soft ? kSoftPedal : 1);
+    if (!on(kStrike)) vel = kKeysVelocity; // Strike off: every note as hard as the window's keys
     if (held[ch][key]) noteOff(ch, key, -1); // struck again before its note-off: let it go first
     held[ch][key] = 1; sounding[key]++; latched[key] = false; sostHeld[key] = false;
     if (!mpe.isMember(ch)) plain(key); // an MPE member's note came with its own (MpeDecoder::midi)
@@ -311,6 +330,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
   }
   void noteOff(int ch, int key, double vel) {
     if (key < 0 || key > 127 || ch < 0 || ch > 15 || !held[ch][key]) return; // not down on this channel
+    if (!on(kLift)) vel = -1; // Lift off: released at the instrument's own speed
     held[ch][key] = 0;
     if (--sounding[key] > 0) return;
     if (sostenuto && caught[key]) { sostHeld[key] = true; return; }
@@ -343,6 +363,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
     std::memset(held, 0, sizeof held); std::memset(sounding, 0, sizeof sounding); std::memset(latched, 0, sizeof latched);
     std::memset(caught, 0, sizeof caught); std::memset(sostHeld, 0, sizeof sostHeld);
     std::memset(moved, -1, sizeof moved);
+    std::memset(pressed, 0, sizeof pressed);
     sostenuto = false; soft = false;
     if (sustain) pedal(false);
     if (engine) engine->allNotesOff();
@@ -359,10 +380,11 @@ struct Plugin : Instance, MpeDecoder::Sink {
     set(presetAt, n + 1, out);
     tell(presetAt, out);
   }
-  // the mod wheel's parameter at u (0..1): at rest its default, fully up its maximum (shared/midi.js)
-  double wheelValue(double u) const {
-    const ParamInfo &p = I.params[I.modWheel];
-    const double top = I.modWheelMax;
+  // the mod wheel's parameter at u (0..1): at rest its default, fully up its maximum (shared/midi.js);
+  // or a slide's (its parameter's at either end of the key: slideMax)
+  double wheelValue(double u, int at = -1, double max = NAN) const {
+    const ParamInfo &p = I.params[at < 0 ? I.modWheel : at];
+    const double top = at < 0 ? I.modWheelMax : max;
     if (u <= 0) return p.def;
     return constrain(p, p.log ? p.def * std::pow(top / p.def, u) : p.def + (top - p.def) * u);
   }
@@ -417,17 +439,35 @@ struct Plugin : Instance, MpeDecoder::Sink {
   // ---- one note's own expression: MPE (forte/mpe.h), or the host's per-note expressions ----------
   // its bend in semitones, along the tuning
   void noteBend(int key, double semitones) override {
-    if (key < 0 || key > 127 || !engine) return;
+    if (key < 0 || key > 127 || !engine || !on(kGlide)) return;
     expressed[key] = true;
     engine->noteBend(bendRatio(tuning, key, semitones), key);
   }
-  // its slide 0..1 (NaN: none) is its own mod wheel
+  // its slide 0..1 (NaN: none) sets its own value of the slide's parameter (the mod wheel's, or
+  // the one its descriptor names: shared/expression.js slideOf)
   void noteSlide(int key, double value) override {
-    if (key < 0 || key > 127 || !engine || I.modWheel < 0) return;
+    if (key < 0 || key > 127 || !engine || I.slide < 0 || (!on(kSlide) && value == value)) return;
     expressed[key] = true;
-    engine->slide(value == value ? wheelValue(value) : NAN, key);
+    engine->slide(value == value ? wheelValue(value, I.slide, I.slideMax) : NAN, key);
   }
-  void notePressure(int key, double value) override { if (engine) engine->pressure(value, key); }
+  void notePressure(int key, double value) override { pressure(value, key); }
+  // aftertouch (key −1: the channel's), unless Press is off
+  void pressure(double value, int key) {
+    if (!engine || !on(kPress) || key < -1 || key > 127) return;
+    pressed[key < 0 ? 128 : key] = value > 0;
+    engine->pressure(value, key);
+  }
+  // a switch turned off since the engine last had them: what it let through lets go (as the
+  // worklet's gate does, shared/expression.js)
+  void switches() {
+    bool now[kSwitches];
+    for (int k = 0; k < kSwitches; k++) now[k] = on(k);
+    if (engine && switchOn[kGlide] && !now[kGlide]) for (int k = 0; k < 128; k++) if (expressed[k]) engine->noteBend(1, k);
+    if (engine && switchOn[kSlide] && !now[kSlide]) for (int k = 0; k < 128; k++) if (expressed[k]) engine->slide(NAN, k);
+    if (engine && switchOn[kPress] && !now[kPress])
+      for (int k = 0; k <= 128; k++) if (pressed[k]) { pressed[k] = false; engine->pressure(0, k == 128 ? -1 : k); }
+    for (int k = 0; k < kSwitches; k++) switchOn[k] = now[k];
+  }
   // a note struck without its own: the key starts plain again
   void plain(int key) {
     if (!expressed[key] || !engine) return;
@@ -488,8 +528,8 @@ struct Plugin : Instance, MpeDecoder::Sink {
         if (cc == 121) { if (!mapped(7)) levels(7, 127); if (!mapped(11)) levels(11, 127); } // Reset All Controllers
         controller(cc, d[2], out);
       }
-    } else if (cmd == 0xc0) programChange(d[1], out); else if (cmd == 0xd0) { if (engine) engine->pressure(d[1] / 127.0, -1); }
-    else if (cmd == 0xa0) { if (engine) engine->pressure(d[2] / 127.0, d[1]); }
+    } else if (cmd == 0xc0) programChange(d[1], out); else if (cmd == 0xd0) pressure(d[1] / 127.0, -1);
+    else if (cmd == 0xa0) pressure(d[2] / 127.0, d[1]);
     else if (cmd == 0xe0) {
       double b = ((d[2] << 7) + d[1] - 8192) / 8191.0;
       if (engine) engine->bend(b < -1 ? -1 : b);
@@ -584,7 +624,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
       }
       uint32_t end = pos + kBlock < n ? pos + kBlock : n;
       if (next < count) { uint32_t t = in->get(in, next)->time; if (t < end) end = t; }
-      if (dirty && engine) { engine->setQuality(quality()); engine->setParams(P.data()); chain.setParams(P.data()); retune(); dirty = false; }
+      if (dirty && engine && swap.state != 1) { switches(); engine->setQuality(quality()); engine->setParams(P.data()); chain.setParams(P.data()); retune(); dirty = false; }
       if (L) render(L + pos, R ? R + pos : spare, end - pos);
       pos = end;
     }
@@ -613,11 +653,26 @@ struct Plugin : Instance, MpeDecoder::Sink {
       postedIn.fetch_add(1, std::memory_order_release);
     }
   }
+  // a preset's change: fade out (from where a fade in has got to), and the parameters wait for the bottom
+  void swapIn() { if (swap.state == 1) return; swap.at = swap.state == 2 ? 1 - swap.at : 0; swap.state = 1; }
+  void fadeSwap(float *L, float *R, uint32_t n) {
+    const bool down = swap.state == 1;
+    const double step = 1 / ((down ? kSwapOut : kSwapIn) * fs);
+    for (uint32_t i = 0; i < n; i++) {
+      const double g = swap.at >= 1 ? (down ? 0 : 1) : 0.5 - 0.5 * std::cos(3.14159265358979323846 * (down ? 1 - swap.at : swap.at));
+      L[i] = (float)(L[i] * g); R[i] = (float)(R[i] * g);
+      swap.at = std::min(1.0, swap.at + step);
+    }
+    if (swap.at < 1) return;
+    if (down) { swap.state = 2; swap.at = 0; } // at the bottom: the next block takes the parameters (dirty), then up
+    else swap.state = 0;
+  }
   // the engine, a guard (a NaN stops the notes rather than the instrument, shared/guard.js), the chain
   void render(float *L, float *R, uint32_t n) {
     if (!engine) { std::memset(L, 0, n * sizeof *L); std::memset(R, 0, n * sizeof *R); return; }
     engine->process(L, R, (int)n);
     if (!guardBlock(L, R, (int)n)) engine->allNotesOff();
+    if (swap.state) fadeSwap(L, R, n);
     if (viewsOn.load(std::memory_order_relaxed)) {
       for (uint32_t i = 0; i < n; i++) heard.push(0.5f * (L[i] + R[i]));
       handOn();
@@ -644,8 +699,9 @@ struct Plugin : Instance, MpeDecoder::Sink {
         if (I.space != Space::none) pedal(e.v > 0);
         else if (spaceSwitch()) controller(64, e.v > 0 ? 127 : 0, out);
         break;
-      case UiEvent::pressure: if (engine) engine->pressure(e.v, e.i); break;
+      case UiEvent::pressure: pressure(e.v, e.i); break;
       case UiEvent::panic: panic(); break;
+      case UiEvent::swap: swapIn(); break;
     }
   }
   void gesture(int i, bool begin, const clap_output_events_t *out) {
@@ -864,7 +920,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
       std::vector<double> v;
       std::string error;
       const bool ok = readPreset(I, text(1), (int)num(2), v, error);
-      if (ok) for (int i = 0; i < I.paramCount; i++) { shown[i] = v[i]; sent[i] = NAN; toAudio({UiEvent::param, (int16_t)i, v[i]}); }
+      if (ok) { toAudio({UiEvent::swap, 0, 0}); for (int i = 0; i < I.paramCount; i++) { shown[i] = v[i]; sent[i] = NAN; toAudio({UiEvent::param, (int16_t)i, v[i]}); } }
       Value r = createObject("");
       r.addMember("ok", ok);
       r.addMember("error", error);
@@ -1233,6 +1289,7 @@ bool pluginActivate(const clap_plugin_t *p, double fs, uint32_t, uint32_t) {
   s->chain.configure(s->I.chain, fs, s->P.data());
   s->levelCoef = 1 - std::exp(-1 / (0.01 * fs)); // the pedals' gain follows in 10 ms
   s->level = s->levelTarget();
+  s->swap = {};
   s->panic();
   if (s->I.space == Space::sustain) s->engine->setSustain(false);
   s->dirty = true;

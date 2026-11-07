@@ -11,6 +11,7 @@
 namespace forte::planets {
 
 namespace fd = forte::fdlibm;
+constexpr double AFTER_T = 0.4;        // s between aftershocks while a key is pressed (Press)
 constexpr double OUT = 0.06;          // the reference quake's rms at the start, at Mw 9
 constexpr double RELEASE = 0.15;      // s: a key let go stops the recording, fading this fast
 constexpr double FLOOR = 3e-5;        // an oscillator this far under the voice's loudest (at the start) is gone
@@ -67,7 +68,7 @@ void PlanetEngine::envelope(const Voice &v, const Osc &o, double *eL, double *eR
 
 void PlanetEngine::start(Voice &v, int key, double velocity) {
   if (dirty) { respond(P.data(), resp); dirty = false; }
-  v.key = key; v.on = true; v.released = false; v.damped = false; v.level = 1;
+  v.key = key; v.on = true; v.released = false; v.damped = false; v.level = 1; v.fall = 0; v.after = 0;
   v.stereo = resp.stereo;
   v.K = speedup(key, P.data());
   v.spin = expr.slideOr(key, P[p::spin]);
@@ -108,6 +109,7 @@ void PlanetEngine::start(Voice &v, int key, double velocity) {
 
 void PlanetEngine::noteOn(int key, double velocity) {
   if (!hasParams) return;
+  press.reset(key);
   for (Voice &v : voices) if (v.on && v.key == key && !v.released) { v.released = true; if (!sustain) v.damped = true; }
   // a free voice, or the oldest
   int best = -1;
@@ -125,8 +127,24 @@ void PlanetEngine::noteOn(int key, double velocity) {
   }
 }
 
-void PlanetEngine::noteOff(int key, double) {
-  for (Voice &v : voices) if (v.on && v.key == key && !v.released) { v.released = true; if (!sustain) v.damped = true; }
+// Lift: how the recording stops: a slow lift fades the ringing over up to four times the usual,
+// a fast one cuts it in a quarter of it.
+void PlanetEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
+  for (Voice &v : voices) if (v.on && v.key == key && !v.released) {
+    v.released = true;
+    if (!sustain) { v.damped = true; v.fall = s == 1 ? 0 : fd::exp(-1 / (fs * RELEASE * s * s)); }
+  }
+}
+
+// Press: aftershocks. A firm press into a held key sets off one at once, and another every
+// AFTER_T while it stays pressed: a smaller quake at the same source, each mode it rings
+// kicked again in the phase the main shock gave it. By Båth's law the largest aftershock is
+// about 1.2 magnitudes below the main shock; the harder the press, the nearer it comes (to 0.3
+// below at the firmest).
+void PlanetEngine::aftershock(Voice &v, double x) {
+  const double a = fd::pow(10.0, 1.5 * (-1.2 + 0.9 * x));
+  for (int j = 0; j < v.count; j++) v.osc[j].zr += a;
 }
 
 void PlanetEngine::process(float *L, float *R, int n) {
@@ -135,6 +153,10 @@ void PlanetEngine::process(float *L, float *R, int n) {
   const double wheelRatio = fd::pow(2.0, wheel * kBendSemitones / 12);
   for (Voice &v : voices) {
     if (!v.on) continue;
+    if (const double x = v.released ? 0 : press.of(v.key); x > 0) {
+      v.after -= dt;
+      if (v.after <= 0) { aftershock(v, x); v.after += AFTER_T; if (v.after <= 0) v.after = AFTER_T; }
+    } else v.after = 0;
     v.spin = glideTo(v.spin, expr.slideOr(v.key, P[p::spin]), dt, 0.05);
     const double K = v.K * wheelRatio * expr.bendOf(v.key);
     const bool turns = K != v.Kc, spins = turns || v.spin != v.spinC || n != v.nC;
@@ -184,7 +206,7 @@ void PlanetEngine::process(float *L, float *R, int n) {
     }
     double lv = v.level;
     for (int i = 0; i < n; i++) {
-      if (v.damped) lv *= fall;
+      if (v.damped) lv *= v.fall ? v.fall : fall;
       L[i] = (float)(L[i] + lv * bl[i]);
       R[i] = (float)(R[i] + lv * (v.stereo ? br[i] : bl[i]));
     }

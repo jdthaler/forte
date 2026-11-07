@@ -17,7 +17,7 @@
 namespace forte::tines {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { tineDiameter, springMass, springPos, strike, barMass, barTune, blockMass, mountRatio, mountDamp, hardness, tipExp, hammerMass, hysteresis, gap, offset, poleRadius, cable, resQ, tineLoss, hfLoss, barLoss, damper, tremDepth, tremRate, drive, tone, voicing, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { tineDiameter, springMass, springPos, strike, barMass, barTune, blockMass, mountRatio, mountDamp, hardness, tipExp, hammerMass, hysteresis, gap, offset, poleRadius, cable, resQ, tineLoss, hfLoss, barLoss, damper, tremDepth, tremRate, drive, tone, voicing, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -117,32 +117,38 @@ inline const ParamInfo kParams[p::count] = {
   {"cents9", "Major 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
+  {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::gap, 0.6}, {p::offset, 0.55}, {p::drive, 0.35}};
-inline const PresetValue kPreset2[] = {{p::gap, 2.8}, {p::offset, 0.3}, {p::tone, 4000}};
-inline const PresetValue kPreset3[] = {{p::offset, 0}};
-inline const PresetValue kPreset4[] = {{p::strike, 3}, {p::hfLoss, 0.4}};
-inline const PresetValue kPreset5[] = {{p::barMass, 0.01}};
-inline const PresetValue kPreset6[] = {{p::barTune, 40}};
-inline const PresetValue kPreset7[] = {{p::hardness, 0.25}, {p::hysteresis, 0.0006}, {p::hammerMass, 1.3}};
-inline const PresetValue kPreset8[] = {{p::tremDepth, 0.7}, {p::tremRate, 4.5}};
-inline const PresetValue kPreset9[] = {{p::springMass, 1.2}, {p::springPos, 0.95}};
-inline const PresetValue kPreset10[] = {{p::cable, 5000}};
-inline const PresetValue kPreset11[] = {{p::drive, 0.8}};
+inline const PresetValue kPreset0[] = {{p::pressOn, 0}};
+inline const PresetValue kPreset1[] = {{p::pressOn, 0}, {p::gap, 0.6}, {p::offset, 0.55}, {p::drive, 0.35}};
+inline const PresetValue kPreset2[] = {{p::pressOn, 0}, {p::gap, 2.8}, {p::offset, 0.3}, {p::tone, 4000}};
+inline const PresetValue kPreset3[] = {{p::pressOn, 0}, {p::offset, 0}};
+inline const PresetValue kPreset4[] = {{p::pressOn, 0}, {p::strike, 3}, {p::hfLoss, 0.4}};
+inline const PresetValue kPreset5[] = {{p::pressOn, 0}, {p::barMass, 0.01}};
+inline const PresetValue kPreset6[] = {{p::pressOn, 0}, {p::barTune, 40}};
+inline const PresetValue kPreset7[] = {{p::pressOn, 0}, {p::hardness, 0.25}, {p::hysteresis, 0.0006}, {p::hammerMass, 1.3}};
+inline const PresetValue kPreset8[] = {{p::pressOn, 0}, {p::tremDepth, 0.7}, {p::tremRate, 4.5}};
+inline const PresetValue kPreset9[] = {{p::pressOn, 0}, {p::springMass, 1.2}, {p::springPos, 0.95}};
+inline const PresetValue kPreset10[] = {{p::pressOn, 0}, {p::cable, 5000}};
+inline const PresetValue kPreset11[] = {{p::pressOn, 0}, {p::drive, 0.8}};
 inline const Preset kPresets[] = {
-  {"Stage piano (default voicing)", nullptr, 0},
-  {"Bark — pickups close, voiced off-centre", kPreset1, 3},
-  {"Mellow — pickups pulled back", kPreset2, 3},
-  {"Centred tine — the octave trick", kPreset3, 1},
-  {"Bell — strike right at the clamp", kPreset4, 2},
-  {"No tone bar — bare tine on its mount", kPreset5, 1},
-  {"Detuned tone bar (+40 ¢)", kPreset6, 1},
-  {"Soft felt hammers (early style)", kPreset7, 3},
-  {"Suitcase stereo vibrato", kPreset8, 2},
-  {"Heavy tuning springs (stretched bell)", kPreset9, 2},
-  {"Long cable: the top end rolled off", kPreset10, 1},
-  {"Amp pushed: tines into a breaking amp", kPreset11, 1},
+  {"Stage piano (default voicing)", kPreset0, 1},
+  {"Bark — pickups close, voiced off-centre", kPreset1, 4},
+  {"Mellow — pickups pulled back", kPreset2, 4},
+  {"Centred tine — the octave trick", kPreset3, 2},
+  {"Bell — strike right at the clamp", kPreset4, 3},
+  {"No tone bar — bare tine on its mount", kPreset5, 2},
+  {"Detuned tone bar (+40 ¢)", kPreset6, 2},
+  {"Soft felt hammers (early style)", kPreset7, 4},
+  {"Suitcase stereo vibrato", kPreset8, 3},
+  {"Heavy tuning springs (stretched bell)", kPreset9, 3},
+  {"Long cable: the top end rolled off", kPreset10, 2},
+  {"Amp pushed: tines into a breaking amp", kPreset11, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::drive}, {109, p::tone}, {111, p::hardness}, {113, p::tremRate}, {114, p::tremDepth}};
@@ -165,6 +171,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::tremDepth, .modWheelMax = 1,
+    .slide = p::strike, .slideMax = 14,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 1.8, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -3},
     .midiVelocity = midiVelocity, .create = create,

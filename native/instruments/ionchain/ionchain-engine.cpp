@@ -42,15 +42,15 @@ void IonChainEngine::place(Voice &v, const double *q, const double *qd) {
 }
 
 // The voice's step and output weights for its frequency now (the note × the wheel's bend × its
-// own × √λ) and its losses (the resistor's, the cooling laser's once cooled, a stolen voice's
-// fade). keep: as the motion was, displacement and velocity, across the change.
+// own × √λ) and its losses (the resistor's, less what a pressed key's laser makes up; the
+// cooling laser's once cooled; a stolen voice's fade). keep: as the motion was, displacement and velocity, across the change.
 void IonChainEngine::tune(Voice &v, bool keep) {
   double q[MAXM], qd[MAXM];
   if (keep) motion(v, q, qd);
   const double f = v.f0 * bendNow * v.bend, nyq = 0.45 * fs;
   for (int m = 0; m < v.M; m++) {
     const double fm = f * std::sqrt(v.lam[m]), w = 2 * PI * fm;
-    const double s = v.sR[m] + (v.cooled ? v.sD[m] : 0) + (v.stolen ? 1 / STEAL_T : 0);
+    const double s = v.sR[m] * (1 - v.push) + (v.cooled ? v.sD[m] * v.coolK : 0) + (v.stolen ? 1 / STEAL_T : 0);
     const double wd = std::sqrt(std::max(w * w - s * s, 1e-6 * w * w)); // (overdamped: barely turning)
     const double a = fdlibm::exp(-s / fs);
     v.rr[m] = a * fdlibm::cos(wd / fs); v.ri[m] = a * fdlibm::sin(wd / fs);
@@ -121,6 +121,7 @@ void IonChainEngine::setParams(const double *p) {
 void IonChainEngine::noteOn(int key, double velocity) {
   if (!hasP) return;
   key &= 127;
+  press.reset(key);
   Voice *v = nullptr;
   for (Voice &x : voices) if (x.alive && x.key == key && !x.stolen) {
     if (x.N == crystal.N) v = &x;
@@ -147,7 +148,7 @@ void IonChainEngine::noteOn(int key, double velocity) {
   }
   v->born = ++clock;
   v->held = true;
-  if (v->cooled) { v->cooled = false; tune(*v); }
+  if (v->cooled) { v->cooled = false; v->coolK = 1; tune(*v); }
   // the pulse: a kick to each mode's velocity, through the pulse's spectrum at the mode's own
   // frequency in the trap (SLOW times the heard one)
   const double tau = P[p::pulse] * 1e-6, f = v->f0 * bendNow * v->bend;
@@ -167,14 +168,17 @@ void IonChainEngine::noteOn(int key, double velocity) {
   }
 }
 
-void IonChainEngine::cool(Voice &v) {
+void IonChainEngine::cool(Voice &v, double k) {
   v.held = false;
-  if (!v.cooled) { v.cooled = true; tune(v); }
+  if (!v.cooled) { v.cooled = true; v.coolK = k; tune(v); }
 }
 
-void IonChainEngine::noteOff(int key, double) {
+// Lift: the cooling laser: a fast lift turns it up, cooling the ions at once (up to four times as
+// strong), a slow one gently (a quarter), letting them ring on.
+void IonChainEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
   for (Voice &v : voices) if (v.alive && v.key == (key & 127) && v.held) {
-    if (sustain) v.held = false; else cool(v);
+    if (sustain) v.held = false; else cool(v, 1 / (s * s));
   }
 }
 
@@ -200,7 +204,10 @@ void IonChainEngine::process(float *L, float *R, int n) {
   for (Voice &v : voices) {
     if (!v.alive) continue;
     const double b = glideTo(v.bend, expr.bendOf(v.key), dt, BEND_T);
-    if (b != v.bend || bendNow != was) { v.bend = b; tune(v); }
+    // Press: a held key's laser pushes its ions in step with their motion, making up the share of
+    // the resistor's loss that the key is pressed: pressed fully they ring on as long as it is held
+    const double u = glideTo(v.push, v.held && !v.cooled && !v.stolen ? press.of(v.key) : 0.0, dt, PRESS_GLIDE);
+    if (b != v.bend || bendNow != was || u != v.push) { v.bend = b; v.push = u; tune(v); }
     for (int i = 0; i < n; i++) {
       double l = 0, r = 0;
       for (int m = 0; m < v.M; m++) {

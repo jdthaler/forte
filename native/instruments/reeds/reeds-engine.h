@@ -22,6 +22,8 @@
 #include "forte/background.h"
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "reeds-model.h"
 #include "reeds-params.h"
@@ -43,6 +45,9 @@ class ReedEngine : public Engine {
   void allNotesOff() override;
   void bend(double value) override; // every reed's bending stiffness ×r², its notes ×r
   void noteBend(double ratio, int key) override; // one reed's stiffness ×r², on top of the wheel's
+  // a note's own slide: where its hammer strikes (strike), from its next strike
+  void slide(double value, int key) override { expr.setSlide(value, key); }
+  void pressure(double value, int key) override { presses.set(value, key); } // a finger on the reed's tip: muted
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A reed its page's model built already (packVoiceData; the page's noteData), for the next
@@ -58,8 +63,9 @@ class ReedEngine : public Engine {
     bool inUse = false;
     double k = 0;
     int os = OS, hMax = 0; // this voice's oversampling (Medium and Low play their reeds at the output rate), the hammer's longest flight
+    double liftK = 1; // how many times longer than usual its damper takes (forte/lift.h)
     double prune = 0, deathRel = 0, loudest = 0; // Medium, Low: a mode / the voice ends this far below the loudest
-    std::array<double, MAX_MODES> q{}, q1{}, a1{}, a2{}, a1d{}, a2d{}, w{}, bw{}, pk{}, bp{}, om{}, sig{}, dw{}, om0{};
+    std::array<double, MAX_MODES> q{}, q1{}, a1{}, a2{}, a1d{}, a2d{}, a1p{}, a2p{}, w{}, w0{}, bw{}, pk{}, bp{}, om{}, sig{}, dw{}, om0{};
     // om0: the modes unbent; bend: the ratio om is tuned to, the wheel's × the note's own (own, gliding to its key's)
     double bend = 1, own = 1;
     double comp = 0, cStop = 0, stopDen = 1;
@@ -75,6 +81,12 @@ class ReedEngine : public Engine {
     void setDamper(double sd);
     void tune(double r); // the modes at r × om0: a1, a2, bw, bp, comp, the stop (then setDamper)
     void updateDamping(const ReedEngine &eng) { damped = killing || (!keyDown && !eng.sustain); }
+    Press press; // a finger on the reed's tip (forte/press.h): a1p, a2p while it is pressed
+    void setPressed();
+    // a note's own slide: where its hammer strikes (a fraction of the reed; NaN: the knob's, as built)
+    std::array<double, STRIKES * MAX_MODES> ws{};
+    double aimed = NAN;
+    void aim(double at);
     void kill(const ReedEngine &eng);
     void strike(double v);
     double contactForce(double dFree);
@@ -93,6 +105,7 @@ class ReedEngine : public Engine {
   const int hammerMax;
   double damperSigma = LOSS.damper;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
+  Presses presses; // each key's pressure and the channel's
   NoteExpression expr{NOTE_BEND};  // each key's own bend (MPE)
   double kF = 0, nodeA = 0, nodeB = 0;
   double *capA, *capB; // C(y) for the current gap and, while it glides, the next block's

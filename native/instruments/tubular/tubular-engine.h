@@ -20,6 +20,8 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "tubular-model.h"
 #include "tubular-params.h"
@@ -47,6 +49,9 @@ class TubularEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override { sustain = on; }
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's mallet face, at its next strike
+  // Glide: the tube swinging on its cord, toward the listener or away: a Doppler shift of a few cents
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
+  void pressure(double value, int key) override { presses.set(value, key); } // a hand on the tube, damping it while its key is held
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
@@ -77,6 +82,8 @@ class TubularEngine : public Engine {
     double Fmax = 0, lastContactMs = 0;
     bool released = false;
     double damp = 0, dampSet = -1;
+    double bent = 1; // its sound × this (a note's own bend: the tube swinging)
+    double liftK = 1; // how many times longer than usual its damper takes to stop it (forte/lift.h)
     double fade = 1;
     bool fading = false, dead = false;
     double age = 0;
@@ -109,7 +116,8 @@ class TubularEngine : public Engine {
   std::array<double, p::count> P{};
   bool hasParams = false;
   bool sustain = false;
-  NoteExpression expr{0}; // each key's own mallet face (no bend: a tube is cut to its pitch)
+  Presses presses; // each key's pressure and the channel's (forte/press.h)
+  NoteExpression expr{0.1}; // each key's own mallet face, and its bend (ten cents either way)
   // the tubes' version: a new one when what cuts them changes (the metal, the section, the cap, the
   // microphones' distance, the tuning); its snapshot (a ring, read by the builder) holds those
   uint64_t version = 0;

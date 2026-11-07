@@ -12,6 +12,21 @@ namespace forte::brass {
 constexpr double OUT = 0.035;      // the radiated pressure at 1 m (Pa) to the output
 constexpr double RELEASE = 0.03;   // s: the breath stops
 constexpr int MAX_SOUNDING = 12;
+// The compressor (compress): brass at full cry is some 35 dB above its pianissimo, and its shock
+// fronts put its peaks 18-20 dB above its rms, so a fortissimo note's peaks reach 10 dB over full
+// scale and a chord's 17 dB. The limiter after it caught them by ducking the whole sound 8-12 dB at
+// once and letting it back over 150 ms, a pumping that this rides instead, smoothly. Its detector
+// holds each peak for HOLD (longer than the lowest note's period, so it reads the waveform's crest,
+// shock fronts and all, not one spike), then lets go over LET_GO; the gain follows it down in
+// ATTACK and back up in RECOVER. Above THRESH (re the engine's full scale; the page adds the
+// registry's 2.5 dB trim) the peaks rise 1/RATIO as fast, through a KNEE dB soft knee, so
+// mezzo-forte and below (the regulation's level, brass-levels.h) are untouched; what is left over
+// the ceiling for the limiter is a dB or two.
+namespace comp {
+constexpr double THRESH = -4, RATIO = 3, KNEE = 6; // dB, ratio, dB
+constexpr double HOLD = 0.05, LET_GO = 0.3;        // s
+constexpr double ATTACK = 0.004, RECOVER = 0.25;   // s
+} // namespace comp
 
 BrassEngine::BrassEngine(double fs) : Engine(fs) {
   for (int i = 0; i < POOL; i++) pool[i].mem = memory.data() + (size_t)i * MEM;
@@ -41,6 +56,7 @@ int BrassEngine::voiceCount() const {
 
 void BrassEngine::allNotesOff() {
   for (Voice &v : pool) v.active = false;
+  peak = 0; peakHold = 0; compGain = 1;
   focus = nullptr;
 }
 
@@ -87,7 +103,7 @@ void BrassEngine::start(Voice &v, double velocity) {
   v.bendNow = expr.bendOf(v.key) * bendNow;
   v.plunger = v.plungerTo = expr.slideOr(v.key, P[p::plunger]);
   std::tie(v.gl, v.gr) = keyPan(v.key, 0.4);
-  v.active = true; v.down = true;
+  v.active = true; v.down = true; v.liftK = 1;
   retune(v, true);
 }
 
@@ -169,9 +185,12 @@ void BrassEngine::noteOn(int key, double velocity) {
   focus = &nv;
 }
 
-void BrassEngine::noteOff(int key, double) {
+// Lift: how the breath stops: a slow lift tapers the note (the mouth pressure falls over up to four
+// times the usual), a fast one is a tongue stop (a quarter of it).
+void BrassEngine::noteOff(int key, double velocity) {
   for (Voice &v : pool) if (v.active && v.key == key && v.down) {
-    v.down = false;
+    const double s = liftScale(velocity);
+    v.down = false; v.liftK = s * s;
     if (v.crossings > 12) { learned[key] = v.trim; learnedLip[key] = v.lipTrim; learnedPlan[key] = v.plan; learnedVersion[key] = planVersion; }
   }
 }
@@ -317,7 +336,7 @@ void BrassEngine::process(float *Lb, float *Rb, int n) {
     v.plungerTo = expr.slideOr(v.key, P[p::plunger]);
     v.plunger = glideTo(v.plunger, v.plungerTo, dt, 0.02);
     retune(v, false);
-    const double kRel = 1 - std::exp(-1 / (v.fsV * RELEASE)), kFol = 1 - std::exp(-1 / (v.fsV * 0.03));
+    const double kRel = 1 - std::exp(-1 / (v.fsV * RELEASE * v.liftK)), kFol = 1 - std::exp(-1 / (v.fsV * 0.03));
     const double gain = v.gain / v.os;
     for (int i = 0; i < n; i++) {
       double l = 0, r = 0;
@@ -337,7 +356,30 @@ void BrassEngine::process(float *Lb, float *Rb, int n) {
     if (!v.down && v.pm < 1 && v.env < 1e-4) { v.active = false; if (focus == &v) focus = nullptr; }
     if (!std::isfinite(v.y) || !std::isfinite(v.out)) { v.active = false; if (focus == &v) focus = nullptr; }
   }
+  compress(Lb, Rb, n);
   if (++blocks % 6 == 0) postView();
+}
+
+void BrassEngine::compress(float *L, float *R, int n) {
+  using namespace comp;
+  const double kLet = 1 - std::exp(-1 / (fs * LET_GO)), kA = 1 - std::exp(-1 / (fs * ATTACK)),
+               kR = 1 - std::exp(-1 / (fs * RECOVER));
+  const int hold = (int)(HOLD * fs);
+  const double knee0 = std::pow(10.0, (THRESH - KNEE / 2) / 20), slope = 1 - 1 / RATIO;
+  for (int i = 0; i < n; i++) {
+    const double x = std::max(std::abs((double)L[i]), std::abs((double)R[i]));
+    if (x >= peak) { peak = x; peakHold = hold; }
+    else if (peakHold > 0) peakHold--;
+    else peak += (x - peak) * kLet;
+    double want = 1;
+    if (peak > knee0) {
+      const double over = 20 * std::log10(peak) - THRESH;
+      const double cut = over >= KNEE / 2 ? slope * over : slope * (over + KNEE / 2) * (over + KNEE / 2) / (2 * KNEE);
+      want = std::pow(10.0, -cut / 20);
+    }
+    compGain += (want - compGain) * (want < compGain ? kA : kR);
+    L[i] = (float)(L[i] * compGain); R[i] = (float)(R[i] * compGain);
+  }
 }
 
 // The traces of the focused voice: its cup pressure, lip opening, the wave going into the flare and

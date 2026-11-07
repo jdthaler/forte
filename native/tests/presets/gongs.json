@@ -15,7 +15,7 @@
         "thermal": 1,
         "radiation": 1,
         "asym": 0.5,
-        "hardness": 4,
+        "hardness": 20,
         "mass": 0.06,
         "strike": 0.1,
         "strikeAngle": 20,
@@ -40,7 +40,12 @@
         "cents8": 0,
         "cents9": 0,
         "cents10": 0,
-        "cents11": 0
+        "cents11": 0,
+        "strikeOn": true,
+        "glideOn": false,
+        "slideOn": true,
+        "pressOn": true,
+        "liftOn": true
       }
     }
   ]

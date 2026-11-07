@@ -13,6 +13,7 @@ namespace forte::quantum {
 namespace fd = forte::fdlibm;
 using std::numbers::pi;
 
+constexpr double BEND_T = 0.02;  // s: a note's own bend glides this fast
 constexpr double OUT = 0.3;      // launch peak at full velocity
 constexpr double TAU_MIN = 1e-4; // shortest pump ramp, s (keeps the onset below Nyquist)
 constexpr double SLIDE_T = 0.02; // s: a note's slide (its dephasing rate) glides with this time constant
@@ -57,7 +58,9 @@ bool QuantumEngine::Voice::start(const QuantumEngine &eng, int k, double vel, co
     }
     last = i;
   }
-  for (int g = 0; g < G; g++) { gD[g] = 1; gR[g] = 1; }
+  for (int g = 0; g < G; g++) { gD[g] = 1; gR[g] = 1; gA[g] = 1; }
+  bent = 1; warp = 0;
+  bend(eng, 0); // a note bent before it is struck starts there
   useIm = p.d == coil;
   // the electrode's Franck–Condon offset, faded out by its AC coupling over DC_FADE
   dc = truthy(p.dc) ? p.dc : 0; dcEnd = (int64_t)jsRound(DC_FADE * fs);
@@ -70,7 +73,7 @@ bool QuantumEngine::Voice::start(const QuantumEngine &eng, int k, double vel, co
   // across C2–C7, the keyboard it was first drawn on; the keys beyond sit at its ends
   const double pan = std::max(-1.0, std::min(1.0, (2.0 * (k - 36)) / (96 - 36) - 1)) * 0.6, a = ((pan + 1) * pi) / 4;
   gl = fd::cos(a); gr = fd::sin(a); // keyPan(key)
-  released = quench = stolen = dead = false;
+  released = quench = stolen = dead = false; liftK = 1;
   coh = folded = false; lam = 0; gain = 1; dcB = dcC = 0;
   s0 = 0; s1 = S; active = NP; // the states rotated, and the pairs summed (see trim)
   const double x = eng.expr.slideOr(k, NAN); // a slide starts there
@@ -116,7 +119,7 @@ void QuantumEngine::Voice::trim(double tau) {
 }
 
 void QuantumEngine::Voice::rates(const QuantumEngine &eng) { // T₁ (or the release quench) and T_φ, applied live
-  const double fs = eng.fs, T1 = stolen ? 0.005 : quench ? eng.P[p::release] : eng.P[p::T1];
+  const double fs = eng.fs, T1 = stolen ? 0.005 : quench ? eng.P[p::release] * liftK : eng.P[p::T1];
   r1 = fd::exp(-1 / (fs * T1));
   if (!slid) deph = eng.P[p::dephase];
   const double Gp = std::max(0.0, truthy(deph) ? deph : 0); // Γ_φ = 1/T_φ
@@ -208,9 +211,25 @@ void QuantumEngine::Voice::dephase(const QuantumEngine &eng, int n) {
   if (deph != was) rates(eng);
 }
 
-// Exact phases from the sample counter: aₙ = e^(−iθₙ·count).
+// The well squeezed (a note's own bend): every level, so every Bohr frequency, × bent. It glides
+// a block at a time (n 0: straight there); sync keeps the phase it gains in warp.
+void QuantumEngine::Voice::bend(const QuantumEngine &eng, int n) {
+  const double to = eng.expr.bendOf(key), was = bent;
+  bent = n ? glideTo(bent, to, n / eng.fs, BEND_T) : to;
+  if (bent == was) return;
+  for (int s = 0; s < S; s++) { const double t = th[s] * bent; cr[s] = fd::cos(t); ci[s] = fd::sin(t); }
+  // a group whose lines it takes past 0.475 fs falls silent (none of an unbent packet's is there)
+  for (int g = 0; g < G; g++) {
+    double top = 0;
+    for (int i = ga[g]; i < gb[g]; i++) top = std::max(top, std::fabs(th[i + gk[g]] - th[i]));
+    gA[g] = top * bent < 0.95 * pi ? 1 : 0;
+  }
+}
+
+// Exact phases from the sample counter: aₙ = e^(−iθₙ·count), at a bent well's levels
+// e^(−iθₙ·(count + warp)).
 void QuantumEngine::Voice::sync() {
-  const double c = (double)count;
+  const double c = (double)count + warp;
   if (coh && folded) { // aₙ = (Rₙ + 1)·e^(−iθₙ·count)
     for (int s = s0; s < s1; s++) {
       const double ph = th[s] * c, cs = fd::cos(ph), sn = fd::sin(ph), br = Rr[s] + 1, bi = Ri[s];
@@ -243,7 +262,7 @@ void QuantumEngine::Voice::render(T *L, T *R, int n) {
       double sum = 0;
       if (useIm) for (int i = ga[g]; i < b; i++, q++) sum += w[q] * (re[i] * im[i + k] - im[i] * re[i + k]);
       else for (int i = ga[g]; i < b; i++, q++) sum += w[q] * (re[i] * re[i + k] + im[i] * im[i + k]);
-      acc += D * sum;
+      acc += D * sum * gA[g];
       if (dec) { const double Dn = D * gR[g]; gD[g] = Dn < 1e-9 ? 0 : Dn; }
     }
     double ramp = 1;
@@ -293,7 +312,7 @@ void QuantumEngine::Voice::renderCoherent(T *L, T *R, int n) {
       double sum = 0;
       if (useIm) for (int i = ga[gi]; i < b; i++, q++) sum += w[q] * (ar[i] * ai[i + k] - ai[i] * ar[i + k]);
       else for (int i = ga[gi]; i < b; i++, q++) sum += w[q] * (ar[i] * ar[i + k] + ai[i] * ai[i + k]);
-      acc += D * sum;
+      acc += D * sum * gA[gi];
       if (dec) { const double Dn = D * gR[gi]; gD[gi] = Dn < 1e-9 ? 0 : Dn; }
     }
     if (off) {
@@ -473,13 +492,16 @@ void QuantumEngine::drop(Voice *v) {
   nVoices = j;
 }
 
-void QuantumEngine::noteOff(int key, double) {
+// Lift: the measurement that ends the note: a fast lift collapses the state (its quench in up to a
+// quarter of the usual time), a slow one lets it decohere slowly (up to four times).
+void QuantumEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
     if (v->key == key && !v->released) {
       v->released = true;
-      if (!sustain) { v->quench = true; v->rates(*this); }
+      if (!sustain) { v->quench = true; v->liftK = s * s; v->rates(*this); }
     }
   }
 }
@@ -502,7 +524,11 @@ template <class T>
 void QuantumEngine::render(T *L, T *R, int n) {
   std::fill(L, L + n, T(0)); std::fill(R, R + n, T(0));
   if (hasParams && nPending) retryPending();
-  for (int i = 0; i < nVoices; i++) { voices[i]->dephase(*this, n); voices[i]->render(L, R, n); }
+  for (int i = 0; i < nVoices; i++) {
+    Voice &v = *voices[i];
+    v.dephase(*this, n); v.bend(*this, n); v.render(L, R, n);
+    v.warp += n * (v.bent - 1);
+  }
   int j = 0; // drop finished voices in place (no allocation; an offered packet goes with its voice)
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];

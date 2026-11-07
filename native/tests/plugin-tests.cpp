@@ -3,6 +3,7 @@
 // (from MIDI, and as CLAP's note expressions).
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <numbers>
@@ -246,6 +247,22 @@ TEST("plugin: the Preset parameter applies a preset, keeping the kept parameters
   for (auto &e : ev.out) told |= e.param_id == in.id("Ring time") && e.value == 6;
   CHECK(told);
 }
+TEST("plugin: a preset's change fades the sound out in 6 ms and back in 12 ms, so it doesn't click (shared/worklet.js)") {
+  Instance in(48000);
+  Events ev;
+  ev.midi(0, 0x90, 60, 100);
+  ev.param(4800, in.id("Preset"), 1);
+  auto L = in.run(9600, 64, ev);
+  CHECK(std::fabs(in.value("Ring time") - 6) < 1e-12); // the host hears of it at once
+  const double playing = peak(L, 4600, 4800);
+  CHECK(playing > 0.01);
+  CHECK(peak(L, 4800 + 280, 4800 + 300) < 0.02 * playing); // at the bottom, 6 ms on
+  CHECK(peak(L, 4800 + 900, 4800 + 1100) > 0.5 * playing); // back up by 18 ms
+  double jump = 0, usual = 0;
+  for (int i = 4700; i < 4800; i++) usual = std::max(usual, (double)std::fabs(L[i] - L[i - 1]));
+  for (int i = 4800; i < 6000; i++) jump = std::max(jump, (double)std::fabs(L[i] - L[i - 1]));
+  CHECK(jump < 1.5 * usual);
+}
 TEST("plugin: Morph takes every parameter part way from one preset to another, keeps the kept ones and tells the host") {
   Instance in(48000);
   CHECK(in.value("Morph from") == 0 && in.value("Morph to") == 1 && in.value("Morph") == 0); // Default settings to the first preset
@@ -445,7 +462,7 @@ TEST("plugin: the editor's calls set parameters, play notes and show what the ho
   auto call = [&](const char *json) { return bridge->call(in.p, json); };
   const std::string d = call("[\"describe\"]");
   CHECK(d.find("\"name\": \"Forte Smoke Test\"") != std::string::npos);
-  CHECK(d.find("\"Long ring\"") != std::string::npos && d.find("\"presets\": 3") != std::string::npos);
+  CHECK(d.find("\"Long ring\"") != std::string::npos && d.find("\"presets\": 8") != std::string::npos);
   CHECK(d.find("\"space\": \"sustain\"") != std::string::npos);
   CHECK(call("[\"poll\"]").find("[1, 0.4, \"-1.9 dB\", ") != std::string::npos); // every value once (and the engine's value)
   CHECK(call("[\"poll\"]").find("\"p\": []") != std::string::npos);            // then only changes
@@ -472,7 +489,7 @@ TEST("plugin: the editor's calls set parameters, play notes and show what the ho
   CHECK(peak(L) > 0.01);
   const std::string polled = call("[\"poll\"]");
   CHECK(polled.find("\"keys\": [69]") != std::string::npos && polled.find("\"vel\": [0.8") != std::string::npos);
-  CHECK(polled.find("[3, 1, \"Long ring\", 1]") != std::string::npos && polled.find("\"6.00 s\"") != std::string::npos);
+  CHECK(polled.find("[8, 1, \"Long ring\", 1]") != std::string::npos && polled.find("\"6.00 s\"") != std::string::npos);
   call("[\"note\", 69, 0]");
   call("[\"panic\"]");
   Events none;
@@ -564,6 +581,81 @@ TEST("plugin: CLAP's note expressions bend and slide one note; the AU wrapper's 
   L = in.run(48000, 128, slide);
   const double c5 = tone(L, up(kC4, 13), 48000, 36000, 48000), e5 = tone(L, up(kE4, 13), 48000, 36000, 48000);
   CHECK(c5 > 5 * e5);
+}
+
+TEST("plugin: the Expression switches: off, Strike plays every note as hard as the window's keys, Glide and Slide hold back a note's own bend and slide, Press its pressure, Lift its release velocity") {
+  // Strike: two notes, struck softly and hard; off, both as the window's keys (0.75)
+  auto struck = [](bool on) {
+    Instance in(48000);
+    Events ev;
+    if (!on) ev.param(0, in.id("Strike"), 0);
+    ev.note(0, true, 0, 60, 0.2); ev.note(0, true, 0, 72, 1);
+    auto L = in.run(4800, 128, ev);
+    return std::array{tone(L, kC4, 48000, 0, 2400), tone(L, 2 * kC4, 48000, 0, 2400)};
+  };
+  auto a = struck(true), b = struck(false);
+  CHECK_NEAR(a[0] / a[1], 0.2, 0.02);
+  CHECK_NEAR(b[0] / b[1], 1, 0.02);
+  CHECK_NEAR(b[1] / a[1], 0.75, 0.02);
+  // Glide: a note's own bend; turned off while bent, the note goes back to its key
+  {
+    Instance in(48000);
+    Events ev;
+    ev.note(0, true, 0, 64, 0.8);
+    ev.expression(10, CLAP_NOTE_EXPRESSION_TUNING, 0, 64, -2);
+    auto L = in.run(4800, 128, ev);
+    CHECK(loudest(L, {kE4, up(kE4, -2)}, 2400, 4800) == 1);
+    Events off;
+    off.param(0, in.id("Glide"), 0);
+    off.expression(10, CLAP_NOTE_EXPRESSION_TUNING, 0, 64, -1); // held back
+    L = in.run(4800, 128, off);
+    CHECK(loudest(L, {kE4, up(kE4, -2), up(kE4, -1)}, 2400, 4800) == 0);
+  }
+  // Slide: a note's own ring time, from where it began fully up (10 s), or the default (1 s) with Slide off
+  auto ring = [](bool on) {
+    Instance in(48000);
+    Events ev;
+    if (!on) ev.param(0, in.id("Slide"), 0);
+    ev.note(0, true, 0, 72, 0.8);
+    ev.expression(0, CLAP_NOTE_EXPRESSION_BRIGHTNESS, 0, 72, 0);
+    ev.expression(0, CLAP_NOTE_EXPRESSION_BRIGHTNESS, 0, 72, 1);
+    auto L = in.run(48000, 128, ev);
+    return tone(L, 2 * kC4, 48000, 36000, 48000) / tone(L, 2 * kC4, 48000, 0, 4800);
+  };
+  CHECK(ring(true) > 0.3);
+  CHECK(ring(false) < 0.01);
+  // Press: pressure doubles the smoke test's note; off, ignored, and a note pressed as it turns off lets go
+  {
+    Instance in(48000);
+    Events ev;
+    ev.param(0, in.id("Ring time"), 10);
+    ev.note(128, true, 0, 60, 0.8); // after the block that takes the ring time
+    ev.midi(2400, 0xa0, 60, 127);
+    auto L = in.run(4800, 128, ev);
+    const auto rung = [](double samples) { return std::exp(-6.9 / 10 * samples / 48000); }; // a 10 s ring, between two windows' middles
+    CHECK_NEAR(tone(L, kC4, 48000, 2400 + 256, 4800) / tone(L, kC4, 48000, 256, 2400), 2 * rung(2400), 0.03);
+    Events off;
+    off.param(0, in.id("Press"), 0);
+    off.midi(10, 0xd0, 127, 0); // held back
+    const double before = tone(L, kC4, 48000, 4800 - 1200, 4800);
+    L = in.run(4800, 128, off);
+    CHECK_NEAR(tone(L, kC4, 48000, 256, 1456) / before, 0.5 * rung(1456), 0.02);
+  }
+  // Lift: a fast release damps the smoke test's note at once (50 ms), a slow one lets it ring (0.4 s);
+  // off, both at its own speed (0.1 s)
+  auto lift = [](bool on, double vel) {
+    Instance in(48000);
+    Events ev;
+    if (!on) ev.param(0, in.id("Lift"), 0);
+    ev.note(0, true, 0, 60, 0.8);
+    ev.note(2400, false, 0, 60, vel);
+    auto L = in.run(9600, 128, ev);
+    return tone(L, kC4, 48000, 2400 + 2400, 2400 + 3600) / tone(L, kC4, 48000, 0, 2400);
+  };
+  CHECK(lift(true, 0) > 5 * lift(true, 1));
+  CHECK_NEAR(lift(false, 0) / lift(false, 1), 1, 0.01);
+  Instance in(48000);
+  for (const char *name : {"Strike", "Glide", "Slide", "Press", "Lift"}) CHECK(in.value(name) == 1); // all on by default
 }
 
 TEST("plugin: Octave and Transpose move the MIDI keys, not the window's; a note held while they change ends where it began; saved") {

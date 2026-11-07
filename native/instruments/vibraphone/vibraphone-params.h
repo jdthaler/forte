@@ -17,7 +17,7 @@
 namespace forte::vibraphone {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { depth, eta, temp, fullRange, tubes, gap, detune, motor, speed, cd, twist, shaft2, hardness, mass, strike, across, speedMax, damp, pedalLock, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { depth, eta, temp, fullRange, tubes, gap, detune, motor, speed, cd, twist, shaft2, hardness, mass, strike, across, speedMax, damp, pedalLock, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -100,36 +100,42 @@ inline const ParamInfo kParams[p::count] = {
   {"cents9", "Major 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
+  {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::motor, 1}};
-inline const PresetValue kPreset2[] = {{p::speed, 6}};
-inline const PresetValue kPreset3[] = {{p::twist, 40}, {p::shaft2, 90}};
-inline const PresetValue kPreset4[] = {{p::tubes, 0}, {p::motor, 1}};
-inline const PresetValue kPreset5[] = {{p::gap, 7}, {p::motor, 1}};
-inline const PresetValue kPreset6[] = {{p::detune, 100}, {p::motor, 1}};
-inline const PresetValue kPreset7[] = {{p::depth, 0}, {p::motor, 1}};
-inline const PresetValue kPreset8[] = {{p::hardness, 6000}, {p::strike, 0.06}, {p::motor, 1}};
-inline const PresetValue kPreset9[] = {{p::temp, 5}, {p::motor, 1}};
-inline const PresetValue kPreset10[] = {{p::motor, 2}};
-inline const PresetValue kPreset11[] = {{p::hardness, 150}, {p::mass, 16}};
-inline const PresetValue kPreset12[] = {{p::speed, 0.8}};
-inline const PresetValue kPreset13[] = {{p::across, 0.85}, {p::motor, 1}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}, {p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::motor, 1}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::speed, 6}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::twist, 40}, {p::shaft2, 90}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::tubes, 0}, {p::motor, 1}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::gap, 7}, {p::motor, 1}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::detune, 100}, {p::motor, 1}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::depth, 0}, {p::motor, 1}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::hardness, 6000}, {p::strike, 0.06}, {p::motor, 1}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::temp, 5}, {p::motor, 1}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::motor, 2}};
+inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::hardness, 150}, {p::mass, 16}};
+inline const PresetValue kPreset12[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::speed, 0.8}};
+inline const PresetValue kPreset13[] = {{p::glideOn, 0}, {p::liftOn, 0}, {p::across, 0.85}, {p::motor, 1}};
 inline const Preset kPresets[] = {
-  {"Vibraphone: motor on, medium yarn mallets", nullptr, 0},
-  {"Motor off, discs open: no tremolo", kPreset1, 1},
-  {"Fast motor: 6 rev/s, a 12 Hz tremolo", kPreset2, 1},
-  {"Discs twisted along the shaft: chords shimmer", kPreset3, 2},
-  {"No resonators: the bars alone", kPreset4, 2},
-  {"Tubes pressed close: bar and tube trade energy", kPreset5, 2},
-  {"Tubes a semitone sharp", kPreset6, 2},
-  {"Plain bars, 1 : 2.76 : 5.40", kPreset7, 2},
-  {"Hard cord mallets, struck near the end", kPreset8, 3},
-  {"Cold hall (5 °C): tubes fall flat of their bars", kPreset9, 2},
-  {"Motor off, discs closed: dry", kPreset10, 1},
-  {"Soft yarn mallets: dark and round", kPreset11, 2},
-  {"Slow motor: a lazy 1.6 Hz tremolo", kPreset12, 1},
-  {"Struck off the edge: the bars twist", kPreset13, 2},
+  {"Vibraphone: motor on, medium yarn mallets", kPreset0, 2},
+  {"Motor off, discs open: no tremolo", kPreset1, 3},
+  {"Fast motor: 6 rev/s, a 12 Hz tremolo", kPreset2, 3},
+  {"Discs twisted along the shaft: chords shimmer", kPreset3, 4},
+  {"No resonators: the bars alone", kPreset4, 4},
+  {"Tubes pressed close: bar and tube trade energy", kPreset5, 4},
+  {"Tubes a semitone sharp", kPreset6, 4},
+  {"Plain bars, 1 : 2.76 : 5.40", kPreset7, 4},
+  {"Hard cord mallets, struck near the end", kPreset8, 5},
+  {"Cold hall (5 °C): tubes fall flat of their bars", kPreset9, 4},
+  {"Motor off, discs closed: dry", kPreset10, 3},
+  {"Soft yarn mallets: dark and round", kPreset11, 4},
+  {"Slow motor: a lazy 1.6 Hz tremolo", kPreset12, 3},
+  {"Struck off the edge: the bars twist", kPreset13, 4},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::hardness}, {109, p::gap}, {111, p::damp}, {113, p::strike}, {114, p::speed}};
@@ -152,6 +158,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 53, .compassHi = 89, .compass = p::fullRange, .space = Space::sustain,
     .modWheel = p::speed, .modWheelMax = 6,
+    .slide = p::strike, .slideMax = 0.05,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 3},
     .midiVelocity = midiVelocity, .create = create,

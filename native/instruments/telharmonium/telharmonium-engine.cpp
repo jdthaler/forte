@@ -20,6 +20,7 @@ static constexpr double GAIN_T = 0.02;     // s: a key's pressure and the swell 
 static constexpr double HP_HZ = 16;        // the transformers' magnetising inductance passes nothing slower
 static constexpr double CHORD = 0.04;      // s: keys struck within this of one another make one chord (Pierce)
 static constexpr double PAN_NEAR = 0.891, PAN_FAR = 0.454; // the two manuals' receivers, to either side
+static constexpr double LN2 = 0.6931471805599453;
 
 static double frac(double x) { return x - std::floor(x); }
 
@@ -107,6 +108,7 @@ void TelharmoniumEngine::setParams(const double *p) {
     }
     bareGain = fs / (TAU * 1000);
   }
+  if (hasP) for (Key &k : keys) redraw(k); // the held keys' relays follow the knob
   hasP = true;
 }
 
@@ -206,28 +208,58 @@ void TelharmoniumEngine::settle(Source &s, const Key &k, int64_t now) {
 void TelharmoniumEngine::connect(Key &k) {
   k.count = 0;
   k.gainNow = k.gain = keyGain(k);
-  for (int h = 1; h <= HARMONICS; h++) {
-    const int teeth = k.teeth * h;
-    const double f = teeth * unit[k.shaft];
-    if ((h > 1 && f > top) || f * speed > 0.45 * fs) continue; // each key keeps its own alternator
-    const int b = k.manual * HARMONICS + h - 1;
-    const int ai = acquire(k.shaft, teeth);
-    if (ai < 0) continue;
-    Source &s = k.src[k.count];
-    s.alt = ai; s.bus = b; s.harmonic = h;
-    const double v = voiced(f); // the alternator's field, voiced: its whole flux, twelfth and all
-    const bool third = 3 * f < 0.45 * fs;
-    const cplx h0 = v * circuit(f, tau), h3 = third ? v * circuit(3 * f, tau) : cplx(0);
-    s.h0r = h0.real(); s.h0i = h0.imag(); s.h3r = h3.real(); s.h3i = h3.imag();
-    s.u1 = v * TAU * f * tau; s.u3 = third ? 3 * s.u1 : 0;
-    const double Y = busSum(b);
-    const int N = busCount[b];
-    const double share = level[b] <= 0 ? (N > 0 ? 1.0 / N : 0.0) : rhoBus[b] / (1 + N * rhoBus[b]);
-    busCount[b]++;
-    k.count++;
-    if (contact > 0) { s.dir = 1; s.at = 0; s.len = contact; s.uPrev = 0; s.y = 0; } // parted: no current yet
-    else { s.y = share * Y; settle(s, k, t); }
+  k.reach = reachOf(k.key);
+  for (int h = 1; h <= k.reach; h++) addSource(k, h);
+}
+
+// One harmonic's winding onto its bus, its blades closing over the contact time (or at once).
+void TelharmoniumEngine::addSource(Key &k, int h) {
+  const int teeth = k.teeth * h;
+  const double f = teeth * unit[k.shaft];
+  if ((h > 1 && f > top) || f * speed > 0.45 * fs) return; // each key keeps its own alternator
+  const int b = k.manual * HARMONICS + h - 1;
+  const int ai = acquire(k.shaft, teeth);
+  if (ai < 0) return;
+  Source &s = k.src[k.count];
+  s.alt = ai; s.bus = b; s.harmonic = h;
+  const double v = voiced(f); // the alternator's field, voiced: its whole flux, twelfth and all
+  const bool third = 3 * f < 0.45 * fs;
+  const cplx h0 = v * circuit(f, tau), h3 = third ? v * circuit(3 * f, tau) : cplx(0);
+  s.h0r = h0.real(); s.h0i = h0.imag(); s.h3r = h3.real(); s.h3i = h3.imag();
+  s.u1 = v * TAU * f * tau; s.u3 = third ? 3 * s.u1 : 0;
+  const double Y = busSum(b);
+  const int N = busCount[b];
+  const double share = level[b] <= 0 ? (N > 0 ? 1.0 / N : 0.0) : rhoBus[b] / (1 + N * rhoBus[b]);
+  busCount[b]++;
+  k.count++;
+  if (contact > 0) { s.dir = 1; s.at = 0; s.len = contact; s.uPrev = 0; s.y = 0; } // parted: no current yet
+  else { s.y = share * Y; settle(s, k, t); }
+}
+
+// Slide: how many of its harmonics a key's relay draws, from the ground tone up (the knob's, or the
+// key's own slide). A held key's relay opens the blades it no longer draws and closes the new ones.
+int TelharmoniumEngine::reachOf(int key) const {
+  return std::clamp((int)std::lround(expr.slideOr(key, P[p::draws])), 1, HARMONICS);
+}
+void TelharmoniumEngine::redraw(Key &k) {
+  const int n = reachOf(k.key);
+  if (!k.on || n == k.reach) return;
+  k.reach = n;
+  for (int i = k.count - 1; i >= 0; i--) if (k.src[i].harmonic > n && k.src[i].dir >= 0) openSource(k, i, 1);
+  for (int h = 1; h <= n; h++) {
+    bool has = false;
+    for (int i = 0; i < k.count; i++) {
+      Source &s = k.src[i];
+      if (s.harmonic != h) continue;
+      has = true;
+      if (s.dir < 0) { s.dir = 1; s.at = s.len - s.at; } // still parting: it closes from where it got to
+    }
+    if (!has) addSource(k, h);
   }
+}
+void TelharmoniumEngine::slide(double value, int key) {
+  expr.setSlide(value, key);
+  for (Key &k : keys) if (k.on && k.key == key) redraw(k);
 }
 
 // One winding leaves its bus with whatever current it still has (a spark at the contacts).
@@ -246,22 +278,26 @@ void TelharmoniumEngine::drop(Key &k) {
 
 // The relay opens: each winding's contacts part over the contact time, its current followed step by
 // step as their engagement falls; at once, it leaves with its current.
-void TelharmoniumEngine::open(Key &k) {
+void TelharmoniumEngine::open(Key &k, double scale) {
   k.on = false;
   if (contact <= 0) { drop(k); return; }
-  for (int i = 0; i < k.count; i++) {
-    Source &s = k.src[i];
-    if (s.dir == 0) {
-      const double c = s.c0 * exp(-(double)(t - s.t0) / (fs * tau));
-      C[s.bus] -= c;
-      s.y = steady(s, k) + c;
-      s.uPrev = emf(s, k);
-      s.at = 0; s.len = contact;
-    } else if (s.dir == 1) { // still closing: it opens from where it got to
-      s.at = s.len - s.at;
-    }
-    s.dir = -1;
+  for (int i = 0; i < k.count; i++) openSource(k, i, scale);
+}
+
+// One winding's blades part over the contact time (× scale); with no contact time it leaves at once.
+void TelharmoniumEngine::openSource(Key &k, int i, double scale) {
+  Source &s = k.src[i];
+  if (contact <= 0) { dropSource(k, i); return; }
+  if (s.dir == 0) {
+    const double c = s.c0 * exp(-(double)(t - s.t0) / (fs * tau));
+    C[s.bus] -= c;
+    s.y = steady(s, k) + c;
+    s.uPrev = emf(s, k);
+    s.at = 0; s.len = scale == 1 ? contact : std::max(1, (int)std::lround(contact * scale));
+  } else if (s.dir == 1) { // still closing: it opens from where it got to
+    s.at = s.len - s.at;
   }
+  s.dir = -1;
 }
 
 // The lowest key held, on its own shaft, that the key is a major third or a minor seventh above
@@ -305,6 +341,7 @@ void TelharmoniumEngine::noteOn(int key, double velocity) {
   k.on = true; k.key = key; k.born = t;
   k.vel = std::clamp(velocity, 0.0, 1.0); k.after = 0;
   k.manual = key >= split ? 1 : 0;
+  newest.down(key);
   start(k);
   // Pierce: a chord's keys arrive one after another; a key struck just before its root moves to it
   if (pierce)
@@ -325,10 +362,13 @@ void TelharmoniumEngine::noteOn(int key, double velocity) {
   }
 }
 
-void TelharmoniumEngine::noteOff(int key, double) {
+// Lift: how fast the relay opens: a slow lift parts its contacts over twice the contact time (a
+// softer click), a fast one over half.
+void TelharmoniumEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
+  newest.up(key);
   for (Key &k : keys) if (k.on && k.key == key) {
-    open(k);
+    open(k, liftScale(velocity));
     Message m;
     m.type = msg::note; m.key = (int16_t)key; m.values[0] = 0; m.count = 1;
     post(m);
@@ -337,6 +377,7 @@ void TelharmoniumEngine::noteOff(int key, double) {
 
 void TelharmoniumEngine::allNotesOff() {
   for (Key &k : keys) if (k.on) open(k);
+  newest.clear();
 }
 
 void TelharmoniumEngine::pressure(double value, int key) { // aftertouch: one key (poly) or every held key (channel, −1)
@@ -463,8 +504,9 @@ void TelharmoniumEngine::process(float *L, float *R, int n) {
   for (int at = 0; at < n; at += CHUNK) {
     const int m = std::min(CHUNK, n - at);
     const double dt = m / fs;
-    // the motor: its speed droops with the load and follows the field rheostat, through the flywheel
-    const double target = bendCents - droop * load;
+    // the motor: its speed droops with the load and follows the field rheostat (the wheel, and the
+    // newest held key's own bend), through the flywheel
+    const double target = bendCents + 1200 / LN2 * fdlibm::log(expr.bendOf(newest.key())) - droop * load;
     cents = glideTo(cents, target, dt, flywheel);
     speed = fdlibm::pow(2.0, cents / 1200);
     swellNow = glideTo(swellNow, swell, dt, GAIN_T);

@@ -138,7 +138,9 @@ bars by themselves.
   the box takes less: quieter and longer.
 - **Box tuning**: off tune, the box takes less energy and the note starts with a
   beat at the difference.
-- **Resonator boxes** off: the bar alone, 15–20 dB quieter in the middle of the compass.
+- **Resonator boxes** off: the bar alone, which barely moves the air at its own pitch: in the
+  first quarter second about 45 dB quieter at C4, 35 at C5, 28 at C6 and 26 at C7, and 16 at C8,
+  where the box is tiny and helps least (the vibraphone's tubes add 34 dB at F3 in the same way).
 
 ### 5. The hammer
 

@@ -28,20 +28,25 @@
     {"id":"cents8","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"cents9","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"cents10","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
-    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false}
+    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"strikeOn","kind":"toggle","def":true},
+    {"id":"glideOn","kind":"toggle","def":true},
+    {"id":"slideOn","kind":"toggle","def":true},
+    {"id":"pressOn","kind":"toggle","def":true},
+    {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"Concert cimbalom, cotton hammers","values":{}},
-    {"name":"Cimbalom tremolo","values":{"roll":12}},
-    {"name":"Cimbalom as built: the pedal lifts the dampers","values":{"dampers":"pedal"}},
-    {"name":"Hammered dulcimer, bare wood","values":{"build":"dulcimer","head":"wood","dampers":"none","strike":0.1,"detune":1.5}},
-    {"name":"Dulcimer with leather hammers","values":{"build":"dulcimer","head":"leather","dampers":"none"}},
-    {"name":"Whippy bamboo sticks","values":{"stick":40,"head":"leather"}},
-    {"name":"Struck near the bridge","values":{"strike":0.04,"head":"leather"}},
-    {"name":"Struck at the middle: hollow","values":{"strike":0.5}},
-    {"name":"Heavy hammers","values":{"mass":12}},
-    {"name":"Unisons in perfect tune","values":{"detune":0}},
-    {"name":"Out-of-tune tavern cimbalom","values":{"detune":6,"bridge":1.5}},
-    {"name":"Dulcimer drone cloud","values":{"build":"dulcimer","head":"wood","dampers":"none","sympathy":1,"bridge":1.6}}
+    {"name":"Concert cimbalom, cotton hammers","values":{"glideOn":false}},
+    {"name":"Cimbalom tremolo","values":{"glideOn":false,"roll":12}},
+    {"name":"Cimbalom as built: the pedal lifts the dampers","values":{"glideOn":false,"dampers":"pedal"}},
+    {"name":"Hammered dulcimer, bare wood","values":{"glideOn":false,"build":"dulcimer","head":"wood","dampers":"none","strike":0.1,"detune":1.5}},
+    {"name":"Dulcimer with leather hammers","values":{"glideOn":false,"build":"dulcimer","head":"leather","dampers":"none"}},
+    {"name":"Whippy bamboo sticks","values":{"glideOn":false,"stick":40,"head":"leather"}},
+    {"name":"Struck near the bridge","values":{"glideOn":false,"strike":0.04,"head":"leather"}},
+    {"name":"Struck at the middle: hollow","values":{"glideOn":false,"strike":0.5}},
+    {"name":"Heavy hammers","values":{"glideOn":false,"mass":12}},
+    {"name":"Unisons in perfect tune","values":{"glideOn":false,"detune":0}},
+    {"name":"Out-of-tune tavern cimbalom","values":{"glideOn":false,"detune":6,"bridge":1.5}},
+    {"name":"Dulcimer drone cloud","values":{"glideOn":false,"build":"dulcimer","head":"wood","dampers":"none","sympathy":1,"bridge":1.6}}
   ]
 }

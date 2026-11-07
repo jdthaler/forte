@@ -23,7 +23,7 @@ Then the bar is lowered to 2.5 mm above its box. Now they are strongly coupled a
     views: ['Bar and box energy', 'Spectrogram'],
     preset: 'No resonators: the bars alone',
     play: [run('C5 E5 G5 C6', { step: 0.5, dur: 1 }), { at: 2.2, set: { boxes: true } }, run('C5 E5 G5 C6', { at: 2.3, step: 0.5, dur: 1 })],
-    text: `The same phrase with the boxes taken away, then put back. A bar vibrating on its own pushes air forward with one face and back with the other, and the two nearly cancel: it can hardly make itself heard.
+    text: `The same phrase with the boxes taken away, then put back, struck with hard felt and fast hammers so that the bars alone can be heard at all. A bar vibrating on its own pushes air forward with one face and back with the other, and the two nearly cancel: it can hardly make itself heard.
 
 The box gathers the sound from one face only, and the note comes alive.`,
   },

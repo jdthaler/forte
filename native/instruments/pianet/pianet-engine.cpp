@@ -19,24 +19,27 @@ constexpr double FADE = 1.0 / 480; // per-sample fade for retired voices (5 ms a
 constexpr double GLIDE = 0.015;    // s: the pickup follows its knobs through two such lags (critically damped)
 constexpr double XFADE = 0.02;     // s: switching the valve combo in or out crossfades over this
 constexpr double DUCK = 0.01;      // s: a pickup switch fades out over this, then back in
+constexpr double HAND = 25;       // 1/s: the most a hand on the reed adds to its loss (Press)
 constexpr double RETACK = 0.95;    // a re-pressed key fires once its dropped pad has re-tacked this much of its disc …
 constexpr double RETACK_MAX = 0.15; // s … or after this long at most
 constexpr double BEND_T = 0.02;    // s: the pitch wheel's glide, and a note's own bend's
 
 // ---- a voice: one key's mechanism and its pickup -------------------------------------------
 
-void PianetEngine::Voice::start(PianetEngine &eng, int k, Data::Ref r) {
+void PianetEngine::Voice::start(PianetEngine &eng, int k, Data::Ref r, double x) {
   *this = Voice{};
   inUse = true;
-  key = k; version = eng.version; ref = r;
+  key = k; version = eng.version; ref = r; grab = x;
+  if (x != REED.xPad) at = padAt(*r.data, x);
+  const KeyReed &kr = x != REED.xPad ? at : *r.data;
   eng.data.acquire(r);
   own = eng.expr.bendOf(k);
   // Quality: Low leaves out the reed's modes above 12 kHz; Medium and Low let a reed rest once
   // its ringing is 70 / 60 dB below its loudest
   const double fTop = eng.Engine::pick<double>(INFINITY, INFINITY, 12000);
   int nMax = 0;
-  while (nMax < r.data->N && r.data->modes[nMax].f <= fTop) nMax++;
-  p = Pluck(*r.data, eng.pad(), eng.fs2, eng.bendNow * own, std::max(nMax, 1));
+  while (nMax < kr.N && kr.modes[nMax].f <= fTop) nMax++;
+  p = Pluck(kr, eng.pad(), eng.fs2, eng.bendNow * own, std::max(nMax, 1));
   rel = eng.Engine::pick(0.0, 1e-7, 1e-6);
   pol = key % 2 ? -1 : 1;
   setPickup(eng, true);
@@ -106,18 +109,20 @@ void PianetEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < 0 || key > 127) return;
   lastKey = key;
   Voice *v = byKey[key];
-  if (v && v->version == version) { startNote(key, velocity, v); return; }
+  // where its pad grabs the reed: the knob's, or its own slide (a pad moved is a new note's)
+  const double grab = std::clamp(expr.slideOr(key, P[p::grab]), 0.5, 0.95);
+  if (v && v->version == version && v->grab == grab) { startNote(key, velocity, v); return; }
   const Data::Ref r = data.get(key, version);
   if (!r) { // the reed is being built (a millisecond or so): the note waits for it
     for (int i = 0; i < nPending; i++) if (pending[i].key == key) { pending[i] = {key, velocity, false}; return; }
     if (nPending < (int)pending.size()) pending[nPending++] = {key, velocity, false};
     return;
   }
-  if (v) v->retire(); // its reed was re-cut: the old one fades out
+  if (v) v->retire(); // its reed was re-cut, or its pad moved: the old one fades out
   Voice *fresh = nullptr;
   for (Voice &u : pool) if (!u.inUse) { fresh = &u; break; }
   if (!fresh) { byKey[key] = nullptr; return; } // every voice busy (beyond anything the stealing below lets happen)
-  fresh->start(*this, key, r);
+  fresh->start(*this, key, r, grab);
   voices[nVoices++] = fresh; byKey[key] = fresh;
   if (nVoices > Engine::pick(MAX_VOICES, 16, 10)) { // Quality: Medium and Low let fewer notes sound at once
     Voice *victim = nullptr;
@@ -156,13 +161,13 @@ void PianetEngine::retryPending() {
   }
 }
 
-void PianetEngine::noteOff(int key, double) {
+void PianetEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
   Voice *v = byKey[key];
   if (!v) return;
   if (sustain) v->held = true;
-  else { v->pending = false; v->p.lift(); v->sleep = false; }
+  else { v->pending = false; v->p.lift(liftScale(velocity)); v->sleep = false; } // the pad's return: a fast lift slaps it back, with a small knock
 }
 
 void PianetEngine::setSustain(bool on) {
@@ -175,6 +180,7 @@ void PianetEngine::setSustain(bool on) {
 
 void PianetEngine::allNotesOff() {
   nPending = 0;
+  presses.clear();
   for (int i = 0; i < nVoices; i++) voices[i]->retire();
   byKey.fill(nullptr);
 }
@@ -240,6 +246,7 @@ void PianetEngine::processBlock(float *L, float *R, int n) {
     if (v.pending && ((p.hv == 0 && p.F <= 0 && p.a >= RETACK * PAD.a0) || (v.wait += n2) > waitMax)) {
       v.pending = false; p.press(v.pressVel); v.sleep = false; v.quiet = 0;
     }
+    if (v.hand.follow(p.down ? presses.of(v.key) : 0, n, fs)) { p.muted(HAND * v.hand.p); v.sleep = false; }
     const bool gliding = v.g != v.gT || v.g1 != v.gT || v.ye != v.yeT || v.ye1 != v.yeT;
     if (v.sleep && !gliding) { if (es) for (int s = 0; s < n2; s++) dCs[s] += v.dC; continue; }
     if (gliding) glide(v, n2, es);

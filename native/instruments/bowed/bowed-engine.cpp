@@ -71,7 +71,7 @@ void OrganistaEngine::setParams(const double *P) {
   Fr = friction(Pm);
   vBt = Pm.speed; if (first) vB = Pm.speed; // the wheel follows the treadle through the flywheel
   for (auto &s : S) {
-    s->design(loopDesign(s->key, Pm, s->fs));
+    s->design(loopDesign(s->key, own(s->key), s->fs));
     if (bendNow * s->nb != 1) s->bend(bendNow * s->nb);
     s->setDamper(damped(*s), 6.91 / Pm.damper);
   }
@@ -123,6 +123,22 @@ void OrganistaEngine::activate(Key &s) {
   act[nAct++] = &s;
 }
 
+// The parameters a key's string is designed from: the instrument's, at its own bow position (its slide).
+Params OrganistaEngine::own(int key) const {
+  Params q = Pm;
+  q.beta = expr.slideOr(key, Pm.beta);
+  return q;
+}
+void OrganistaEngine::slide(double value, int key) {
+  const double was = expr.slideOr(key, Pm.beta);
+  expr.setSlide(value, key);
+  Key *s = string(key);
+  if (!s || !hasParams || expr.slideOr(key, Pm.beta) == was) return;
+  s->design(loopDesign(key, own(key), s->fs)); // the wheel meets the string elsewhere: its delays split anew
+  if (bendNow * s->nb != 1) s->bend(bendNow * s->nb);
+  s->setDamper(damped(*s), 6.91 / Pm.damper);
+}
+
 void OrganistaEngine::noteOn(int key, double velocity) {
   Key *s = string(key);
   if (!s || !hasParams) return;
@@ -136,11 +152,14 @@ void OrganistaEngine::noteOn(int key, double velocity) {
   focus = key;
 }
 
-void OrganistaEngine::noteOff(int key, double) {
+// Lift: how fast the key lifts the string off the wheel, 15 ms as a rule: from 60 ms for the
+// slowest lift (the bow pressure fading, the tone thinning as it goes) to 4 ms for the fastest.
+void OrganistaEngine::noteOff(int key, double velocity) {
   Key *s = string(key);
   if (!s || !s->down) return;
   s->down = false; s->FT = 0;
-  s->dn = std::max(s->FN, 1e-6) / (0.015 * fs); // the key lifts the string off the wheel in 15 ms
+  const double t = liftScale(velocity);
+  s->dn = std::max(s->FN, 1e-6) / (0.015 * t * t * fs);
 }
 
 void OrganistaEngine::allNotesOff() { // Panic: every string and the board to rest

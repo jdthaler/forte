@@ -27,6 +27,9 @@ export function set(name, v) {
   const [p, lo, hi] = PARAMS[name];
   return [setParam(p, Math.max(lo, Math.min(hi, Math.round(v))))];
 }
+/** Where the three faders' lights stand (0..127 each), as a fader's touch leaves them: 3D 14, 15, 16.
+ *  GRAB found these in the firmware (RISE-GRAND.md: "fader values"), not in Dashboard's traffic. */
+export const faderLights = (values) => values.slice(0, 3).map((v, i) => setParam(0x14 + i, Math.max(0, Math.min(127, Math.round(v)))));
 /** MPE on a lower zone of `members` channels (2 …), each bending ±bend: the mode flag, RPN 6, RPN 0, as Dashboard sends them. */
 export const mpeMode = (members = 15, bend = 48) => [setParam(0x0e, 1), ...rpn(1, 6, members), ...rpn(0, 6, members), ...rpn(1, 0, bend), ...rpn(0, 0, bend)];
 /** Press as channel pressure (the MPE way) or polyphonic aftertouch: NRPN 4 (1, 0). */

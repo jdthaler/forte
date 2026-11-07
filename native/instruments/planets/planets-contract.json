@@ -29,19 +29,24 @@
     {"id":"cents8","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"cents9","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"cents10","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
-    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false}
+    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"strikeOn","kind":"toggle","def":true},
+    {"id":"glideOn","kind":"toggle","def":true},
+    {"id":"slideOn","kind":"toggle","def":true},
+    {"id":"pressOn","kind":"toggle","def":true},
+    {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"Earth: a great megathrust quake","values":{}},
-    {"name":"Earth: heard on a gravimeter","values":{"sensor":"gravimeter","mwTop":9.3,"rupture":1.5}},
-    {"name":"Earth: a deep quake 640 km down (like Bolivia, 1994)","values":{"mech":"normal","depth":640,"lat":-13.8,"strike":300,"mwTop":9,"distance":80,"azimuth":20}},
-    {"name":"Earth: at the antipode, every wave comes back","values":{"distance":179,"azimuth":0,"mwTop":8.6}},
-    {"name":"Earth: an explosion heard 90° away (odd degrees silent)","values":{"mech":"explosion","distance":90,"depth":10}},
-    {"name":"Earth: twisting modes, heard sideways","values":{"sensor":"horizontal","mech":"strikeslip","strike":0,"azimuth":30,"depth":15,"mwTop":8.8}},
-    {"name":"Earth, not turning: one tone each","values":{"spin":0}},
-    {"name":"Earth spun up eight times","values":{"spin":8,"lat":60}},
-    {"name":"Mars: a great marsquake","values":{"planet":"mars","depth":40,"distance":70}},
-    {"name":"Moon: a deep moonquake (900 km)","values":{"planet":"moon","mech":"normal","depth":900,"distance":90,"mwTop":8.5}},
-    {"name":"Moon: a meteorite strikes","values":{"planet":"moon","mech":"explosion","depth":0,"distance":40}}
+    {"name":"Earth: a great megathrust quake","values":{"liftOn":false}},
+    {"name":"Earth: heard on a gravimeter","values":{"liftOn":false,"sensor":"gravimeter","mwTop":9.3,"rupture":1.5}},
+    {"name":"Earth: a deep quake 640 km down (like Bolivia, 1994)","values":{"liftOn":false,"mech":"normal","depth":640,"lat":-13.8,"strike":300,"mwTop":9,"distance":80,"azimuth":20}},
+    {"name":"Earth: at the antipode, every wave comes back","values":{"liftOn":false,"distance":179,"azimuth":0,"mwTop":8.6}},
+    {"name":"Earth: an explosion heard 90° away (odd degrees silent)","values":{"liftOn":false,"mech":"explosion","distance":90,"depth":10}},
+    {"name":"Earth: twisting modes, heard sideways","values":{"liftOn":false,"sensor":"horizontal","mech":"strikeslip","strike":0,"azimuth":30,"depth":15,"mwTop":8.8}},
+    {"name":"Earth, not turning: one tone each","values":{"liftOn":false,"spin":0}},
+    {"name":"Earth spun up eight times","values":{"liftOn":false,"spin":8,"lat":60}},
+    {"name":"Mars: a great marsquake","values":{"liftOn":false,"planet":"mars","depth":40,"distance":70}},
+    {"name":"Moon: a deep moonquake (900 km)","values":{"liftOn":false,"planet":"moon","mech":"normal","depth":900,"distance":90,"mwTop":8.5}},
+    {"name":"Moon: a meteorite strikes","values":{"liftOn":false,"planet":"moon","mech":"explosion","depth":0,"distance":40}}
   ]
 }

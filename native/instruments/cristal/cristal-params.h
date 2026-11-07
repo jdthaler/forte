@@ -17,7 +17,7 @@
 namespace forte::cristal {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { press, stroke, strokes, wet, height, loss, fullRange, radiator, whiskers, sway, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { press, stroke, strokes, wet, height, loss, fullRange, radiator, whiskers, sway, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -86,36 +86,42 @@ inline const ParamInfo kParams[p::count] = {
   {"cents9", "Major 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
+  {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::press, 2.5}};
-inline const PresetValue kPreset2[] = {{p::press, 120}};
-inline const PresetValue kPreset3[] = {{p::wet, 0.2}};
-inline const PresetValue kPreset4[] = {{p::stroke, 0.04}};
-inline const PresetValue kPreset5[] = {{p::stroke, 0.25}};
-inline const PresetValue kPreset6[] = {{p::strokes, 1}};
-inline const PresetValue kPreset7[] = {{p::strokes, 2}};
-inline const PresetValue kPreset8[] = {{p::height, 0.3}};
-inline const PresetValue kPreset9[] = {{p::loss, 0.006}};
-inline const PresetValue kPreset10[] = {{p::radiator, 3}, {p::whiskers, 0}};
-inline const PresetValue kPreset11[] = {{p::radiator, 1}, {p::whiskers, 0}};
-inline const PresetValue kPreset12[] = {{p::radiator, 2}};
-inline const PresetValue kPreset13[] = {{p::sway, 1}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::press, 2.5}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::press, 120}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::wet, 0.2}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::stroke, 0.04}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::stroke, 0.25}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::strokes, 1}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::strokes, 2}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::height, 0.3}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::loss, 0.006}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::radiator, 3}, {p::whiskers, 0}};
+inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::radiator, 1}, {p::whiskers, 0}};
+inline const PresetValue kPreset12[] = {{p::glideOn, 0}, {p::radiator, 2}};
+inline const PresetValue kPreset13[] = {{p::glideOn, 0}, {p::sway, 1}};
 inline const Preset kPresets[] = {
-  {"The Baschets' cristal", nullptr, 0},
-  {"A light touch: the note takes its time", kPreset1, 1},
-  {"Pressing too hard: the tone crackles", kPreset2, 1},
-  {"Dry fingers: no grip", kPreset3, 1},
-  {"Slow strokes: soft and pure", kPreset4, 1},
-  {"Fast strokes: loud and bright", kPreset5, 1},
-  {"Strokes toward you, lifting between", kPreset6, 1},
-  {"One endless stroke", kPreset7, 1},
-  {"Rods low on their stems: two modes argue", kPreset8, 1},
-  {"Lossy stems: the rods stop with the finger", kPreset9, 1},
-  {"The bare collector: no radiators, no whiskers", kPreset10, 2},
-  {"Cones only, no whiskers", kPreset11, 2},
-  {"The flame alone", kPreset12, 1},
-  {"Swaying whiskers: a sparkle in the highs", kPreset13, 1},
+  {"The Baschets' cristal", kPreset0, 1},
+  {"A light touch: the note takes its time", kPreset1, 2},
+  {"Pressing too hard: the tone crackles", kPreset2, 2},
+  {"Dry fingers: no grip", kPreset3, 2},
+  {"Slow strokes: soft and pure", kPreset4, 2},
+  {"Fast strokes: loud and bright", kPreset5, 2},
+  {"Strokes toward you, lifting between", kPreset6, 2},
+  {"One endless stroke", kPreset7, 2},
+  {"Rods low on their stems: two modes argue", kPreset8, 2},
+  {"Lossy stems: the rods stop with the finger", kPreset9, 2},
+  {"The bare collector: no radiators, no whiskers", kPreset10, 3},
+  {"Cones only, no whiskers", kPreset11, 3},
+  {"The flame alone", kPreset12, 2},
+  {"Swaying whiskers: a sparkle in the highs", kPreset13, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::wet}, {109, p::height}, {111, p::sway}, {113, p::press}, {114, p::stroke}};
@@ -138,6 +144,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 84, .compass = p::fullRange, .space = Space::hold,
     .modWheel = p::stroke, .modWheelMax = 0.2,
+    .slide = p::stroke, .slideMax = 0.2,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 0},
     .midiVelocity = midiVelocity, .create = create,

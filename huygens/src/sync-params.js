@@ -48,7 +48,7 @@ export const GROUPS = [
     ],
   },
   {
-    id: 'sound', title: 'Sound',
+    id: 'sound', title: 'Sound', open: false,
     params: [
       { id: 'tone', label: 'Tone (low-pass)', perform: true, kind: 'mix', min: 300, max: 16000, def: 2500, log: true, fmt: (v) => `${(v / 1000).toFixed(1)} kHz` },
       { id: 'body', label: 'Resonant body', kind: 'mix', min: 0, max: 1, step: 0.01, def: 0.5, fmt: (v) => v.toFixed(2) },

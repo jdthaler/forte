@@ -376,6 +376,21 @@ await test('finite output and sane level across settings', () => {
     assert.ok(r.finite && r.pk < 5, JSON.stringify(eng));
   }
 });
+await test('rail sag under a heavy load (a big chord, every key bent up 40 semitones, as an MPE glide does, on the strongest sag): the rail settles where source and load balance, so it keeps playing, and the regulator and pitch hold keep each key on its bent pitch', () => {
+  const e = new HuygensEngine(FS);
+  e.setParams({ ...DEFAULTS, kick: 0, rSrc: 200e3 });
+  const keys = [48, 52, 55, 60, 64, 67, 72, 76, 79, 84, 88, 91, 96, 100, 103, 108];
+  for (const k of keys) e.noteOn(k, 1);
+  for (const k of keys) e.handle({ type: 'noteBend', key: k, value: 10 }); // each up ×10, or to fs/4
+  const L = new Float32Array(128), R = new Float32Array(128);
+  let pk = 0;
+  for (let s = 0; s < 4 * FS; s += 128) {
+    e.process(L, R, 128);
+    for (const v of L) { assert.ok(Number.isFinite(v), `non-finite output at ${(s / FS).toFixed(2)} s`); if (s > 3.5 * FS) pk = Math.max(pk, Math.abs(v)); }
+  }
+  assert.ok(pk > 0.05 && pk < 5, `level in the last half second: ${pk}`);
+  for (const o of e.report(0.5)) assert.ok(Math.abs(c(o.f / o.fTarget)) < 5, `key ${o.key}: ${c(o.f / o.fTarget).toFixed(1)} ¢ from its bent pitch`);
+});
 await test('Quality: nothing to trim (every lamp kicks every other, so leaving one out would move where they lock): Medium and Low play 24 coupled lamps exactly as High', () => {
   const render = (quality) => {
     const e = new HuygensEngine(FS); e.setQuality(quality); e.setParams({ kick: 0.08 });
@@ -400,7 +415,7 @@ await test('performance: 24 oscillators', () => {
 });
 
 console.log('MPE');
-// A note's bend turns its own lamp's timing resistor (R/r); the coupling is every lamp's (no slide).
+// A note's bend turns its own lamp's timing resistor (R/r).
 // Events [t, fn(engine)] in 128-sample blocks; the left channel and the engine.
 function play(eng, events, sec, fs = FS) {
   const e = new HuygensEngine(fs);
@@ -456,6 +471,33 @@ await test('bend sweeps of ±48 semitones on chords, sent every block, stay fini
     const { e } = play({ kick: 0 }, [[0, bend(108, 16)], [0, lamp(108)]], 0.5, fs), [o] = e.report(0.2);
     assert.ok(Math.abs(c(o.f / (fs / 4))) < 0.01, `${fs}: C8 bent four octaves plays ${o.f.toFixed(1)} Hz`);
   }
+});
+
+await test(`Slide: a note's own coupling, how hard the others' firings kick its lamp (the Pulse coupling knob's, or up to ${INSTRUMENT.mpe.slide.max}): a tritone that locks to 7:5 at the knob's 5.5 % is pulled to 3:2 with its upper lamp slid fully; Press: its keyer opens further, up to twice as loud (6 dB), its firings untouched`, () => {
+  assert.equal(INSTRUMENT.mpe.slide.param, 'kick');
+  const pair = (ev) => { const { e } = play({}, [...ev, [0, lamp(60)], [0, lamp(66)]], 2.5), [a, b] = e.report(1.0); return c(b.f / a.f); };
+  assert.ok(Math.abs(pair([]) - c(7 / 5)) < 0.01, `as it is: ${pair([]).toFixed(2)} ¢`);
+  const slid = pair([[0, (e) => e.handle({ type: 'slide', key: 66, value: INSTRUMENT.mpe.slide.max })]]);
+  assert.ok(Math.abs(slid - c(3 / 2)) < 0.01, `slid: ${slid.toFixed(2)} ¢`);
+  const one = (p) => play({ kick: 0 }, [[0, lamp(48)], [0, (e) => e.handle({ type: 'pressure', key: 48, value: p })]], 2.0);
+  const db = (x) => { let s = 0; for (let i = FS; i < 2 * FS; i++) s += x[i] * x[i]; return 10 * Math.log10(s / FS); };
+  const plain = one(0), pressed = one(1);
+  assert.ok(Math.abs(db(pressed.out) - db(plain.out) - 6.02) < 0.3, `${(db(pressed.out) - db(plain.out)).toFixed(2)} dB`);
+  assert.deepEqual(Array.from(pressed.e.report(1.0), (o) => o.f), Array.from(plain.e.report(1.0), (o) => o.f), 'the same firings');
+  assert.ok(same(one(0).out, plain.out));
+});
+
+await test('Strike: how hard the key closes its circuit, as how fast its lamp\'s supply comes on and its keyer opens: the softest key over eight times the attack, the hardest in an eighth of it (sample for sample as the knob set there), the first flash coming sooner the harder the key; at the computer keys\' 0.75 it plays as it always did', () => {
+  const at = (v, P = {}) => play({ kick: 0, ...P }, [[0, (e) => e.noteOn(60, v, { f: keyFreq(60) })]], 0.3).out;
+  const A = DEFAULTS.attack;
+  assert.ok(same(at(0), at(0.75, { attack: 8 * A })), 'the softest: as eight times the attack');
+  assert.ok(same(at(1), at(0.75, { attack: A / 8 })), 'the hardest: as an eighth of it');
+  assert.ok(same(at(NaN), at(0.75)), 'no velocity: as 0.75');
+  // when the note first reaches half its steady peak
+  const rise = (x) => { let pk = 0; for (let i = 0.2 * FS; i < 0.3 * FS; i++) pk = Math.max(pk, Math.abs(x[i])); let i = 0; while (Math.abs(x[i]) < 0.5 * pk) i++; return i / FS; };
+  const t = [0, 0.4, 0.75, 1].map((v) => rise(at(v))), ms = t.map((x) => (1000 * x).toFixed(1)).join(', ');
+  for (let i = 1; i < t.length; i++) assert.ok(t[i] <= t[i - 1], `onsets ${ms} ms at velocity 0, 0.4, 0.75, 1`);
+  assert.ok(t[0] > t[3], `onsets ${ms} ms`);
 });
 
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');

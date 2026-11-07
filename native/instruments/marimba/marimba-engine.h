@@ -20,6 +20,8 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "marimba-model.h"
 #include "marimba-params.h"
@@ -47,6 +49,9 @@ class MarimbaEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's own roll
+  // Glide: a hard mallet pressed on the bar and dragged along it: up to a semitone flat
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
+  void pressure(double value, int key) override { presses.set(value, key); } // the mallet pressed into the bar: the dead stroke
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A bar its page's model built already (packVoiceData; the page's noteData), for the next
@@ -80,9 +85,12 @@ class MarimbaEngine : public Engine {
     bool held = false, hand = false;     // the key is down; which mallet strikes next in a roll
     double vel = 0, rollIn = 0; // the first stroke's velocity, samples to the next stroke
     double fade = 1;
+    Press press;     // the mallet pressed into the bar while its key is held: the dead stroke (forte/press.h)
+    LiftTouch touch; // a mallet resting on the bar a moment after a fast lift (forte/lift.h)
     bool fading = false, dead = false;
     double age = 0;
     double E = 0, Emax = 0, Eb = 0, Et = 0;
+    double bent = 1; // its modes × this (a note's own bend)
     double top = 0, floor = 0; // Quality's, when the bar was struck: its highest mode (Hz), and where it is let go (× its most energy)
     double gl = 0, gr = 0;
     Mallet mal{};
@@ -134,7 +142,8 @@ class MarimbaEngine : public Engine {
   int blocks = 0;
   int malletMax;
   uint32_t rng = 0x2545F491u;
-  NoteExpression expr{0}; // each key's own roll (no bend: a struck bar rings at its own pitch)
+  Presses presses; // each key's pressure and the channel's
+  NoteExpression expr{1, 0}; // each key's own roll, and its bend (down only, a semitone at most)
   Message barMsg; // kept between posts
 };
 

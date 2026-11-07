@@ -21,6 +21,7 @@
 #include "forte/background.h"
 #include "forte/engine.h"
 #include "forte/expression.h"
+#include "forte/press.h"
 #include "springs-model.h"
 #include "springs-params.h"
 
@@ -51,6 +52,9 @@ class SpringEngine : public Engine {
   void allNotesOff() override;
   // a note's slide: a hand on that key's own springs, gliding in as the knob's does
   void slide(double value, int key) override { expr.setSlide(value, key); }
+  // Glide: a hand stretching (or easing) that key's coil: its waves faster, every mode and echo with them
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
+  void pressure(double value, int key) override { presses.set(value, key); } // a firm press: the hammer held into the coil, muting it
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A key's springs its page's model built already (packKeySprings), for the next note on that
@@ -71,6 +75,7 @@ class SpringEngine : public Engine {
     void sigma(const SpringEngine &eng, double extra, bool fixed = false);
     void gains(const SpringEngine &eng, bool now = false);
     void compact();
+    void retune(const SpringEngine &eng, double r); // every mode at its frequency × r (σ and gains to follow)
   };
   struct Voice {
     int key = 0, nBanks = 0;
@@ -82,6 +87,7 @@ class SpringEngine : public Engine {
     std::vector<double> pulse;
     int pulseN = 0, pulseAt = 0;
     double tau = 0, age = 0, fade = 1, peak = 0, level = 0, extra = 0, dampGlide = 0.03;
+    double bent = 1; // its springs × this (a note's own bend: the coil stretched)
     bool fading = false, dead = false, released = false;
 
     void start(SpringEngine &eng, int key, Data::Ref r, uint64_t version);
@@ -128,7 +134,8 @@ class SpringEngine : public Engine {
   std::array<double, kCount> S{}, T{};
   bool sustain = false, lossMoved = false;
   double dampSigma = 0;
-  forte::NoteExpression expr{0}; // each key's slide (the springs don't bend)
+  forte::Presses presses; // each key's pressure and the channel's
+  forte::NoteExpression expr{2}; // each key's slide, and its bend (two semitones either way)
   double handOf(int key) const; // the hand on a key's springs (σ): the knob's, or the key's slide
   uint64_t version = 0;
   int lastKey = 60;

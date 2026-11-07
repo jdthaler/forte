@@ -16,6 +16,7 @@ constexpr double DRY = 0.05;            // bridge force (N) → output, with the
 // keys sounding at once: beyond maxVoices() (16 at High) the quietest released one fades, beyond
 // hardVoices() (24) the quietest sounding one too (harpsichord-engine.h)
 constexpr double KILL_SIGMA = 200;      // s⁻¹: a stolen or retuned voice dies away this fast
+constexpr double BEND_T = 0.02;         // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double QUIET = 4e-6;          // N: a string whose bridge force stays below this is put to sleep
 constexpr double DROP = 1e-6;           // N: top partials below this stop being integrated
 constexpr double RAMP = 0.02;           // s: the buff's leather and the soundboard switch glide over this
@@ -29,7 +30,8 @@ void HarpsichordEngine::Voice::start(HarpsichordEngine &e, int k, Data::Ref r) {
   eng = &e; inUse = true; key = k; version = e.version; ref = r;
   e.data.acquire(r);
   has.fill(false); lifts.fill(false); sleep.fill(false); quiet.fill(0); nList = 0;
-  lift = 0; V = 0.3; vDown = fallSpeed(DEFAULT_RELEASE); keyDown = false; pending = false;
+  lift = 0; V = 0.3; vDown = fallSpeed(DEFAULT_RELEASE); keyDown = false; pending = false; hand = Press{};
+  bent = e.expr.bendOf(k); // bent before it was struck
   top = ACTION::top + rowGap(ROW_FOUR, e.mp);
   knockT = -1; knockAmp = 0; knockN = std::max(2, (int)std::floor(ACTION::knock * e.fs + 0.5));
   killing = false; dead = false; sounded = false; peak = 0; age = 0;
@@ -44,6 +46,8 @@ void HarpsichordEngine::Voice::press(double vel) {
   const Registration reg = registration(P);
   const int m = key;
   V = jackSpeed(vel);
+  const double f = eng->pluckScale(m); // its own slide moves every quill along the string
+  auto at = [&](int row) { const double x = pluckPoint(m, row, P); return f == 1 ? x : std::clamp(x * f, 0.002, 0.5 * stringLength(m, ROW_STRING[row], P.build)); };
   for (int ch : CHOIRS) {
     const bool any = ch == BACK ? reg.rows[ROW_BACK] || reg.rows[ROW_LUTE] : reg.rows[ch]; // (front and 4′: their row's index is the choir's)
     lifts[ch] = reg.lift[ch];
@@ -52,6 +56,7 @@ void HarpsichordEngine::Voice::press(double vel) {
     if (!has[ch]) {
       buildString(st, m, ch, P, ref.data->S[ch], ref.data->parts[ch], eng->fs);
       st.limit(eng->kept(ref.data->parts[ch])); // (Quality: fewer partials)
+      st.retune(bent);
       has[ch] = true;
       w[ch] = segmentWeights(m, ch);
       w0[ch] = -1; w1[ch] = -1;
@@ -65,7 +70,7 @@ void HarpsichordEngine::Voice::press(double vel) {
       const int row = rows[i], p = row == ROW_LUTE ? PT::LUTE : PT::MAIN;
       const bool on = reg.rows[row];
       const double gap = rowGap(row, P);
-      if (on) { const Plectrum pl = plectrumFor(m, row, P); st.armPlectrum(p, &pl, pluckPoint(m, row, P), gap, true, lift - gap > 0); }
+      if (on) { const Plectrum pl = plectrumFor(m, row, P); st.armPlectrum(p, &pl, at(row), gap, true, lift - gap > 0); }
       else st.armPlectrum(p, nullptr, 0, gap, false, lift - gap > 0);
     }
     st.onRelease = &HarpsichordEngine::onRelease; st.ctx = this;
@@ -124,6 +129,16 @@ void HarpsichordEngine::Voice::render(int n) {
   const bool sy = e.P[p::sympathy] > 0 && e.quality != Quality::low; // (Quality: no sympathetic strings at Low)
   for (auto &b : sb) { b[0] = b[sbn]; std::fill(b.begin() + 1, b.begin() + 1 + n, 0.0); }
   sbn = n;
+  // Glide: a finger on the strings' back length, retuning them as the bend glides
+  if (const double to = e.expr.bendOf(key); bent != to) {
+    bent = glideTo(bent, to, n / e.fs, BEND_T);
+    for (int i = 0; i < nList; i++) strings[list[i]].retune(bent);
+  }
+  // Press: the hand's buff, gliding across the block, on every choir; the stop's on the back 8′ too
+  const double h0 = hand.p;
+  hand.follow(keyDown && !killing ? e.presses.of(key) : 0, n, e.fs);
+  const bool held = h0 > 0 || hand.p > 0;
+  if (held) for (int t = 0; t < n; t++) { const double ht = h0 + (hand.p - h0) * (t + 1) / n; e.handBuf[t] = std::max(ht, e.buffBuf[t]); }
   for (int i = 0; i < nList; i++) {
     const int ch = list[i];
     PluckedString &st = strings[ch];
@@ -132,7 +147,7 @@ void HarpsichordEngine::Voice::render(int n) {
     st.kcOn = e.P[p::kc] != 0;
     st.hookOn = e.mp.hooks; // (only a virginal's bass strings have a hook)
     st.setSide(e.P[p::side], e.sideModes()); // (Quality: fewer sideways partials, none at Low)
-    const double pk = st.render(n, lifted ? lb : e.zeroBuf.data(), keyDown && lifted, ch == BACK ? e.buffBuf.data() : e.zeroBuf.data(), e.seg.data(), BLOCK, w[ch].data(), w0[ch], w1[ch], 1,
+    const double pk = st.render(n, lifted ? lb : e.zeroBuf.data(), keyDown && lifted, held ? e.handBuf.data() : ch == BACK ? e.buffBuf.data() : e.zeroBuf.data(), e.seg.data(), BLOCK, w[ch].data(), w0[ch], w1[ch], 1,
                                sy ? sb[ch].data() + 1 : nullptr);
     if (pk > pk0) pk0 = pk;
     if (!(pk < 1e4) || !std::isfinite(st.q()[0])) {
@@ -340,6 +355,7 @@ void HarpsichordEngine::noteOff(int key, double relVel) {
 }
 
 void HarpsichordEngine::allNotesOff() {
+  presses.clear();
   nPending = 0;
   for (int i = 0; i < nVoices; i++) voices[i]->kill();
   byKey.fill(nullptr);

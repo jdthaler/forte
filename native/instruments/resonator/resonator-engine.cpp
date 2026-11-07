@@ -111,13 +111,22 @@ void ResonatorEngine::setDamper(Voice &v) {
 
 // The loops for the Harmonic choice, each on its partial: its band-pass and guards, its PLL's
 // gains, and the phase that puts the push in step with the string's velocity.
+// The partial nearest h0 × r (in pitch) of the np a string has: the one a note's own bend drives.
+int ResonatorEngine::harmonicFor(int h0, double r, int np) const {
+  if (r == 1) return h0;
+  const double x = h0 * r;
+  const int a = std::max(1, (int)std::floor(x)), b = a + 1;
+  const int h = std::fabs(std::log(x / a)) <= std::fabs(std::log(b / x)) ? a : b;
+  return std::clamp(h, 1, std::max(1, np));
+}
+
 void ResonatorEngine::loopsFor(Voice &v) {
   const Loops ls = loopsOf((int)P[p::harmonic]);
-  v.nLoops = ls.n;
+  v.nLoops = ls.n; v.loopR = expr.bendOf(v.key);
   for (int j = 0; j < ls.n; j++) {
     Loop &l = v.loops[j];
     l = Loop{};
-    l.h = ls.h[j];
+    l.h = harmonicFor(ls.h[j], expr.bendOf(v.key), v.np); // (a note's own bend: another harmonic)
     l.fc = std::min(v.s.partial(l.h), 0.45 * fs);
     l.w0 = (TAU * l.fc) / fs;
     l.bp.set(Biquad::bp, l.fc, Q_BP, fs);
@@ -195,18 +204,32 @@ void ResonatorEngine::noteOn(int key, double velocity) {
   focus = key;
 }
 
-void ResonatorEngine::noteOff(int key, double) {
+void ResonatorEngine::lifted(Voice &v, double scale) {
+  if (scale == v.liftK) return;
+  v.liftK = scale;
+  for (int u = 0; u < v.nu; u++) for (int j = 0; j < v.np; j++) {
+    const int i = u * v.np + j;
+    const ModeCoeffs d = modeCoeffs(v.s.p[j].f[u], v.s.p[j].sigma + DAMPER / scale, fs);
+    v.a1d[i] = d.a1; v.a2d[i] = d.a2;
+  }
+  if (v.damped) { v.damped = false; setDamper(v); }
+}
+
+// Lift: how fast the drive ramps down and the damper falls: a slow lift lets the string sing on
+// as both let go gently, a fast one stops it sooner.
+void ResonatorEngine::noteOff(int key, double velocity) {
   for (int i = 0; i < count; i++) {
     Voice &v = *voices[i];
     if (v.key != key) continue;
     v.keyDown = false; v.driven = false;
+    lifted(v, sustain ? 1 : liftScale(velocity));
     setDamper(v);
   }
 }
 
 void ResonatorEngine::setSustain(bool on) {
   sustain = on;
-  for (int i = 0; i < count; i++) setDamper(*voices[i]);
+  for (int i = 0; i < count; i++) { if (!on) lifted(*voices[i], 1); setDamper(*voices[i]); } // the pedal's dampers fall as they always did
 }
 
 void ResonatorEngine::allNotesOff() {
@@ -221,6 +244,16 @@ void ResonatorEngine::process(float *L, float *R, int n) {
 void ResonatorEngine::run(float *L, float *R, int n) {
   for (int i = 0; i < n; i++) { L[i] = R[i] = 0; heard[i] = 0; }
   if (!hasParams) { for (int i = 0; i < n; i++) ring[(pos + i) & (RING - 1)] = 0; pos = (pos + n) & (RING - 1); return; }
+  // Glide: a driven note bent onto another harmonic: its loops move there
+  for (int i = 0; i < count; i++) {
+    Voice &v = *voices[i];
+    const double r = expr.bendOf(v.key);
+    if (!v.driven || r == v.loopR) continue;
+    const Loops ls = loopsOf((int)P[p::harmonic]);
+    bool moved = ls.n != v.nLoops;
+    for (int j = 0; j < ls.n && !moved; j++) moved = v.loops[j].h != harmonicFor(ls.h[j], r, v.np);
+    if (moved) loopsFor(v); else v.loopR = r;
+  }
   const int wave = (int)P[p::wave];
   const bool open = (int)P[p::loop] == loop_::open, noise = wave == wave_::noise, guard = P[p::guard] != 0;
   const double phaseErr = (P[p::phase] * PI) / 180, bias = P[p::bias];
@@ -239,11 +272,12 @@ void ResonatorEngine::run(float *L, float *R, int n) {
     const double Fk = F_REF / v.s.nuFull; // each string's share of the pull (a string the Quality leaves out takes its share away)
     double pk = 0, uaPk = 0;
     const bool active = v.driven || v.env > 0 || v.current > 1e-6;
+    const double fallV = v.liftK == 1 ? fall : 1 - std::exp(-k / (RELEASE * v.liftK));
     for (int i = 0; i < n; i++) {
       double Fc[MAX_UNI] = {0, 0, 0};
       if (active) {
         // the drive: its envelope, then the loops on the pickup, a block late
-        v.env = v.driven ? std::min(1.0, v.env + rise) : (v.env > 1e-5 ? v.env * (1 - fall) : 0);
+        v.env = v.driven ? std::min(1.0, v.env + rise) : (v.env > 1e-5 ? v.env * (1 - fallV) : 0);
         const double x = ring[(pos + i - D) & (RING - 1)];
         double s = 0;
         if (noise) {

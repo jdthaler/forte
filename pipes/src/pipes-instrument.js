@@ -5,20 +5,22 @@
 import { GROUPS, DEFAULTS, PRESETS } from './pipes-params.js';
 import { KEY_LO, KEY_HI, KEY_MIN, KEY_MAX } from './pipes-data.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'pipes',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP],    // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],               // MIDI keys: A0–C8, 21–108
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // C–f³, 36–89, until Full range opens the rest
   space: 'hold',                           // Space and CC64 latch the keys down; the host sends the noteOffs on release
   modWheel: { param: 'pressure', max: 3000 }, // CC1: wind pressure, from its default up to 3000 Pa
-  mpe: { bend: 12 },                       // MPE: a key's own bend warms or cools the air in its pipes alone, an octave either way (the wind is every key's: no slide)
+  mpe: { bend: 12, slide: { param: 'pallet', max: 0.4 } }, // MPE: a key's own bend warms or cools the air in its pipes alone, an octave either way; its slide holds its pallet part open (its own wind)
   aftertouch: 'leans on the bellows: more wind, up to double', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how fast its pallet closes: a slow lift lets the pipes die away', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['principal', 'octave', 'mixture', 'wind', 'pressure'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the physics in C++ (native/instruments/pipes), built as WebAssembly
   wasm: { name: 'PipeWasmEngine', module: new URL('./pipes-wasm.js', import.meta.url).href, binary: new URL('../wasm/pipes.wasm', import.meta.url).href },

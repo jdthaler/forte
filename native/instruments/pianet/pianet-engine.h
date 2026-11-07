@@ -17,6 +17,8 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "pianet-model.h"
 #include "pianet-params.h"
@@ -50,6 +52,8 @@ class PianetEngine : public Engine {
   void allNotesOff() override;
   void bend(double value) override; // every reed's stiffness ×r², its notes ×r
   void noteBend(double ratio, int key) override; // one reed's stiffness ×r², on top of the wheel's
+  void pressure(double value, int key) override { presses.set(value, key); } // a hand muting the reed by the pickup
+  void slide(double value, int key) override { expr.setSlide(value, key); } // where its pad grabs the reed, at its next touch
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // whether key's reed is built for the knobs as they are (the tests wait for it)
@@ -62,12 +66,15 @@ class PianetEngine : public Engine {
     Data::Ref ref;
     bool inUse = false;
     Pluck p;
+    double grab = REED.xPad; // where its pad grabs the reed (the knob's, or its key's own slide)
+    KeyReed at;              // its reed with the pad there, when that isn't REED.xPad
     double own = 1; // its own bend (MPE), gliding to its key's: p.bend is the wheel's × this
     double pol = 1;
     bool held = false, posted = false, sleep = false;
     int quiet = 0;
     bool pending = false; // a re-press waiting for its pad to land and re-tack
     double pressVel = 0;
+    Press hand; // a hand on the reed (forte/press.h), while its key is down
     int wait = 0;
     double fade = 1;
     bool dying = false, dead = false;
@@ -75,7 +82,7 @@ class PianetEngine : public Engine {
     double g = 0, g1 = 0, ye = 0, ye1 = 0, gT = 0, yeT = 0, c0 = 0;
     double phiPrev = 0, dC = 0;
 
-    void start(PianetEngine &eng, int key, Data::Ref r);
+    void start(PianetEngine &eng, int key, Data::Ref r, double grab);
     void setPickup(const PianetEngine &eng, bool now = false);
     void retire() { dying = true; }
   };
@@ -112,7 +119,8 @@ class PianetEngine : public Engine {
   int pick = pickup_::em;
   double duck = 1;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
-  NoteExpression expr{NOTE_BEND};  // each key's own bend (MPE)
+  Presses presses; // each key's pressure and the channel's
+  NoteExpression expr{NOTE_BEND};  // each key's own bend and slide (MPE)
   PlateRail rail;
   double glideA, mix = 0, mixStep, duckStep;
   int waitMax;

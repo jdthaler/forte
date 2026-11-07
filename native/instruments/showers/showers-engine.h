@@ -7,6 +7,8 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/expression.h"
+#include "forte/lift.h"
 #include "showers-model.h"
 #include "showers-params.h"
 
@@ -29,6 +31,8 @@ class ColliderShowersEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override;
   void pressure(double value, int key) override;
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the crystal's temperature: its speed of sound
+  void slide(double value, int key) override { expr.setSlide(value, key); }    // where its particle lands, off the axis
   void allNotesOff() override { voices.clear(); }
   int voiceCount() const override { return (int)voices.size(); }
   void process(float *L, float *R, int n) override;
@@ -42,6 +46,7 @@ class ColliderShowersEngine : public Engine {
     std::array<bool, MAX_MODES> on{};                            // modes still ringing
     double gl = 1, gr = 1;      // its place across the row (the keys' pan)
     double press = 0, pressTarget = 0;
+    double bent = 1;            // its modes' frequencies over their own: the crystal warmer or cooler (a note's own bend)
     double toNext = 0;          // samples to the next pile-up particle
     double level = 0;           // the sensor's reading's energy, for stealing and ending
     double stat = 0;            // the piezo's static strain, after its preamp's high-pass
@@ -50,10 +55,13 @@ class ColliderShowersEngine : public Engine {
   Voice *voiceFor(int key);
   void build(Voice &v);
   void kick(Voice &v, const Kicks &k, double scale, double xbar, double frac);
-  void deposit(int key, const Deposit &d, double energy, double velocity, Particle kind);
+  double impact(int key) const;
+  void deposit(int key, const Deposit &d, double energy, double velocity, Particle kind, double offset);
   void report(const Voice &v);
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
+  forte::NoteExpression expr{0.5}; // each key's own bend (its crystal's speed of sound, a few per cent) and slide (its impact point)
+  double struck[128] = {}; // each key's last velocity, for a fast lift's pile-up (forte/lift.h)
   int focus = -1, sinceReport = 0, sinceHit = 0;
   Rng rng;
   std::vector<Voice> voices; // reserved (twice kMaxVoices, for the stolen ones fading out): never reallocates

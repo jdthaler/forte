@@ -21,6 +21,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "pyrophone-model.h"
 #include "pyrophone-params.h"
@@ -81,6 +82,7 @@ class PyrophoneEngine : public Engine {
     bool dead = false;
     double turb = 0, amp = 0, amp2 = 0, peak = 0, song = 0;
     bool keyDown = false;
+    double kUp = 0; // how fast the flames close after this lift, a sample (0: as usual; forte/lift.h)
     double age = 0, since = 0, rel = 0, chkT = 0, chkA = INFINITY;
     // strobe and phase portrait for the views
     double prevE1 = 0, period = 100, strobe = 0;

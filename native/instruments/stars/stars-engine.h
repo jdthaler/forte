@@ -20,6 +20,7 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "stars-model.h"
 #include "stars-params.h"
@@ -51,6 +52,7 @@ class StarEngine : public Engine {
   void pressure(double value, int key) override;
   // a note's slide: its own star's rotation, gliding as the knob does
   void slide(double value, int key) override { expr.setSlide(value, key); }
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // its orbit in a binary: a Doppler shift
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A star its page built (the page's noteData, packed: key, K, δ Scuti?, N, ν_max, T_eff, then f,
@@ -74,6 +76,8 @@ class StarEngine : public Engine {
     std::array<double, MAX_MODES> W{}, C{}, S{}, RHO{}, A1{}, A2{}, Y1{}, Y2{}, G{}, GT{}, AMP{}, ETA{};
     double gl = 0, gr = 0, lift = 1; // lift: the played modes' gain, for the power of those trimmed
     double vel = 0.7, pressure = 1, age = 0, fade = 1, peak = 1e-12, level = 0;
+    double tail = 0, tailT = 0; // a slow lift (forte/lift.h): the convection's driving, dying away over tailT s
+    double bent = 1; // its Doppler factor: its orbit in a binary, toward us or away (a note's own bend)
     double spin = 1; bool slid = false; // the rotation it turns at (the knob's, or its slide's), and whether a slide moves it
     bool held = false, fading = false, dead = false;
     Rng seed{1};
@@ -114,7 +118,7 @@ class StarEngine : public Engine {
   enum { kSpin, kCore, kIncl, kDamping, kDriving, kFlare, kGrowth, kSlope, kCount };
   std::array<double, kCount> S{}, T{};
   bool sustain = false, freqMoved = false, dampMoved = false, inclMoved = false;
-  forte::NoteExpression expr{0}; // each key's slide (a star doesn't bend)
+  forte::NoteExpression expr{0.1}; // each key's slide (its spin) and bend (a star doesn't bend, but its orbit Doppler-shifts it: ±10 ¢)
   uint32_t presses = 0, rs = 0x2545f491;
   double postT = 0;
   std::array<double, 28> gtab{}; // √(V_l² E_lm(i)) at [l·7 + m + 3]

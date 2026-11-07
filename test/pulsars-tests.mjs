@@ -218,7 +218,7 @@ test('the mod wheel\'s DM rebuilds a sounding pulsar\'s table, crossfaded withou
   for (let i = 0.2 * FS; i < 0.4 * FS; i++) typ = Math.max(typ, Math.abs(L[i] - L[i - 1]));
   assert.ok(jump < 1.5 * typ, `largest step ${jump} vs ${typ} before`);
 });
-test('MPE: a slide is that pulsar\'s own DM, and leaves the others alone', () => {
+test('MPE: a slide is that pulsar\'s own DM, and leaves the others alone; a bend, its binary orbit\'s Doppler shift, reaches 10 ¢', () => {
   const p = P({ dedisp: 'none', dm: 0.5 }), a = 60, b = 67, fa = tunedFreq(p, a), fb = tunedFreq(p, b);
   const [L] = render(p, 1, [[0, (e) => { e.handle({ type: 'slide', key: a, value: 5 }); e.noteOn(a, 0.8); e.noteOn(b, 0.8); }]]);
   const [L0] = render(p, 1, [[0, (e) => { e.noteOn(a, 0.8); e.noteOn(b, 0.8); }]]);
@@ -226,7 +226,7 @@ test('MPE: a slide is that pulsar\'s own DM, and leaves the others alone', () =>
   near(tone(L, 3 * fb, 0.3 * FS, FS) / tone(L0, 3 * fb, 0.3 * FS, FS), 1, 0.02, 'the other untouched');
   const [B] = render(p, 0.5, [[0, (e) => { e.handle({ type: 'noteBend', key: a, value: 1.5 }); e.noteOn(a, 0.8); }]]);
   const got = peak(B, fa, 0.2 * FS, 0.5 * FS);
-  assert.ok(Math.abs(cents(got, fa)) < 1, 'a spin does not bend');
+  assert.ok(Math.abs(cents(got, fa) - 10) < 1, `a spin does not bend; its orbit's Doppler shift goes as far as 10 ¢: ${cents(got, fa).toFixed(2)} ¢`);
 });
 test('level: a forte note peaks under 0.6, a ten-note chord stays finite, and every preset plays', () => {
   const [L, R] = note(45, P(), 1, 1);
@@ -246,6 +246,23 @@ test('silence after release: a switched-off pulsar is gone (and its voice too)',
   assert.ok(rms(B, 1.004 * FS, 1.01 * FS) > 1e-3, 'undedispersed, the last pulses are still coming down the band\'s lower half');
   void A;
   assert.equal(e2.voiceCount(), 0, 'and gone by 3 s');
+});
+test('Press: a held pulsar\'s beam brightens with its key\'s press, up to twice as bright at the firmest (1 + p); before the press, or with none, as it was', () => {
+  // the key held, its press from the block at 0.5 s (188 blocks), measured from 0.6 s on
+  const run = (press, key = 60) => {
+    const e = new Engine(FS); e.setParams(DEFAULTS); e.noteOn(60, 0.8);
+    const n = 3 * FS, L = new Float32Array(n), b = new Float32Array(128), c = new Float32Array(128);
+    for (let s = 0; s < n; s += 128) { if (press !== undefined && s === 128 * 188) e.handle({ type: 'pressure', key, value: press }); e.process(b, c, 128); L.set(b.subarray(0, Math.min(128, n - s)), s); }
+    return L;
+  };
+  const level = (x) => { let s = 0; for (let i = 0.6 * FS; i < 2.9 * FS; i++) s += x[i] * x[i]; return Math.sqrt(s); };
+  const plain = run(), full = run(1), half = run(0.5);
+  assert.deepEqual(full.subarray(0, 128 * 188), plain.subarray(0, 128 * 188), 'before the press');
+  assert.deepEqual(run(0), plain, 'a press of none');
+  assert.ok(Math.abs(level(full) / level(plain) / 2.0 - 1) < 0.005, `pressed fully: ${(level(full) / level(plain)).toFixed(3)}×`);
+  assert.ok(Math.abs(level(half) / level(plain) / 1.5 - 1) < 0.005, `pressed halfway: ${(level(half) / level(plain)).toFixed(3)}×`);
+  assert.deepEqual(run(1, -1), full, 'the channel\'s pressure as the key\'s');
+  assert.deepEqual(run(1, 61), plain, 'another key\'s');
 });
 test('Quality: Medium and Low play 16 and 8 pulsars at once (High 32), in tables of 2048 and 1024; a middle note sounds nearly the same', () => {
   for (const [q, most, size] of [['high', 32, 4096], ['medium', 16, 2048], ['low', 8, 1024]]) {

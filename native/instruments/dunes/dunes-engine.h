@@ -22,6 +22,7 @@
 
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "forte/tuning.h"
 #include "dunes-model.h"
@@ -40,6 +41,7 @@ struct Voice {
   int key = 0, mip = 0, modes = 0, layer = 0; // layer: the theory it was struck in
   int64_t born = 0;
   double f0 = 0, vel = 0, after = 0, push = 0;
+  double bent = 1;                     // the shear rate over the key's own (a note's own bend)
   double U = 0, target = 0, brake = 0; // m/s, and its fall a second once let go
   double drive = 0;                    // K / K_c, for the views
   double surge = 0, surge0 = 0;                  // the speed's wander, a fraction
@@ -59,6 +61,7 @@ class DunesEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override;
   void slide(double value, int key) override;
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the avalanche's shear: the boom a few per cent up or down
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -84,7 +87,7 @@ class DunesEngine : public Engine {
   double onset = U_ONSET;        // m/s: the speed it starts to sing at
   double tableContact = -1;
   std::vector<float> tables;     // [mip][TABLE + 1]: the collision pulse, 32 … 1 harmonics
-  NoteExpression expr{0};
+  NoteExpression expr{0.5}; // each key's push (slide) and its shear (bend: half a semitone, about 3 %)
   std::array<Voice, kKeys> voices;
   int64_t t = 0;
   int focus = -1, tick = 0;

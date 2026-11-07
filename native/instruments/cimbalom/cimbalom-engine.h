@@ -25,6 +25,8 @@
 #include "cimbalom-model.h"
 #include "cimbalom-params.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
+#include "forte/lift.h"
 #include "forte/sympathetic.h"
 
 namespace forte::cimbalom {
@@ -55,6 +57,8 @@ class CimbalomEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override;
   void slide(double value, int key) override; // MPE: the note's own strike point
+  // Glide: a finger pressing a note's course behind the bridge, tightening it: up to a semitone sharp
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
 
@@ -95,6 +99,9 @@ class CimbalomEngine : public Engine {
     Hammer h;
     // per oscillator (string j's partials, then its far side's, string after string)
     std::array<double, OSC> q{}, q1{}, A1{}, A2{}, D1{}, D2{}, bg{}, bc{}, cK{}, bpsi{}, psiy{}, beta{}, tmp{};
+    std::array<double, OSC> wq{}, sq{}; // each partial's ω and own loss, for the damper's recursions
+    double liftK = 1;                   // how many times longer than usual the damper takes (forte/lift.h)
+    double bent = 1;                    // its partials × this (a note's own bend)
     std::array<double, BLOCK> Sblock{}; // its bridge signal this block (the sympathetic strings take it out of their own)
   };
 
@@ -125,6 +132,7 @@ class CimbalomEngine : public Engine {
 
   Voice *allocate(int key);
   void build(Voice &v);
+  void damper(Voice &v, double scale); // the damper's recursions, at `scale` times its usual time
   void launch(Voice &v, double speed);
   void render(Voice &v, int n, double *seg);
   void symRefresh();
@@ -136,6 +144,8 @@ class CimbalomEngine : public Engine {
   std::array<Board, 2> boards;
   std::array<Voice, POOL> pool{};
   std::array<double, 128> after{}, slides{};
+  NoteExpression expr{0, 1}; // each key's own bend: up only, a semitone at most
+  void retune(Voice &v, double r);
   std::array<uint8_t, 128> down{};
   std::array<uint64_t, 128> symVer{};
   uint64_t version = 1;

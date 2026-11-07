@@ -21,6 +21,7 @@
 #include <cstdint>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "brass-model.h"
 #include "brass-params.h"
@@ -86,6 +87,7 @@ class BrassEngine : public Engine {
     int crossings = 0;
     double yAmp = 0, yMax = 0, yMin = 0;
     bool down = false, active = false, low = false;
+    double liftK = 1; // how many times longer than usual the breath takes to stop (forte/lift.h)
   };
   std::array<Voice, POOL> pool;
   // the ear's memory: each key's trim the last time it played (with the plan it had)
@@ -106,6 +108,7 @@ class BrassEngine : public Engine {
   void listen(Voice &v);
   void postView();
   void record(const Voice &v);
+  void compress(float *L, float *R, int n);
   double hornOf() const;
 
   std::array<double, p::count> P{};
@@ -121,6 +124,9 @@ class BrassEngine : public Engine {
   // views
   Voice *focus = nullptr;
   int blocks = 0;
+  // the compressor (brass-engine.cpp): its held peak, the samples left to hold it, its gain
+  double peak = 0, compGain = 1;
+  int peakHold = 0;
   struct Trace { float pc[TRACE] = {}, h[TRACE] = {}, pb[TRACE] = {}, rad[TRACE] = {}; int n = 0, cnt = 0, dec = 4; double dt = 1.0 / 12000; bool armed = true; } trace;
 };
 

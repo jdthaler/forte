@@ -11,6 +11,8 @@ namespace forte::celesta {
 using std::numbers::pi;
 
 constexpr double OUT = 0.125;       // output units per m³/s² of volume acceleration
+constexpr double BEND_T = 0.02;     // s: a note's own bend glides as the instruments that bend glide theirs
+constexpr double FINGER = 8, FINGER_F = 2000; // 1/s and Hz: a finger resting on a bar, pressed fully: its loss, the modes above FINGER_F most
 constexpr int MAX_VOICES = 24;      // bars sounding at once; the quietest older one fades out beyond this
 constexpr double FADE = 0.03;       // s: a stolen voice fades out over this
 constexpr double YOUNG = 0.05;      // s: a voice this young is never stolen
@@ -32,14 +34,19 @@ void CelestaEngine::Voice::start(CelestaEngine &eng, const Bar &b, double thickn
   // −60 dB under its loudest instead of −90
   top = eng.pick(NYQUIST * eng.fs, std::min(NYQUIST * eng.fs, 16000.0), std::min(NYQUIST * eng.fs, 12000.0));
   floor = eng.pick(1e-9, 1e-7, 1e-6);
+  bent = eng.expr.bendOf(key); // bent before it was struck
   coefs(eng);
 }
 
 // Exact two-pole coefficients for modes 2… at the current damping (bar losses + damper).
 void CelestaEngine::Voice::coefs(const CelestaEngine &eng) {
   const double k = 1 / eng.fs, sd = (6.91 / eng.P[p::damp]) * damp;
+  // a finger resting on the bar (a note's own bend): as far down as it is pressed, its loss with it,
+  // the upper modes most
+  const double dep = bent < 1 ? (-1200 * std::log2(bent)) / GLIDE_CENTS : 0;
   for (int i = 0; i < N; i++) {
-    const double f = bar.f[i], om = TAU * f, s = bar.sigTE[i] + bar.sigSup[i] + bar.sigRad[i] + pi * f * eng.P[p::eta] + sd * bar.dampW[i];
+    const double f = bar.f[i] * bent, x2 = (f / FINGER_F) * (f / FINGER_F);
+    const double om = TAU * f, s = bar.sigTE[i] + bar.sigSup[i] + bar.sigRad[i] + pi * f * eng.P[p::eta] + sd * bar.dampW[i] + (dep > 0 ? FINGER * dep * (0.1 + x2) / (1 + x2) : 0);
     sig[i] = s;
     if (i == 0) { K11 = om * om; sig1 = s; continue; }
     cut[i] = f >= top;
@@ -82,7 +89,7 @@ void CelestaEngine::Voice::strike(const CelestaEngine &eng, double velocity) {
   eta = uc - 1.5 * v * h; etaPrev = eta - v * h;
   dPrev = -1; dPrev2 = -1; hammerOn = true; contact = false; inFlight = 0;
   contactSamples = 0; Fmax = 0;
-  released = false; fading = false; fade = 1; age = 0;
+  released = false; fading = false; fade = 1; age = 0; liftK = 1;
 }
 
 // Felt force for a compression D at the next step: the discrete gradient of V = Kδ^(p+1)/(p+1)
@@ -245,12 +252,14 @@ void CelestaEngine::noteOn(int key, double velocity) {
   }
 }
 
-void CelestaEngine::noteOff(int key, double) {
+void CelestaEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
-  if (Voice *v = byKey[key]) v->released = true;
+  // how fast its damper falls: a slow lift leaves a longer tail (with the pedal down, the pedal's lets it fall later)
+  if (Voice *v = byKey[key]) { v->released = true; v->liftK = sustain || P[p::pedalLock] != 0 ? 1 : liftScale(velocity); }
 }
 
 void CelestaEngine::allNotesOff() {
+  presses.clear();
   for (int i = 0; i < nVoices; i++) voices[i]->fading = true;
 }
 
@@ -279,9 +288,12 @@ void CelestaEngine::processBlock(float *L, float *R, int n) {
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
     // the damper felt: on every bar not held by a key, unless the pedal is down
-    const double want = v->released && !sustain && !lock ? 1 : 0;
-    if (v->damp != want) v->damp = want > v->damp ? std::min(1.0, v->damp + dStep) : std::max(0.0, v->damp - dStep);
-    if (v->damp != v->dampSet) v->coefs(*this);
+    double want = v->released && !sustain && !lock ? 1 / v->liftK : 0; // a slow lift lowers it gently
+    if (!v->released) want = std::max(want, presses.of(v->key)); // Press: damped as hard as the key is pressed
+    if (v->damp != want) v->damp = want > v->damp ? std::min(want, v->damp + dStep) : std::max(want, v->damp - dStep);
+    const double to = expr.bendOf(v->key), was = v->bent; // Glide: a finger on the bar
+    if (was != to) v->bent = glideTo(was, to, n / fs, BEND_T);
+    if (v->damp != v->dampSet || v->bent != was) v->coefs(*this);
     if (moving || v->fresh) v->box(*this);
     v->render(L, R, n, *this);
   }
@@ -317,7 +329,7 @@ void CelestaEngine::postFocus() {
   a[9] = (float)std::sqrt(v->X * v->X + (v->vx * v->vx * v->M22) / v->Ka);
   a[10] = (float)v->lastContactMs; a[11] = (float)v->Fmax;
   a[12] = (float)(-v->M12 / std::sqrt(v->M11 * v->M22)); a[13] = (float)(std::sqrt(v->Ka / v->M22) / TAU);
-  a[14] = (float)v->damp; a[15] = (float)(v->hammerOn ? 1 : 0);
+  a[14] = (float)std::min(1.0, v->damp); a[15] = (float)(v->hammerOn ? 1 : 0);
   post(m);
 }
 

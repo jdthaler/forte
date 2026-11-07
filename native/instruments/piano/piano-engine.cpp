@@ -12,6 +12,11 @@ constexpr double TWO_PI = 2 * PI;
 constexpr double OUT_SCALE = 24;  // bridge velocity → full-scale audio
 constexpr double SMOOTH_T = 0.01; // s: one-pole glide of live gains and pan (no zipper noise)
 constexpr double KILL_SIGMA = 250;
+constexpr double BEND_T = 0.02; // s: a note's own bend glides as the instruments that bend glide theirs
+// Press: a palm on the strings by the bridge, fully pressed, adds PALM·g(f) to a partial's decay
+// rate (1/s), g = (0.15 + x²)/(1 + x²), x = f/PALM_F: the treble partials go in a fifth of a second,
+// the fundamental rings on for a second or so
+constexpr double PALM = 35, PALM_F = 1500;
 // longitudinal modes: none above LONG_FMAX (Hz); pairs summing below LONG_BELOW × the mode's
 // frequency left out (≥ 24 dB down); the share of the longitudinal force the board takes up,
 // set so that a forte A1's strongest phantom partials stand about 15 dB under the partials beside
@@ -27,7 +32,7 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
   const int nu = d.unisons > 0 ? d.unisons : 1;
   const double una = nu > 1 ? (double)nu / (nu - 1) : 1;
   double *base = eng.arena.data() + (size_t)at * ARRAYS;
-  double **arrays[ARRAYS] = {&q, &q1, &a1, &a2, &a1d, &a2d, &wN, &bwN, &wU, &bwU, &fbv, &fbh, &cvk, &chk, &ctk, &om, &sig, &perm, &gw, &eps, &us};
+  double **arrays[ARRAYS] = {&q, &q1, &a1, &a2, &a1d, &a2d, &wN, &bwN, &wU, &bwU, &fbv, &fbh, &cvk, &chk, &ctk, &om, &sig, &perm, &gw, &eps, &us, &a1p, &a2p};
   for (int a = 0; a < ARRAYS; a++) { *arrays[a] = base + (size_t)a * N; std::fill(*arrays[a], *arrays[a] + N, 0.0); }
 
   // order modes by segment, and within one by string; perm[i] = index in the incoming data
@@ -43,7 +48,6 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
   }
   e0 = ends[0]; e1 = ends[1]; e2 = ends[2];
 
-  double cmp = 0, cmpU = 0;
   for (int i = 0; i < N; i++) {
     const int j = (int)perm[i];
     const double w0 = TWO_PI * d.freq[j];
@@ -59,14 +63,6 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
     a1[i] = 2 * r * std::cos(od * k);
     a2[i] = r * r;
     const double b = (k * r * std::sin(od * k)) / od; // impulse-invariant input gain
-    wN[i] = d.w[j];
-    bwN[i] = b * d.w[j];
-    cmp += b * d.w[j] * d.w[j];
-    // una corda: the last string of the unison is missed, the others share the blow
-    const double wu = nu > 1 && d.uni[j] == nu - 1 ? 0 : d.w[j] * una;
-    wU[i] = wu;
-    bwU[i] = b * wu;
-    cmpU += b * wu * wu;
     fbv[i] = b * d.cv[j];
     fbh[i] = b * d.ch[j];
     cvk[i] = d.cv[j] / k;
@@ -76,18 +72,48 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
     gw[i] = d.g[j]; eps[i] = b * d.g[j]; us[i] = d.uni[j];
   }
   kcGain = d.kc; Tt = d.T; this->nu = nu;
-  compN = cmp; compU = cmpU;
+  aim(d, eng.P[p::strikePos], eng.P[p::strikePos]);
   hammer = {d.hammer.mass, d.hammer.K, d.hammer.p, d.hammer.alpha};
   // the felt touches one string fewer, so its contact stiffness drops by (ν−1)/ν
   KU = d.hammer.K / una;
-  w = wN; bw = bwN; comp = cmp; hK = d.hammer.K;
+  w = wN; bw = bwN; comp = compN; hK = d.hammer.K;
   outV = d.outV * OUT_SCALE;
   outH = d.outH * OUT_SCALE;
   hasDamper = d.hasDamper;
   damperSigma = eng.P[p::damper];
+  liftK = 1;
   computeDamped();
   setPan(eng, true);
   startLong(eng, d);
+}
+
+// Where the hammer strikes, β of the string's length, for a voice whose data was built for β0 (a note's
+// own slide moves it, engine.h slide): each partial n's share of the blow goes as its shape there,
+// sin(nπβ) (the hammer's width as it was), from the data's own at β0. A partial whose node was at β0
+// is taken from its shape a little off it.
+void PianoEngine::Voice::aim(const VoiceData &d, double beta, double beta0) {
+  const double una = nu > 1 ? (double)nu / (nu - 1) : 1;
+  double cmp = 0, cmpU = 0;
+  for (int i = 0; i < N; i++) {
+    const int j = (int)perm[i];
+    double wj = d.w[j];
+    if (beta != beta0) {
+      const double n = d.idx[j] + 1, s0 = std::sin(n * PI * beta0), s1 = std::sin(n * PI * beta);
+      wj *= s1 / (std::fabs(s0) < 0.05 ? std::copysign(0.05, s0) : s0);
+    }
+    const double r = std::exp(-sig[i] * k), od = std::sqrt(std::max(om[i] * om[i] - sig[i] * sig[i], 1e-6));
+    const double b = (k * r * std::sin(od * k)) / od; // impulse-invariant input gain
+    wN[i] = wj;
+    bwN[i] = b * wj;
+    cmp += b * wj * wj;
+    // una corda: the last string of the unison is missed, the others share the blow
+    const double wu = nu > 1 && d.uni[j] == nu - 1 ? 0 : wj * una;
+    wU[i] = wu;
+    bwU[i] = b * wu;
+    cmpU += b * wu * wu;
+  }
+  compN = cmp; compU = cmpU;
+  aimed = beta;
 }
 
 // The longitudinal modes this voice runs, from its kept partials (after start's arrays).
@@ -109,14 +135,38 @@ void PianoEngine::Voice::startLong(const PianoEngine &eng, const VoiceData &d) {
 }
 
 void PianoEngine::Voice::computeDamped() {
-  const double extra = killing ? KILL_SIGMA : damperSigma;
+  const double extra = killing ? KILL_SIGMA : damperSigma / liftK; // a slow lift lowers the damper gently
   for (int i = 0; i < N; i++) {
-    const double s = sig[i] + extra, o = om[i];
+    const double s = sig[i] + extra, o = om[i] * bent;
     const double r = std::exp(-s * k);
     const double od = std::sqrt(std::max(o * o - s * s, 1e-6));
     a1d[i] = 2 * r * std::cos(od * k);
     a2d[i] = r * r;
   }
+}
+
+// Its recursion with a palm on the strings, as hard as press.p (render uses it while the key is up
+// under no damper's felt).
+void PianoEngine::Voice::computePressed() {
+  for (int i = 0; i < N; i++) {
+    const double o = om[i] * bent, x = o / (TWO_PI * PALM_F), s = sig[i] + PALM * press.p * (0.15 + x * x) / (1 + x * x);
+    const double r = std::exp(-s * k);
+    const double od = std::sqrt(std::max(o * o - s * s, 1e-6));
+    a1p[i] = 2 * r * std::cos(od * k);
+    a2p[i] = r * r;
+  }
+}
+
+// Its strings tightened (or let go) to sound × r: each mode's recursion at its frequency × r, its
+// loss as it was.
+void PianoEngine::Voice::retune(double r) {
+  bent = r;
+  for (int i = 0; i < N; i++) {
+    const double o = om[i] * r, e = std::exp(-sig[i] * k);
+    a1[i] = 2 * e * std::cos(std::sqrt(std::max(o * o - sig[i] * sig[i], 1e-6)) * k);
+  }
+  computeDamped();
+  if (press.on()) computePressed();
 }
 
 // A new voice starts at its pan; a width change glides there (see render).
@@ -191,7 +241,7 @@ double PianoEngine::Voice::contactForce(double dFree) {
 void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
   // qa holds q[n], qb q[n−1]; each step writes q[n+1] over q[n−1], then they swap
   double *qa = q, *qb = q1;
-  const double *A1 = damped ? a1d : a1, *A2 = damped ? a2d : a2;
+  const double *A1 = damped ? a1d : press.on() ? a1p : a1, *A2 = damped ? a2d : press.on() ? a2p : a2;
   const double *FBV = fbv, *FBH = fbh, *CV = cvk, *CH = chk, *CT = ctk;
   const double *GV = eng.gV.data(), *GH = eng.gH.data(), *GT = eng.gT.data();
   const double oV = outV, oH = outH;
@@ -486,30 +536,35 @@ void PianoEngine::strikeKey(int key, double velocity, const VoiceData &d) {
     if (at < 0) return; // every voice or the whole arena busy (beyond anything the budget lets happen)
     v = slot;
     v->start(*this, key, d, at);
+    if (expr.bendOf(key) != 1) v->retune(expr.bendOf(key)); // bent before it was struck
     voices[nVoices++] = v;
     byKey[key] = v;
   }
   v->keyDown = true;
   v->updateDamping(*this);
+  const double beta = slid[key] == slid[key] ? slid[key] : P[p::strikePos]; // its own slide, at the strike
+  if (beta != v->aimed) v->aim(d, beta, P[p::strikePos]);
   v->strike(velocity, P[p::unaCorda] != 0);
   enforceBudget(v);
   last = v;
 }
 
-void PianoEngine::noteOff(int key, double) {
+void PianoEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   down[key] = 0;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
-  if (Voice *v = byKey[key]) { v->keyDown = false; v->updateDamping(*this); }
+  // how fast the damper falls: a slow lift leaves a longer tail, a fast one a shorter
+  if (Voice *v = byKey[key]) { v->keyDown = false; v->lifted(liftScale(velocity)); v->updateDamping(*this); }
 }
 
 void PianoEngine::setSustain(bool on) {
   sustain = on;
-  for (int i = 0; i < nVoices; i++) voices[i]->updateDamping(*this);
+  for (int i = 0; i < nVoices; i++) { if (!on) voices[i]->lifted(1); voices[i]->updateDamping(*this); } // the pedal's dampers fall as they always did
 }
 
 void PianoEngine::allNotesOff() {
   nPending = 0;
+  presses.clear();
   down.fill(0);
   for (int key = 0; key < 128; key++) sym.clear(key);
   symHush = true;
@@ -570,7 +625,13 @@ void PianoEngine::process(float *L, float *R, int n) {
     }
     if (std::fabs(tV - gv) + std::fabs(tH - gh) + std::fabs(tT - gt) < 1e-9) { gv = tV; gh = tH; gt = tT; }
     sV = gv; sH = gh; sT = gt;
-    for (int i = 0; i < nVoices; i++) if (!voices[i]->dead) voices[i]->render(L + off, R + off, m, *this);
+    for (int i = 0; i < nVoices; i++) {
+      Voice &v = *voices[i];
+      if (v.dead) continue;
+      if (v.press.follow(v.keyDown ? presses.of(v.key) : 0, m, fs)) v.computePressed(); // Press: a palm, while the key is held
+      if (const double to = expr.bendOf(v.key); v.bent != to) v.retune(glideTo(v.bent, to, m / fs, BEND_T)); // Glide
+      v.render(L + off, R + off, m, *this);
+    }
     symRun(L + off, R + off, m, gV.data(), gH.data());
   }
   if (overBudget) enforceBudget(nullptr);

@@ -333,6 +333,7 @@ void WindHarpEngine::noteOn(int key, double velocity) {
     for (int i = 0; i < v->ns; i++) initString(v->strings[i], key, stringDesign(key, dp, o[i]), bendNow * v->nb);
     v->x = 0; v->target = 0; v->rate = 0; v->held = false; v->pedal = false;
     v->fading = false; v->fade = 1; v->dead = false; v->age = 0; v->env = 0; v->press = 0; v->pressS = 0;
+    if (const double g = expr.slideOr(key, NAN); g == g) v->gust = std::clamp(g, 0.0, 0.3); else v->gust = NAN; // a slide before it starts: there at once
     v->pb = boxGain(key);
     const auto [gl, gr] = keyPan(key, 0.6, KEY_LO, KEY_HI);
     v->gl = gl; v->gr = gr; v->liftPrev = 0;
@@ -382,7 +383,7 @@ double WindHarpEngine::wind(int n) {
   const double dt = n * h;
   Uw += (P[p::wind] - Uw) * (1 - exp(-dt / GLIDE));
   const double I = P[p::gust], Tu = P[p::gustTime], t1 = Tu, t2 = Tu / GUST.ratio, w2 = GUST.w2;
-  if (I > 0) {
+  if (I > 0 || slidGusts) { // (gusts a slid key feels, though the knob has none)
     const double e1 = exp(-dt / t1), e2 = exp(-dt / t2);
     g1 = g1 * e1 + std::sqrt(1 - e1 * e1) * gauss();
     g2 = g2 * e2 + std::sqrt(1 - e2 * e2) * gauss();
@@ -391,9 +392,14 @@ double WindHarpEngine::wind(int n) {
   const double kp = 1 - exp(-dt / GLIDE);
   chanS += (chanPress - chanS) * kp;
   for (int i = 0; i < nv; i++) { Voice *v = voices[i]; v->pressS += (v->press - v->pressS) * kp; }
-  const double u = Uw * (1 + I * Ug) * (1 + AFTER * chanS);
-  U = std::max(0.05, std::min(1.5 * U_MAX, u));
+  U = windOf(I);
   return U;
+}
+
+// the wind this block, at gustiness I
+double WindHarpEngine::windOf(double I) const {
+  const double u = Uw * (1 + I * Ug) * (1 + AFTER * chanS);
+  return std::max(0.05, std::min(1.5 * U_MAX, u));
 }
 
 void WindHarpEngine::bend(double value) {
@@ -418,6 +424,16 @@ void WindHarpEngine::process(float *L, float *R, int n) {
     v.nb = nb;
     for (int i = 0; i < v.ns; i++) tension(v.strings[i], bendNow * nb);
   }
+  // Slide: a key's own gustiness, its strings in the lee of something or out in the open: the same
+  // gusts, felt as strongly as its slide says (gliding)
+  slidGusts = false;
+  for (int vi = 0; vi < nv; vi++) {
+    Voice &v = *voices[vi];
+    const double g = expr.slideOr(v.key, NAN);
+    if (g != g) { v.gust = NAN; continue; }
+    v.gust = glideTo(v.gust == v.gust ? v.gust : P[p::gust], std::clamp(g, 0.0, 0.3), n * h, GLIDE);
+    if (!v.dead && v.gust > 0) slidGusts = true;
+  }
   const double Unow = wind(n);
   std::fill(flatL, flatL + n, 0.0); std::fill(flatR, flatR + n, 0.0); std::fill(mono, mono + n, 0.0);
   std::fill(dipL, dipL + n, 0.0); std::fill(dipR, dipR + n, 0.0);
@@ -426,7 +442,7 @@ void WindHarpEngine::process(float *L, float *R, int n) {
   for (int vi = 0; vi < nv; vi++) {
     Voice &v = *voices[vi];
     if (v.dead) continue;
-    const double Uv = Unow * (1 + AFTER * v.pressS);
+    const double Uv = (v.gust == v.gust ? windOf(v.gust) : Unow) * (1 + AFTER * v.pressS);
     // the shutter moves
     const double x0 = v.x;
     if (v.x != v.target) { const double st = v.rate * n * h; v.x = v.target > v.x ? std::min(v.target, v.x + st) : std::max(v.target, v.x - st); }

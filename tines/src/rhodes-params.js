@@ -10,6 +10,9 @@ import { VENUE } from '../../shared/chain.js';
 import { TUNING_GROUP } from '../../shared/tuning.js';
 
 const x = (v) => `×${v < 1 ? v.toFixed(2) : v.toFixed(v < 10 ? 2 : 0)}`;
+// MIDI velocity (0..1) → the hammer's speed, 0.25 … 5 m/s (the descriptor's midiVelocity), and back
+export const hammerSpeed = (v) => 0.25 * 20 ** v;
+const touchOf = (speed) => Math.log(speed / 0.25) / Math.log(20);
 
 export const GROUPS = [
   {
@@ -44,7 +47,7 @@ export const GROUPS = [
       { id: 'tipExp', label: 'Tip nonlinearity Δp', kind: 'model', min: -0.5, max: 1, step: 0.05, def: 0, fmt: (v) => (v >= 0 ? '+' : '') + v.toFixed(2) },
       { id: 'hammerMass', label: 'Hammer mass', kind: 'model', min: 0.3, max: 3, def: 1, log: true, fmt: x },
       { id: 'hysteresis', label: 'Tip hysteresis α', kind: 'model', min: 0, max: 1e-3, step: 1e-5, def: 2e-4, fmt: (v) => `${(v * 1e6).toFixed(0)} µs` },
-      { id: 'velocity', label: 'Velocity', perform: true, strip: true, kind: 'play', min: 0.2, max: 5, step: 0.05, def: 1.8, fmt: (v) => `${v.toFixed(2)} m/s`, hint: '↑ / ↓ arrows. MIDI uses key velocity.' },
+      { id: 'velocity', label: 'Velocity', perform: true, strip: true, kind: 'play', min: 0.25, max: 5, step: 0.01, def: 1.8, log: true, fmt: (v) => `${touchOf(v).toFixed(2)} · hammer ${v.toFixed(2)} m/s`, hint: 'The computer keys’ hammer speed, and the MIDI velocity that would give it. ↑ / ↓ arrows. MIDI uses key velocity.' },
     ],
   },
   {

@@ -15,6 +15,7 @@ constexpr double OUT = 0.05;        // the output's gain: a forte note peaks abo
 constexpr double ATTACK_S = 0.002;  // s: the first instant's ramp (the beginning is a step, which would click)
 constexpr double STEAL_T = 0.005;   // s: a stolen voice fades with this time constant
 constexpr double REPORT_HZ = 30;    // state messages to the page a second
+constexpr double BEND_T = 0.02;    // s: a note's own bend glides this fast
 constexpr int BLOCK = 32;           // samples between the amplitudes' updates (they glide between)
 constexpr double PI = std::numbers::pi;
 constexpr double FADE_FROM = 4 * PI, FADE_TO = 6 * PI; // the streaming fundamental's phase over which a note ends
@@ -138,6 +139,7 @@ void EarlyUniverseEngine::amplitudes(Voice &v, double *e, double *q) const {
 
 void EarlyUniverseEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < 0 || key > 127) return;
+  press.reset(key);
   Data::Ref r = data.get(0, version);
   if (r) {
     if (r.entry != latest.entry) { data.acquire(r); data.release(latest); latest = r; }
@@ -168,6 +170,7 @@ void EarlyUniverseEngine::noteOn(int key, double velocity) {
   data.acquire(r);
   v.velocity = velocity;
   v.f = keyFreq(key) * tuningOf(P.data()).ratio(key);
+  v.bent = expr.bendOf(key);
   const double top = std::min(0.45 * fs, 20000.0);
   v.count = std::clamp((int)std::floor(top / v.f), 0, pick(MAX_HARMONICS, 16, 10));
   const auto [l, rr] = keyPan(key);
@@ -176,19 +179,29 @@ void EarlyUniverseEngine::noteOn(int key, double velocity) {
   uint32_t seed = 0x9e3779b9u ^ (uint32_t)(key * 2654435761u);
   for (int m = 0; m < v.count; m++) {
     seed = seed * 1664525u + 1013904223u;
-    const double ph = TAU * (seed / 4294967296.0), w = (TAU * (m + 1) * v.f) / fs;
+    const double ph = TAU * (seed / 4294967296.0);
     v.c[m] = std::cos(ph); v.s[m] = std::sin(ph);
-    v.rc[m] = std::cos(w); v.rs[m] = std::sin(w);
   }
+  retune(v);
   amplitudes(v, v.e.data(), v.q.data());
   focus = key;
   sinceReport = (int)(fs / REPORT_HZ);
 }
 
-void EarlyUniverseEngine::noteOff(int key, double) {
+void EarlyUniverseEngine::retune(Voice &v) const {
+  for (int m = 0; m < v.count; m++) {
+    const double w = (TAU * (m + 1) * v.f * v.bent) / fs;
+    v.rc[m] = std::cos(w); v.rs[m] = std::sin(w);
+  }
+}
+
+// Lift: when recombination comes: a fast lift freezes the sound at once (its light streams away in a
+// quarter of the usual time), a slow one lets it stream away over up to four times as long.
+void EarlyUniverseEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
   for (Voice &v : voices) if (v.key == key && v.held) {
     v.held = false;
-    if (!sustain) { v.released = true; if (!v.streaming) startStreaming(v); }
+    if (!sustain) { v.released = true; v.liftK = s * s; if (!v.streaming) startStreaming(v); }
   }
 }
 
@@ -203,7 +216,12 @@ void EarlyUniverseEngine::process(float *L, float *R, int n) {
   std::array<double, MAX_HARMONICS> e1, q1, w;
   for (Voice &v : voices) {
     const Universe &U = *v.uni.data;
-    for (int m = 0; m < v.count; m++) w[m] = OUT * v.velocity * std::pow(m + 1.0, tilt);
+    // the plasma's sound speed (a note's own bend): every wave faster or slower, those it takes past
+    // the band's top silent
+    if (const double to = expr.bendOf(v.key); v.bent != to) { v.bent = glideTo(v.bent, to, n / fs, BEND_T); retune(v); }
+    // Press: a larger primordial amplitude, up to twice: every wave the larger with it (linear)
+    v.amp = glideTo(v.amp, 1 + press.of(v.key), n / fs, PRESS_GLIDE);
+    for (int m = 0; m < v.count; m++) w[m] = (m + 1) * v.f * v.bent < 0.48 * fs ? OUT * v.velocity * v.amp * std::pow(m + 1.0, tilt) : 0;
     for (int i0 = 0; i0 < n; i0 += BLOCK) {
       const int len = std::min(BLOCK, n - i0);
       // the clock: conformal time up to recombination, then (inside the plasma, or once let go)
@@ -213,7 +231,7 @@ void EarlyUniverseEngine::process(float *L, float *R, int n) {
         if (v.u >= 1) { v.u = 1; if (plasma) startStreaming(v); }
       } else {
         // k₁ Δτ: by the cosmic clock while the key is held, by the release's once it is let go
-        v.x1 += len * (v.released ? free : U.k1 * U.tauStar * cosmic);
+        v.x1 += len * (v.released ? free / v.liftK : U.k1 * U.tauStar * cosmic);
         if (v.x1 >= FADE_TO) v.done = true;
       }
       amplitudes(v, e1.data(), q1.data());

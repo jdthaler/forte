@@ -23,6 +23,8 @@
 #include <memory>
 
 #include "forte/engine.h"
+#include "forte/expression.h"
+#include "forte/lift.h"
 #include "hurdygurdy-model.h"
 #include "hurdygurdy-params.h"
 #include "hurdygurdy-string.h"
@@ -54,6 +56,11 @@ class HurdyGurdyEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override;    // aftertouch: the hand leans into the crank
   void bend(double value) override;                 // the tangents push the chanterelles: their notes × r
+  // a note's own slide: how hard the chanterelles bear on the wheel while it is the melody (their
+  // pressure, from Wheel pressure)
+  void slide(double value, int key) override { expr.setSlide(value, key); melodyForce(); }
+  // Glide: the melody's tangent pushed harder into the chanterelles: up to a semitone sharp, the players' vibrato
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -78,6 +85,8 @@ class HurdyGurdyEngine : public Engine {
  private:
   void run(float *L, float *R, int n);
   void restop();          // the chanterelles to the melody's length (and the bend)
+  void melodyForce();     // the chanterelles' force on the wheel, at the melody's own slide
+  NoteExpression expr{0, 1}; // each key's own slide, and its bend (up only, a semitone at most)
   void redesign(Str &s);  // a string's loop at its length now
   void applyQuality();
   void buildBody(double eta);
@@ -90,6 +99,8 @@ class HurdyGurdyEngine : public Engine {
   int nHeld = 0;
   bool pedal = false;
   double after = 0, shotA = 0, bendR = 1, bendTo = 1;
+  double own = 1; int ownKey = -1; // the melody's own bend (its tangent pushed harder), and whose
+  double sagR = 1, sagT = 0; // a slow lift: the tangent sags off the string, its pitch gliding to the next stop over sagT s (forte/lift.h)
   int64_t shotAt = -1;
   double kB[NBRIDGE] = {}, kself[NSTR] = {}, zeta = 0;
   double hand = 0, flyK = 0; // the wheel's lag behind the hand

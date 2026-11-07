@@ -28,21 +28,26 @@
     {"id":"cents8","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"cents9","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"cents10","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
-    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false}
+    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"strikeOn","kind":"toggle","def":true},
+    {"id":"glideOn","kind":"toggle","def":true},
+    {"id":"slideOn","kind":"toggle","def":true},
+    {"id":"pressOn","kind":"toggle","def":true},
+    {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"GW150914-like remnant (a = 0.69, q = 1.2)","values":{}},
-    {"name":"Schwarzschild (a = 0): two cycles and gone","values":{"spinU":0}},
-    {"name":"Rapid spin (a = 0.99)","values":{"spinU":2}},
-    {"name":"Near-extremal (a = 1 − 10⁻⁴): a harmonic bell","values":{"spinU":4,"t0":10,"overtones":0.4}},
-    {"name":"Extremal edge (a = 1 − 10⁻⁶): rings for a second","values":{"spinU":6,"t0":10,"overtones":0.4,"releaseMute":true}},
-    {"name":"Lopsided merger (q = 8): odd modes appear","values":{"massRatio":8}},
-    {"name":"Seen edge-on (ι = 90°): linear polarisation","values":{"inclination":90}},
-    {"name":"Early ringdown (t₀ = 0): overtone burst","values":{"t0":0,"overtones":1.5}},
-    {"name":"Inspiral + merger + ringdown (LIGO chirp)","values":{"inspiral":true,"inspiralOct":1.5}},
-    {"name":"Counter-rotating modes too","values":{"retrograde":0.7,"massRatio":3}},
-    {"name":"GW190814-like: a lopsided merger (q = 9, a = 0.28)","values":{"spinU":0.1427,"massRatio":9}},
-    {"name":"Seen face-on (ι = 0°): circular polarisation","values":{"inclination":0}},
-    {"name":"A long inspiral: three octaves of chirp","values":{"inspiral":true,"inspiralOct":3}}
+    {"name":"GW150914-like remnant (a = 0.69, q = 1.2)","values":{"liftOn":false}},
+    {"name":"Schwarzschild (a = 0): two cycles and gone","values":{"liftOn":false,"spinU":0}},
+    {"name":"Rapid spin (a = 0.99)","values":{"liftOn":false,"spinU":2}},
+    {"name":"Near-extremal (a = 1 − 10⁻⁴): a harmonic bell","values":{"liftOn":false,"spinU":4,"t0":10,"overtones":0.4}},
+    {"name":"Extremal edge (a = 1 − 10⁻⁶): rings for a second","values":{"liftOn":false,"spinU":6,"t0":10,"overtones":0.4,"releaseMute":true}},
+    {"name":"Lopsided merger (q = 8): odd modes appear","values":{"liftOn":false,"massRatio":8}},
+    {"name":"Seen edge-on (ι = 90°): linear polarisation","values":{"liftOn":false,"inclination":90}},
+    {"name":"Early ringdown (t₀ = 0): overtone burst","values":{"liftOn":false,"t0":0,"overtones":1.5}},
+    {"name":"Inspiral + merger + ringdown (LIGO chirp)","values":{"liftOn":false,"inspiral":true,"inspiralOct":1.5}},
+    {"name":"Counter-rotating modes too","values":{"liftOn":false,"retrograde":0.7,"massRatio":3}},
+    {"name":"GW190814-like: a lopsided merger (q = 9, a = 0.28)","values":{"liftOn":false,"spinU":0.1427,"massRatio":9}},
+    {"name":"Seen face-on (ι = 0°): circular polarisation","values":{"liftOn":false,"inclination":0}},
+    {"name":"A long inspiral: three octaves of chirp","values":{"liftOn":false,"inspiral":true,"inspiralOct":3}}
   ]
 }

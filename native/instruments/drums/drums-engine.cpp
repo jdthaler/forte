@@ -137,7 +137,7 @@ double DrumEngine::tensionOf(const Voice &v) const {
 void DrumEngine::coefficients(Voice &v, double tension) {
   v.tension = tension;
   const double dt = 1 / fs;
-  const double extra = v.hand ? std::log(1000.0) / P[p::hand] : 0;
+  const double extra = v.hand ? std::log(1000.0) / (P[p::hand] * v.liftK) : 0;
   v.Y = 0;
   for (int n = 0; n < v.M; n++) {
     const double w = v.w0[n] * tension, a = v.sig[n] + extra;
@@ -195,7 +195,7 @@ void DrumEngine::strike(Voice &v, double velocity) {
   double w = 0;
   for (int n = 0; n < v.M; n++) w += v.phiS[n] * v.q[n];
   v.y = w; // it arrives at the head where the head is now
-  v.hand = false; v.released = false;
+  v.hand = false; v.released = false; v.liftK = 1;
   coefficients(v, v.tension);
 }
 
@@ -224,13 +224,15 @@ void DrumEngine::noteOn(int key, double velocity) {
   }
 }
 
-void DrumEngine::noteOff(int key, double) {
+// Lift: the hand that damps the head on release lands gently on a slow lift (it rings on longer)
+// and firmly on a fast one; with the heads let ring, only a fast lift brings the hand down.
+void DrumEngine::noteOff(int key, double velocity) {
   for (int i = 0; i < npending; i++) if (pending[i].key == key) { pending[i].off = true; return; }
   if (key < KEY_MIN || key > KEY_MAX) return;
   Voice &v = slots[key - KEY_MIN];
   if (!v.active) return;
   v.released = true;
-  if (P[p::ring] < 0.5 && !sustain && !v.hand) { v.hand = true; coefficients(v, v.tension); }
+  if (!sustain && !v.hand && (P[p::ring] < 0.5 || liftPast(velocity) > 0)) { v.hand = true; v.liftK = liftScale(velocity); coefficients(v, v.tension); }
 }
 
 void DrumEngine::setSustain(bool on) {

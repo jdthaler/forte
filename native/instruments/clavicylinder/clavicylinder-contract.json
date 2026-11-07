@@ -11,6 +11,7 @@
     {"id":"thick","kind":"continuous","min":1.2,"max":4,"def":2.3,"step":0.05,"log":false},
     {"id":"t60","kind":"continuous","min":0.5,"max":30,"def":4,"step":0,"log":true},
     {"id":"cords","kind":"continuous","min":-0.1,"max":0.06,"def":0,"step":0.002,"log":false},
+    {"id":"contact","kind":"continuous","min":0,"max":0.12,"def":0,"step":0.002,"log":false},
     {"id":"build","kind":"choice","def":0,"options":[0,1,2]},
     {"id":"board","kind":"continuous","min":0,"max":1,"def":0.6,"step":0.01,"log":false},
     {"id":"fullRange","kind":"toggle","def":false},
@@ -30,20 +31,25 @@
     {"id":"cents8","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"cents9","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"cents10","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
-    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false}
+    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"strikeOn","kind":"toggle","def":true},
+    {"id":"glideOn","kind":"toggle","def":true},
+    {"id":"slideOn","kind":"toggle","def":true},
+    {"id":"pressOn","kind":"toggle","def":true},
+    {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"Chladni’s clavicylinder (1800)","values":{}},
-    {"name":"Light touch (slow to speak)","values":{"press":0.25}},
-    {"name":"Pressing hard (louder, harsher)","values":{"press":4}},
-    {"name":"Cloth soaked (dull; the treble fails)","values":{"wet":0.95}},
-    {"name":"Soaped strips (softer tone)","values":{"grip":-0.7}},
-    {"name":"Pumice on the glass (cutting)","values":{"grip":0.8}},
-    {"name":"Posts all the way up","values":{"build":1}},
-    {"name":"Cords on the wrong nodes (an overtone takes over)","values":{"cords":-0.092}},
-    {"name":"Light flywheel (chords drag the cylinder)","values":{"flywheel":0.4}},
-    {"name":"Slow treadle","values":{"speed":0.4}},
-    {"name":"One layer of cloth: the key’s knock shows","values":{"layers":1}},
-    {"name":"Heavy flywheel: chords keep the speed","values":{"flywheel":10}}
+    {"name":"Chladni’s clavicylinder (1800)","values":{"glideOn":false}},
+    {"name":"Light touch (slow to speak)","values":{"glideOn":false,"press":0.25}},
+    {"name":"Pressing hard (louder, harsher)","values":{"glideOn":false,"press":4}},
+    {"name":"Cloth soaked (dull; the treble fails)","values":{"glideOn":false,"wet":0.95}},
+    {"name":"Soaped strips (softer tone)","values":{"glideOn":false,"grip":-0.7}},
+    {"name":"Pumice on the glass (cutting)","values":{"glideOn":false,"grip":0.8}},
+    {"name":"Posts all the way up","values":{"glideOn":false,"build":1}},
+    {"name":"Cords on the wrong nodes (an overtone takes over)","values":{"glideOn":false,"cords":-0.092}},
+    {"name":"Light flywheel (chords drag the cylinder)","values":{"glideOn":false,"flywheel":0.4}},
+    {"name":"Slow treadle","values":{"glideOn":false,"speed":0.4}},
+    {"name":"One layer of cloth: the key’s knock shows","values":{"glideOn":false,"layers":1}},
+    {"name":"Heavy flywheel: chords keep the speed","values":{"glideOn":false,"flywheel":10}}
   ]
 }

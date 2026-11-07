@@ -11,6 +11,10 @@ namespace forte::grand {
 
 constexpr double OUT = 0.012;       // bridge force (N) → full-scale audio
 constexpr double KILL_SIGMA = 250;  // s⁻¹, fast fade for stolen / panicked / re-struck voices
+constexpr double BEND_T = 0.02;     // s: a note's own bend glides as the instruments that bend glide theirs
+// Press: a palm on the strings by the bridge, fully pressed, adds PALM·g(f) to a partial's decay
+// rate (1/s), g = (0.15 + x²)/(1 + x²), x = f/PALM_F (as the Ribbon Piano's)
+constexpr double PALM = 35, PALM_F = 1500;
 // longitudinal modes: none above LONG_FMAX (Hz); pairs summing below LONG_BELOW × a mode's
 // frequency left out; Q; the share of the longitudinal force the piezo and the board take up, set
 // so that a forte G1's strongest longitudinal component between 1 and 2 kHz is about as loud as
@@ -62,6 +66,7 @@ void GrandEngine::Voice::start(const GrandEngine &eng, Data::Ref r, uint64_t ver
     nHq = i - nV;
   }
   nVa = nVq; nHa = nHq;
+  aimed = eng.P[p::strike];
   bridgeSums();
   hammer = d.hammer; seg = d.seg; hasDamper = d.hasDamper;
   const auto [pl, pr] = keyPan(key, 0.5, KEY_LO, KEY_HI);
@@ -71,8 +76,25 @@ void GrandEngine::Voice::start(const GrandEngine &eng, Data::Ref r, uint64_t ver
   keyDown = true; damped = false; killing = false; dead = false;
   hammerOn = false; peak = 0; quiet = 0; age = 0; struck = -INFINITY;
   eta = 0; etaPrev = 0; dPrev = -1; F = 0; FV = 0; FH = 0; Fmax = 0; contactSamples = 0; hammerSamples = 0; contact = false;
+  liftK = 1; press = Press{}; bent = eng.expr.bendOf(key); // bent before it was struck
   setDamper(eng.P[p::damper]);
   startLong(eng, d);
+}
+
+// Strike at `strike` of the string (a note's own slide) rather than where the key's data has it:
+// each mode's share of the blow and the compliance under the hammer, from there.
+void GrandEngine::Voice::aim(const GrandEngine &eng, double strike) {
+  aimed = strike;
+  if (strike == eng.P[p::strike]) { h = b->h.data(); bh = b->bh.data(); comp0 = b->comp0; bridgeSums(); return; }
+  strikeWeights(b->d, strike, eng.P[p::tilt], hO);
+  double c = 0;
+  for (int i = 0; i < N; i++) {
+    const double r = std::exp(-sig[i] * k), od = std::sqrt(std::max(om[i] * om[i] - sig[i] * sig[i], 1e-6));
+    const double bi = (k * r * std::sin(od * k)) / od; // impulse-invariant input gain
+    bhO[i] = bi * hO[i]; c += bi * hO[i] * hO[i];
+  }
+  h = hO; bh = bhO; comp0 = c;
+  bridgeSums();
 }
 
 // The longitudinal modes this voice runs, from the partials it runs: each polarisation's partial
@@ -130,7 +152,16 @@ void GrandEngine::Voice::dropTop() {
 // own: a2 = e^{−2σk}; a1 places the poles, with the bridge's β, at the exact damped frequency.
 void GrandEngine::Voice::coef(double *A1, double *A2, bool kill, double sd) const {
   for (int i = 0; i < N; i++) {
-    const double s = sig[i] + (kill ? KILL_SIGMA : sd * dmp[i]), w = om[i], bt = beta[i];
+    const double s = sig[i] + (kill ? KILL_SIGMA : sd * dmp[i]), w = om[i] * bent, bt = beta[i];
+    const double aa = std::exp(-2 * s * k), R2 = (aa - bt) / (1 + bt), R = std::sqrt(R2), st = -std::log(R) / k;
+    A1[i] = 2 * R * (1 + bt) * std::cos(std::sqrt(std::max(w * w - st * st, 1e-6)) * k); A2[i] = aa;
+  }
+}
+
+// The recursion with a palm on the strings as hard as p (Voice::coef's, with the palm's loss).
+void GrandEngine::Voice::coefPalm(double *A1, double *A2, double p) const {
+  for (int i = 0; i < N; i++) {
+    const double w = om[i] * bent, x = w / (TAU * PALM_F), s = sig[i] + PALM * p * (0.15 + x * x) / (1 + x * x), bt = beta[i];
     const double aa = std::exp(-2 * s * k), R2 = (aa - bt) / (1 + bt), R = std::sqrt(R2), st = -std::log(R) / k;
     A1[i] = 2 * R * (1 + bt) * std::cos(std::sqrt(std::max(w * w - st * st, 1e-6)) * k); A2[i] = aa;
   }
@@ -232,7 +263,7 @@ inline void kcRun(const KcRun &r, int i0, int i1, double sCorr, double &a, doubl
 // Add this voice's piezo signal (panned) and its vertical bridge force (for the board).
 void GrandEngine::Voice::render(double *PL, double *PR, double *SEG, int n, GrandEngine &eng) {
   const int h1 = nV + nHa, nva = nVa;
-  const double *A1 = damped ? a1d : a1, *A2 = damped ? a2d : a2;
+  const double *A1 = damped || palmIn ? a1d : a1, *A2 = damped || palmIn ? a2d : a2;
   const double gH = eng.P[p::pickH], pl = panL * trim * OUT, pr = panR * trim * OUT;
   double *sg = SEG + seg * BLOCK;
   const double iV = invV, iH = invH, kV = kapV, kH = kapH;
@@ -354,12 +385,12 @@ void GrandEngine::BoardSlot::run(const double *SEG, double *ML, double *MR, int 
 
 GrandEngine::GrandEngine(double fs)
     : Engine(fs), hammerMax((int)std::round(0.08 * fs)), repeat((int)std::round(REPEAT * fs)),
-      sym(128, 2 * SYM_MODES, BLOCK, fs, false), store(new double[(size_t)POOL * 4 * CAP]()),
+      sym(128, 2 * SYM_MODES, BLOCK, fs, false), store(new double[(size_t)POOL * 6 * CAP]()),
       data([this](int key, uint64_t version) { return build(key, version); }) {
   for (int i = 0; i < POOL; i++) {
     Voice &v = pool[i];
-    double *s = store.get() + (size_t)i * 4 * CAP;
-    v.q = s; v.q1 = s + CAP; v.a1d = s + 2 * CAP; v.a2d = s + 3 * CAP;
+    double *s = store.get() + (size_t)i * 6 * CAP;
+    v.q = s; v.q1 = s + CAP; v.a1d = s + 2 * CAP; v.a2d = s + 3 * CAP; v.hO = s + 4 * CAP; v.bhO = s + 5 * CAP;
   }
 }
 
@@ -525,6 +556,8 @@ void GrandEngine::noteOn(int key, double velocity) {
     voices[nVoices++] = v; byKey[key] = v;
   }
   v->keyDown = true; v->updateDamping(*this);
+  const double at = slid[key] == slid[key] ? slid[key] : P[p::strike]; // its own slide, at the blow
+  if (at != v->aimed) v->aim(*this, at);
   v->strike(hammerSpeed(velocity));
   enforceBudget(v);
 }
@@ -543,20 +576,22 @@ void GrandEngine::retryPending() {
   }
 }
 
-void GrandEngine::noteOff(int key, double) {
+void GrandEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   down[key] = 0;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
-  if (Voice *v = byKey[key]) { v->keyDown = false; v->updateDamping(*this); }
+  // how fast the damper falls: a slow lift leaves a longer tail, a fast one a shorter (forte/lift.h)
+  if (Voice *v = byKey[key]) { v->keyDown = false; v->lifted(liftScale(velocity)); v->updateDamping(*this); }
 }
 
 void GrandEngine::setSustain(bool on) {
   sustain = on;
-  for (int i = 0; i < nVoices; i++) voices[i]->updateDamping(*this);
+  for (int i = 0; i < nVoices; i++) { if (!on) voices[i]->lifted(1); voices[i]->updateDamping(*this); } // the pedal's dampers fall as they always did
 }
 
 void GrandEngine::allNotesOff() {
   nPending = 0;
+  presses.clear();
   down.fill(0);
   for (int key = 0; key < 128; key++) sym.clear(key);
   symHush = true;
@@ -598,7 +633,18 @@ void GrandEngine::run(float *L, float *R, int n) {
   std::fill(PL, PL + n, 0.0); std::fill(PR, PR + n, 0.0);
   for (int s = 0; s < SEGMENTS; s++) std::fill(SEG + s * BLOCK, SEG + s * BLOCK + n, 0.0);
   if (hasParams) {
-    for (int i = 0; i < nVoices; i++) voices[i]->render(PL, PR, SEG, n, *this);
+    for (int i = 0; i < nVoices; i++) {
+      Voice &v = *voices[i];
+      const bool moved = v.press.follow(v.keyDown && !v.killing ? presses.of(v.key) : 0, n, fs);
+      const double to = expr.bendOf(v.key), was = v.bent; // Glide: the strings retuned as the bend glides
+      if (was != to) v.bent = glideTo(was, to, n / fs, BEND_T);
+      const bool retuned = v.bent != was;
+      if (v.damped) { if (v.palmIn || retuned) v.setDamper(v.damperSigma); } // the damper's recursion back
+      else if (v.press.on()) { if (moved || retuned || !v.palmIn) { v.coefPalm(v.a1d, v.a2d, v.press.p); v.palmIn = true; } }
+      else if (v.bent != 1) { if (retuned || !v.palmIn) { v.coef(v.a1d, v.a2d, false, 0); v.palmIn = true; } } // the string's own, bent
+      else if (v.palmIn) v.setDamper(v.damperSigma);
+      v.render(PL, PR, SEG, n, *this);
+    }
     symRun(PL, PR, SEG, n);
   }
   BoardSlot *b = board;

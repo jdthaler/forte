@@ -13,6 +13,8 @@ using std::numbers::pi;
 
 constexpr double OUT = 0.02;        // output units per m³/s² of volume acceleration
 constexpr int MAX_VOICES = 16;      // bars sounding at once; the quietest older one fades out beyond this
+constexpr double BEND_T = 0.02;      // s: a note's own bend glides as the instruments that bend glide theirs
+constexpr double DEAD = 40;          // 1/s: the most the mallet pressed into the bar takes (Press)
 constexpr double FADE = 0.03;       // s: a stolen voice fades out over this
 constexpr double YOUNG = 0.05;      // s: a voice this young is never stolen
 constexpr double MALLET_MAX = 0.03; // s: the longest a mallet may stay in flight
@@ -35,6 +37,7 @@ void MarimbaEngine::Voice::start(MarimbaEngine &eng, Data::Ref r, uint64_t ver) 
   // −60 dB under its loudest instead of −90
   top = eng.pick(NYQUIST * eng.fs, std::min(NYQUIST * eng.fs, 16000.0), std::min(NYQUIST * eng.fs, 12000.0));
   floor = eng.pick(1e-9, 1e-7, 1e-6);
+  bent = eng.expr.bendOf(key); // bent before it was struck
   coefs(eng);
 }
 
@@ -53,7 +56,7 @@ static void pairMatrix(MarimbaEngine::Pair &p, double h) {
 void MarimbaEngine::Voice::coefs(const MarimbaEngine &eng) {
   const double k = 1 / eng.fs;
   for (int i = 0; i < N; i++) {
-    const double f = d->f[i], om = TAU * f, s = d->sigFixed[i] + pi * f * eng.P[p::eta];
+    const double f = d->f[i] * bent, om = TAU * f, s = d->sigFixed[i] + pi * f * eng.P[p::eta];
     cut[i] = f >= top;
     if (i < PAIRS) {
       Pair &pr = pair[i];
@@ -113,7 +116,7 @@ void MarimbaEngine::Voice::strike(const MarimbaEngine &eng, double velocity) {
   for (int i = PAIRS; i < N; i++) uc += ws[i] * q[i];
   eta = uc - 1.5 * v * h; etaPrev = eta - v * h;
   dPrev = -1; dPrev2 = -1; malletOn = true; contact = false; inFlight = 0;
-  contactSamples = 0; Fmax = 0;
+  contactSamples = 0; Fmax = 0; touch.stop();
   fading = false; fade = 1; age = 0;
 }
 
@@ -151,7 +154,13 @@ void MarimbaEngine::Voice::render(float *L, float *Rt, int n, MarimbaEngine &eng
   Pair &A = pair[0], &B = pair[1];
   const bool bOn = B.on;
   double fade_ = fade;
+  const double pf = press.factor(DEAD, fs);
   for (int s = 0; s < n; s++) {
+    if (touch.on() || pf != 1) { // a mallet resting on the bar, or pressed into it
+      const double t = (touch.on() ? touch.step() : 1) * pf;
+      for (int i = PAIRS; i < N; i++) { q[i] *= t; q1[i] *= t; }
+      A.q *= t; A.v *= t; B.q *= t; B.v *= t;
+    }
     // each pair's midpoint velocities without the mallet
     double vmA, vxA, vmB = 0, vxB = 0;
     {
@@ -329,20 +338,22 @@ void MarimbaEngine::strikeKey(int key, double velocity, Data::Ref r) {
   }
 }
 
-// A marimba has no dampers: letting go of a key only ends its roll.
-void MarimbaEngine::noteOff(int key, double) {
+// A marimba has no dampers: letting go of a key ends its roll, and a fast lift is a mallet's touch
+// on the bar, which damps it (−28 dB at the fastest, over 80 ms).
+void MarimbaEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
-  if (Voice *v = byKey[key]) v->held = false;
+  if (Voice *v = byKey[key]) { v->held = false; if (!v->malletOn) v->touch.start(velocity, 40, 0.08, fs); }
 }
 
 void MarimbaEngine::allNotesOff() {
   nPending = 0;
   for (int i = 0; i < nVoices; i++) { voices[i]->fading = true; voices[i]->held = false; }
+  presses.clear();
 }
 
-// The roll: the wheel's, or the key's own slide. Pressure does nothing: a Seaboard sends it from any
-// finger at rest, which would roll every note.
+// The roll: the wheel's, or the key's own slide. Pressure does not roll: a Seaboard sends it from
+// any finger at rest, which would roll every note (a firm press is the dead stroke instead).
 double MarimbaEngine::rollOf(const Voice &v) const { return expr.slideOr(v.key, P[p::roll]); }
 
 // Held keys roll: the mallets strike in turn, at the roll's share of the first stroke, the strokes
@@ -377,6 +388,8 @@ void MarimbaEngine::process(float *L, float *R, int n) {
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
     if (moving) v->tube(*this);
+    if (const double to = expr.bendOf(v->key); v->bent != to) { v->bent = glideTo(v->bent, to, n / fs, BEND_T); v->coefs(*this); } // Glide: the mallet dragged along the bar
+    v->press.follow(v->held && !v->fading ? presses.of(v->key) : 0, n, fs);
     v->render(L, R, n, *this);
   }
   int j = 0;

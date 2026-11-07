@@ -4,12 +4,13 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './cavity-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'cavity',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: all 88, A0–C8
@@ -17,6 +18,7 @@ export const INSTRUMENT = {
   modWheel: 'offset',                   // CC1: the beam's offset, from its default out
   mpe: { bend: 48, slide: true },       // MPE: a key's own bend squeezes its own cavity (its train keeps step); its slide, its beam's offset
   aftertouch: 'more beam current', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how fast the RF is ramped down: a slow lift lets the cavity ring on, a fast one stops it', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['bunch', 'spacing', 'lorentz', 'current', 'offset'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/cavity), built as WebAssembly
   wasm: { name: 'CavityBellsWasmEngine', module: new URL('./cavity-wasm.js', import.meta.url).href, binary: new URL('../wasm/cavity.wasm', import.meta.url).href },

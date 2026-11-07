@@ -11,7 +11,7 @@
 // heater pulse (or a particle) of energy E warms the crystal at once, by its T³ heat capacity.
 // The state is stepped by a second-order, L-stable Rosenbrock (W-)method, ROS2, whose Jacobian is
 // tridiagonal (each node touches only its neighbours); a step that leaves the physical range is
-// taken again in halves.
+// taken again in halves, and the shortest is kept in it.
 #pragma once
 
 #include <algorithm>
@@ -63,6 +63,8 @@ struct Bolometer {
   // A step, split in halves (up to depth times) where it would leave the physical range.
   void safeStep(State &y, double h, int depth) const;
   bool sane(const State &from, const State &y) const;
+  // y moved into that range (a step from `from` that the halving could not keep in it)
+  void confine(const State &from, State &y) const;
   // A heater pulse (or particle) of E joules into the crystal: its energy ∫C_c dT = cc T⁴/4 grows by E.
   void kick(State &y, double E) const;
   // The h seconds after a pulse, in n steps or in steps of at most H_MAX (up to 64), whichever

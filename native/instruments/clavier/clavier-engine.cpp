@@ -108,7 +108,7 @@ void ClavierEngine::init(Voice &v, int key) {
   v.C1 = 0; v.C0 = 0; v.um = 0; v.Q = 0;
   v.Flp = 0; v.Fr = 0; v.Fa = 0; v.force = 0;
   v.Pl = 0; v.Pu = 0; v.ul = 0; v.uu = 0;
-  v.pressure = chanPressure; v.down = false; v.thrown = false; v.muted = false;
+  v.pressure = chanPressure; v.down = false; v.thrown = false; v.muted = false; v.ownMute = 0;
   v.dead = false; v.killing = false; v.fade = 1; v.peak = 0; v.quiet = 0; v.Fpeak = 0;
   std::fill(v.fz, v.fz + FRAME_MODES, 0.0); std::fill(v.fz1, v.fz1 + FRAME_MODES, 0.0); v.Z = 0;
   setPickups(v);
@@ -146,8 +146,9 @@ void ClavierEngine::render(Voice &v, double *out, int n) {
   const double *B1 = v.B1, *B2 = v.B2, *by = v.by;
   const double Kr = v.Kr, lr = P[p::tipLoss], Mt = P[p::keyMass] * 1e-3, gap = S.gap, L = S.L;
   const double mass = v.mass, Cy = v.Cy, Cb = v.Cb;
-  const double muteK = MUTE_K * muteLevel, muteR = MUTE_R * muteLevel;
-  const bool muted = muteLevel > 1e-4;
+  const double ml = std::max(muteLevel, v.ownMute); // the bar's felt, or its own (a slide)
+  const double muteK = MUTE_K * ml, muteR = MUTE_R * ml;
+  const bool muted = ml > 1e-4;
   const double G = muteK + muteR / k, Pb = v.Pb, Pg = v.Pg, xm = v.xm;
   const double den = 1 + G * Pg, lamM = xm - Pb / k2;
   const bool kc = P[p::kc] != 0;
@@ -160,7 +161,7 @@ void ClavierEngine::render(Voice &v, double *out, int n) {
   // the wheel's press, and the key's own bend pressing as far again as the wheel would for it (the
   // key's force follows over 10 ms, as it follows the wheel)
   const double nb = expr.bendOf(v.key), wheel = nb == 1 ? bendNow : std::max(0.0, std::min(1.0, bendNow + (12 * fdlibm::log2(nb)) / kBendSemitones));
-  const double target = v.down ? P[p::press] + PRESS_MAX * std::max(v.pressure, wheel) : -RETURN_FORCE;
+  const double target = v.down ? P[p::press] + PRESS_MAX * std::max(v.pressure, wheel) : -v.ret;
   double *q = v.q, *q1 = v.q1, *r = v.r, *r1 = v.r1;
   double s = v.s, s1 = v.s1, eta = v.eta, eta1 = v.eta1, C1 = v.C1, C0 = v.C0, um = v.um, Qn = v.Q;
   double Fl = v.Flp, Pl = v.Pl, Pu = v.Pu, peak = 0, fade = v.fade, Frp = v.Fr, Fap = v.Fa;
@@ -184,7 +185,7 @@ void ClavierEngine::render(Voice &v, double *out, int n) {
     if (muted) { f1 = (-G * lamM) / den; f0 = (-G * (SU - Pb * s0) + (muteR / k) * um) / den; }
     const double Az = 1 / Cy - lamM * f1 + mass / k2;
     const double Bz = -RF / Cy - lamM * f0 + mass * s0 + J0 + Ks * s;
-    const double Fkey = v.thrown ? 0 : v.down ? (v.force += lpF * (target - v.force)) : -RETURN_FORCE;
+    const double Fkey = v.thrown ? 0 : v.down ? (v.force += lpF * (target - v.force)) : -v.ret;
     // the finger on a held key catches its rebound (it damps upward motion, not the stroke); a
     // released key only rubs its bushings
     const double cK = v.down ? (!v.thrown && eta < eta1 ? KEY_DAMPING : 0) : BUSHING, Ae = Mt / k2 + cK / (2 * k);
@@ -313,7 +314,7 @@ void ClavierEngine::noteOn(int key, double velocity) {
   v->pressure = chanPressure;
   // strike: the tangent flies at the key's speed until it meets the string
   v->eta1 = v->eta - strikeSpeed(std::min(1.0, std::max(0.0, velocity))) * k;
-  v->down = true; v->thrown = true; v->Fpeak = 0;
+  v->down = true; v->thrown = true; v->Fpeak = 0; v->ret = RETURN_FORCE;
   if (nVoices > maxVoices()) {
     Voice *victim = nullptr;
     double score = INFINITY;
@@ -325,9 +326,11 @@ void ClavierEngine::noteOn(int key, double velocity) {
   }
 }
 
-void ClavierEngine::noteOff(int key, double) {
+// Lift: how fast the tangent leaves the string. A fast lift pulls it off sharply (the finger adds
+// to the return spring, up to four times its force: off in half the time), a slow one eases it off.
+void ClavierEngine::noteOff(int key, double velocity) {
   if (key < KEY_MIN || key > KEY_MAX) return;
-  if (Voice *v = byKey[key - KEY_MIN]) { v->down = false; v->thrown = false; }
+  if (Voice *v = byKey[key - KEY_MIN]) { const double s = liftScale(velocity); v->down = false; v->thrown = false; v->ret = RETURN_FORCE / (s * s); }
 }
 
 void ClavierEngine::allNotesOff() { for (int i = 0; i < nVoices; i++) voices[i]->killing = true; }
@@ -343,6 +346,13 @@ void ClavierEngine::block(float *L, float *R, int n) {
   const bool on = P[p::muteOn] != 0 || space;
   muteLevel += lpM * ((on ? P[p::mute] : 0) - muteLevel);
   if (muteLevel < 1e-4 && !on) muteLevel = 0;
+  // a note's own felt: its slide, from the felt pressure's default (none) to its maximum (the felt pressure)
+  const ParamInfo &mp = kParams[p::mute];
+  for (int i = 0; i < nVoices; i++) {
+    Voice &v = *voices[i];
+    const double s = expr.slideOr(v.key, mp.def), u = std::clamp((s - mp.def) / (mp.max - mp.def), 0.0, 1.0);
+    if (u > 0 || v.ownMute > 0) { v.ownMute += lpM * (u * P[p::mute] - v.ownMute); if (v.ownMute < 1e-4 && u == 0) v.ownMute = 0; }
+  }
   for (int i = 0; i < nVoices; i++) render(*voices[i], x, n);
   int j = 0;
   for (int i = 0; i < nVoices; i++) {

@@ -4,6 +4,7 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './celesta-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
@@ -12,14 +13,17 @@ export const KEY_LO = 60, KEY_HI = 108, KEY_MIN = 21, KEY_MAX = 108;
 
 export const INSTRUMENT = {
   id: 'celesta',
-  groups: GROUPS,
-  presets: PRESETS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
+  presets: offInPresets(PRESETS, ['glide']), // its presets turn off what makes little sense on it (shared/expression.js)
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // C4–C8, 60–108, until Full range opens the rest
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   modWheel: 'hardness',                 // CC1: the hammers' felt, from its default up to wood or brass
-  mpe: { slide: true },                 // a note's own slide: its hammer's felt, at the strike (a bar cannot bend)
+  mpe: { bend: 0.1, way: 'down', slide: true }, // a note's own bend, a finger resting on its bar (down only, ten cents at most); its slide, its hammer's felt, at the strike
+  glide: 'a finger resting on the bar: a few cents flat, and duller', // what a note's own bend does
+  aftertouch: 'a firm press presses the felt damper onto the bar', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how fast its felt damper falls: a slow lift leaves a longer tail, a fast one stops the bar sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['across', 'damp', 'detune', 'strike', 'hardness'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/celesta), built as WebAssembly
   wasm: { name: 'CelestaWasmEngine', module: new URL('./celesta-wasm.js', import.meta.url).href, binary: new URL('../wasm/celesta.wasm', import.meta.url).href },

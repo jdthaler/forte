@@ -13,6 +13,7 @@ constexpr double OUT = 0.3;          // a whistler's nose (the Airy peak) at ful
 constexpr double CLICK = 0.5;        // the crack's click
 constexpr double TWEEK = 0.12;       // each tweek mode
 constexpr double CHORUS = 0.12;      // a chorus element at its loudest
+constexpr double BEND_T = 0.02;      // s: a note's own bend glides this fast
 constexpr double PRESS_T = 0.02;     // s: a key's pressure is followed with this time constant
 constexpr double STEAL_T = 0.005;    // s: a stolen voice fades with this time constant
 constexpr double SILENT = 1e-7;      // a component quieter than this (−140 dB) past its nose is done
@@ -39,7 +40,8 @@ const KeyLines &WhistlersEngine::linesOf(int key) {
   KeyLines &k = lines[std::clamp(key, FIRST, LAST) - FIRST];
   const double f = keyFreq(key) * tuningOf(P.data()).ratio(key);
   const int ducts = std::clamp((int)std::lround(P[p::ducts]), 1, MAX_DUCTS);
-  const double dens = P[p::density], lpp = P[p::plasmapause], spread = P[p::spread];
+  // (a note's slide: its own line's plasma density, as the knob would set it there)
+  const double dens = std::clamp(expr.slideOr(key, P[p::density]), 0.01, 10.0), lpp = P[p::plasmapause], spread = P[p::spread];
   if (k.valid && k.f == f && k.density == dens && k.lpp == lpp && (ducts == 1 || k.spread == spread) && k.ducts >= ducts) return k;
   // the key's own line, whose nose is its note; the others' a step of `spread` farther out and
   // nearer in, alternately (they keep what was built for the ones they share)
@@ -57,7 +59,7 @@ const KeyLines &WhistlersEngine::linesOf(int key) {
 
 void WhistlersEngine::start(Voice &v, int key, double velocity) {
   const KeyLines &k = linesOf(key);
-  v.key = key; v.vel = velocity;
+  v.key = key; v.vel = velocity; v.bent = expr.bendOf(key);
   v.ducts = std::clamp((int)std::lround(P[p::ducts]), 1, pick(MAX_DUCTS, 3, 2)); // Quality: fewer ducts
   for (int d = 0; d < v.ducts; d++) v.tr[d] = k.tr[d];
   v.scale = 1 / (2 * v.tr[0].cap); // the first hop's nose (both branches together) at 1
@@ -97,7 +99,7 @@ void WhistlersEngine::start(Voice &v, int key, double velocity) {
   v.lp1 = v.lp2 = 0;
   for (Element &e : v.el) e.live = false;
   v.toNext = 0;
-  v.env = 1; v.held = true; v.stolen = false; v.done = false;
+  v.env = 1; v.held = true; v.stolen = false; v.done = false; v.echo = false; v.liftK = 1;
   v.press = v.pressTarget = 0;
   // what the page draws
   Message m;
@@ -130,8 +132,20 @@ void WhistlersEngine::noteOn(int key, double velocity) {
   start(voices.back(), key, velocity);
 }
 
-void WhistlersEngine::noteOff(int key, double) {
-  for (Voice &v : voices) if (v.key == key && v.held) v.held = false;
+// Lift: a slow lift lets the whistler fade over up to four times the release; a fast one sends an
+// echo hopping back from the other hemisphere: the same stroke, two hops further along the line (so
+// more dispersed, and later), up to 0.4 as strong, which rings out by itself.
+void WhistlersEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity), t = liftPast(velocity);
+  double vel = 0;
+  for (Voice &v : voices) if (v.key == key && v.held) { v.held = false; v.liftK = s * s; if (!v.stolen) vel = v.vel; }
+  if (t > 0 && vel > 0 && hasParams) {
+    noteOn(key, 0.4 * t * vel);
+    Voice &e = voices.back();
+    for (int i = 0; i < e.ncomp; i++) e.comps[i].hop += 2;
+    e.ntweek = 0; e.clicked = true; // the stroke's crack was the first's
+    e.held = false; e.echo = true;
+  }
 }
 
 void WhistlersEngine::pressure(double value, int key) {
@@ -163,8 +177,11 @@ void WhistlersEngine::play(Voice &v, float *L, float *R, int n) {
   const double dt = n / fs;
   // the receiver: open while the key or the pedal holds it, then fading
   if (v.stolen) v.env *= std::exp(-dt / STEAL_T);
-  else if (!v.held && !sustain) v.env *= std::exp(-dt / P[p::release]);
+  else if (!v.held && !sustain && !v.echo) v.env *= std::exp(-dt / (P[p::release] * v.liftK));
   v.press += (v.pressTarget - v.press) * (1 - std::exp(-dt / PRESS_T));
+  // the field line (a note's own bend): one a little farther in or out, its whistler the same
+  // shape higher or lower (the nose goes as L⁻³)
+  v.bent = glideTo(v.bent, expr.bendOf(v.key), dt, BEND_T);
   const double out = OUT * v.vel * v.scale;
   const double T0 = v.clock, T1 = T0 + dt;
   bool any = false;
@@ -183,6 +200,7 @@ void WhistlersEngine::play(Voice &v, float *L, float *R, int n) {
     double f1, a1;
     evalComp(v, c, T1, f1, a1);
     a1 *= c.gain * out;
+    f1 *= v.bent;
     const double w1 = (TAU * std::min(f1, 0.45 * fs)) / fs, a0 = c.a, w0 = c.w > 0 ? c.w : w1;
     if (a0 > 0 || a1 > 0) {
       double zr = c.zr, zi = c.zi, rr = std::cos(w0), ri = std::sin(w0);
@@ -280,7 +298,7 @@ void WhistlersEngine::play(Voice &v, float *L, float *R, int n) {
     if (!e.live) continue;
     any = true;
     const double u1 = std::min(1.0, (e.age + dt) / e.dur), s = std::sin(std::numbers::pi * u1);
-    const double a1 = e.amp * s * s, f = e.f0 + (e.f1 - e.f0) * u1;
+    const double a1 = e.amp * s * s, f = (e.f0 + (e.f1 - e.f0) * u1) * v.bent; // on the same line: bent with it
     const double w1 = (TAU * std::min(f, 0.45 * fs)) / fs, w0 = e.w > 0 ? e.w : w1, a0 = e.age > 0 ? e.amp * std::pow(std::sin(std::numbers::pi * e.age / e.dur), 2) : 0;
     double zr = e.zr, zi = e.zi, rr = std::cos(w0), ri = std::sin(w0);
     const double dw = (w1 - w0) / n, dr = std::cos(dw), di = std::sin(dw), da = (a1 - a0) / n;

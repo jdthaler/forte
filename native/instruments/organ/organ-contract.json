@@ -14,6 +14,7 @@
     {"id":"spread","kind":"continuous","min":0,"max":6,"def":1.2,"step":0.05,"log":false},
     {"id":"bounce","kind":"continuous","min":0,"max":2,"def":0.5,"step":0.01,"log":false},
     {"id":"contactTime","kind":"continuous","min":0,"max":3000,"def":20,"step":1,"log":false},
+    {"id":"travel","kind":"continuous","min":0.1,"max":1,"def":1,"step":0.01,"log":false},
     {"id":"percFastTau","kind":"continuous","min":0.03,"max":0.6,"def":0.15,"step":0,"log":true},
     {"id":"percSlowTau","kind":"continuous","min":0.2,"max":3,"def":0.6,"step":0,"log":true},
     {"id":"percLevel","kind":"continuous","min":0,"max":2.5,"def":1,"step":0.01,"log":false},
@@ -68,20 +69,25 @@
     {"id":"percThird","kind":"toggle","def":true},
     {"id":"vib","kind":"choice","def":"C3","options":["off","V1","V2","V3","C1","C2","C3"]},
     {"id":"leslie","kind":"choice","def":"slow","options":["bypass","slow","fast","stop"]},
-    {"id":"motor","kind":"toggle","def":true}
+    {"id":"motor","kind":"toggle","def":true},
+    {"id":"strikeOn","kind":"toggle","def":true},
+    {"id":"glideOn","kind":"toggle","def":true},
+    {"id":"slideOn","kind":"toggle","def":true},
+    {"id":"pressOn","kind":"toggle","def":true},
+    {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"Jazz trio — 88 8000 000, 3rd perc fast","values":{"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":true,"percSoft":false,"percFast":true,"percThird":true,"vib":"C3","leslie":"slow","motor":true}},
-    {"name":"Full organ — 88 8888 888, Leslie fast","values":{"drive":0.35,"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":8,"drawbar5":8,"drawbar6":8,"drawbar7":8,"drawbar8":8,"drawbar9":8,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"C3","leslie":"fast","motor":true}},
-    {"name":"Gospel — 88 8800 000","values":{"drive":0.3,"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":8,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"C3","leslie":"fast","motor":true}},
-    {"name":"Ballad — 80 8000 000","values":{"drawbar1":8,"drawbar2":0,"drawbar3":8,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"C3","leslie":"slow","motor":true}},
-    {"name":"Rock grind — 88 8800 000, overdriven","values":{"drive":0.75,"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":8,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"C3","leslie":"fast","motor":true}},
-    {"name":"Bright whistle — 80 0000 888","values":{"drawbar1":8,"drawbar2":0,"drawbar3":0,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":8,"drawbar8":8,"drawbar9":8,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"V2","leslie":"slow","motor":true}},
-    {"name":"Single wheel — 00 8000 000, dry","values":{"drive":0,"drawbar1":0,"drawbar2":0,"drawbar3":8,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"off","leslie":"bypass","motor":true}},
-    {"name":"2nd perc only — 00 8000 000, slow decay","values":{"drawbar1":0,"drawbar2":0,"drawbar3":8,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":true,"percSoft":false,"percFast":false,"percThird":false,"vib":"off","leslie":"slow","motor":true}},
-    {"name":"Full drawbars, dry — compare tunings","values":{"drive":0,"room":0.1,"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":8,"drawbar5":8,"drawbar6":8,"drawbar7":8,"drawbar8":8,"drawbar9":8,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"off","leslie":"bypass","motor":true}},
-    {"name":"50 Hz mains — 88 8000 000, a minor third flat","values":{"mains":50,"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"C3","leslie":"slow","motor":true}},
-    {"name":"Old B-3 — 88 8000 000, drifted capacitors, leaky wheels","values":{"drift":40,"leakage":-50,"crosstalk":-35,"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"C3","leslie":"slow","motor":true}},
-    {"name":"Key click — 88 8000 000, worn contacts","values":{"contactTime":0,"bounce":1.5,"spread":3,"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"off","leslie":"slow","motor":true}}
+    {"name":"Jazz trio — 88 8000 000, 3rd perc fast","values":{"glideOn":false,"pressOn":false,"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":true,"percSoft":false,"percFast":true,"percThird":true,"vib":"C3","leslie":"slow","motor":true}},
+    {"name":"Full organ — 88 8888 888, Leslie fast","values":{"glideOn":false,"pressOn":false,"drive":0.35,"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":8,"drawbar5":8,"drawbar6":8,"drawbar7":8,"drawbar8":8,"drawbar9":8,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"C3","leslie":"fast","motor":true}},
+    {"name":"Gospel — 88 8800 000","values":{"glideOn":false,"pressOn":false,"drive":0.3,"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":8,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"C3","leslie":"fast","motor":true}},
+    {"name":"Ballad — 80 8000 000","values":{"glideOn":false,"pressOn":false,"drawbar1":8,"drawbar2":0,"drawbar3":8,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"C3","leslie":"slow","motor":true}},
+    {"name":"Rock grind — 88 8800 000, overdriven","values":{"glideOn":false,"pressOn":false,"drive":0.75,"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":8,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"C3","leslie":"fast","motor":true}},
+    {"name":"Bright whistle — 80 0000 888","values":{"glideOn":false,"pressOn":false,"drawbar1":8,"drawbar2":0,"drawbar3":0,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":8,"drawbar8":8,"drawbar9":8,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"V2","leslie":"slow","motor":true}},
+    {"name":"Single wheel — 00 8000 000, dry","values":{"glideOn":false,"pressOn":false,"drive":0,"drawbar1":0,"drawbar2":0,"drawbar3":8,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"off","leslie":"bypass","motor":true}},
+    {"name":"2nd perc only — 00 8000 000, slow decay","values":{"glideOn":false,"pressOn":false,"drawbar1":0,"drawbar2":0,"drawbar3":8,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":true,"percSoft":false,"percFast":false,"percThird":false,"vib":"off","leslie":"slow","motor":true}},
+    {"name":"Full drawbars, dry — compare tunings","values":{"glideOn":false,"pressOn":false,"drive":0,"room":0.1,"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":8,"drawbar5":8,"drawbar6":8,"drawbar7":8,"drawbar8":8,"drawbar9":8,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"off","leslie":"bypass","motor":true}},
+    {"name":"50 Hz mains — 88 8000 000, a minor third flat","values":{"glideOn":false,"pressOn":false,"mains":50,"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"C3","leslie":"slow","motor":true}},
+    {"name":"Old B-3 — 88 8000 000, drifted capacitors, leaky wheels","values":{"glideOn":false,"pressOn":false,"drift":40,"leakage":-50,"crosstalk":-35,"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"C3","leslie":"slow","motor":true}},
+    {"name":"Key click — 88 8000 000, worn contacts","values":{"glideOn":false,"pressOn":false,"contactTime":0,"bounce":1.5,"spread":3,"drawbar1":8,"drawbar2":8,"drawbar3":8,"drawbar4":0,"drawbar5":0,"drawbar6":0,"drawbar7":0,"drawbar8":0,"drawbar9":0,"percOn":false,"percSoft":false,"percFast":true,"percThird":true,"vib":"off","leslie":"slow","motor":true}}
   ]
 }

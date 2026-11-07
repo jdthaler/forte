@@ -1,302 +1,53 @@
-// sync-main.js — the page: UI, audio graph, keyboard / MIDI, lock analysis, views.
-// The instrument itself (parameters, engine, chain) is huygens-instrument.js.
+// sync-main.js — the page: wires the shell (shared/shell.js) to the engine, and the lock
+// analysis and views. The instrument itself (parameters, engine, chain) is huygens-instrument.js.
 // The worklet runs the WebAssembly build (huygens-wasm.js), and the views call its model.
 
-import { INSTRUMENT, GROUPS, DEFAULTS, PRESETS } from './huygens-instrument.js';
-import { ALL_PARAMS } from './sync-params.js';
-import { keyFreq, noteName, nearestRatio, intervalName, KEY_LO, KEY_HI } from './tuning.js';
+import { createShell } from '../../shared/shell.js';
+import { INSTRUMENT } from './huygens-instrument.js';
+import { keyFreq, noteName, nearestRatio, intervalName } from './tuning.js';
 import { TUNING_KEEP, tuningRatio } from '../../shared/tuning.js';
 import { wasmModel } from './huygens-wasm.js';
-import { createChain } from '../../shared/chain.js';
 import { SpectrumView, SpectrogramView, animate } from '../../shared/views.js';
 import { StairView, RasterView } from './sync-viz.js';
 import { FiringLog } from './lock-analysis.js';
-import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, pageMIDI, wheelValue, pageMpe, createSostenuto, controllersOf, controlled, tellFader } from '../../shared/midi.js';
-import { controlOwns, unfocus } from '../../shared/focus.js';
-import { trimGain } from '../../shared/registry.js';
-import { attachPresets } from '../../shared/user-presets.js';
-import { connectQuality, qualityControl } from '../../shared/quality.js';
-import { dress, faceOf } from '../../shared/faces.js';
-import { computerKey } from '../../shared/taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
-import { host, follow } from '../../shared/in-plugin.js';
+import { paramsStore } from '../../shared/registry.js';
 
 const $ = (s) => document.querySelector(s);
-const STORE = 'huygens-keyboard/params/v1';
-function load() { try { const s = JSON.parse(localStorage.getItem(STORE) || 'null'); return s ? { ...DEFAULTS, ...s } : { ...DEFAULTS }; } catch { return { ...DEFAULTS }; } }
-function save() { try { localStorage.setItem(STORE, JSON.stringify(P)); } catch { /* unavailable */ } }
-
-let P = load();
-let base = 48, holding = false;
 const log = new FiringLog(3); // the last 3 s of every sounding lamp's firings
-const held = new Map(), sounding = new Map(), latched = new Set();
 
 const spectrum = new SpectrumView($('#spectrum'), { fLo: 40, fHi: 16000 });
 new SpectrogramView($('#spectrogram'), { spectrum });
-
-const paramsMessage = () => ({ type: 'params', P: { ...P } });
 
 // The WebAssembly model (huygens-wasm.js): each key's design frequency (the lock map's theory and
 // engine are its too, staircase.js in its worker)
 const { tunedFreq } = await wasmModel();
 
-// ---------------------------------------------------------------------------
-// audio
-
-let audio = null, starting = null, live = false; // live: the context has resumed; until then notes queue in order
-function startAudio() {
-  if (live) { if (audio.ctx.state !== 'running') audio.ctx.resume(); return Promise.resolve(audio); }
-  if (starting) return starting;
-  if (host) { // in the plugin's window: the plugin plays, and the views follow it (shared/in-plugin.js)
-    starting = follow({ wasm: INSTRUMENT.wasm, params: ALL_PARAMS, P: () => P, set: fromPlugin, on: (key) => noteOn(key), off: noteOff, pedal: setHold, message: onWorklet })
-      .then((a) => { audio = a; live = true; spectrum.setAnalyser(a.analyser); return a; });
-    return starting;
-  }
-  starting = (async () => {
-    const ctx = new AudioContext({ latencyHint: 'interactive' });
-    if (!ctx.audioWorklet) throw new Error(window.isSecureContext ? 'this browser has no AudioWorklet support' : 'audio needs a secure page — open it with https://');
-    // the engine, the WebAssembly build: its bytes go to the worklet, which compiles them
-    const bytes = await (await fetch(INSTRUMENT.wasm.binary)).arrayBuffer();
-    await ctx.audioWorklet.addModule(INSTRUMENT.wasm.module);
-    await ctx.audioWorklet.addModule(new URL('../../shared/worklet.js', import.meta.url));
-    const node = new AudioWorkletNode(ctx, 'forte-processor', {
-      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], processorOptions: { wasm: { name: INSTRUMENT.wasm.name, bytes } },
-    });
-    const chain = createChain(ctx, node, INSTRUMENT.chain); // tone → dry + body → room → limiter
-    node.port.onmessage = (e) => onWorklet(e.data);
-    const analyser = ctx.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0.55;
-    chain.tap.connect(analyser); spectrum.setAnalyser(analyser);
-    audio = { ctx, node, chain };
-    applyMix();
-    node.port.postMessage(paramsMessage());
-    connectQuality(node, { toast }); // the device's Quality (shared/quality.js)
-    if (ctx.state !== 'running') await ctx.resume();
-    live = true;
-    $('#start').textContent = `Audio on · ${(ctx.sampleRate / 1000).toFixed(1)} kHz`;
-    $('#start').classList.add('running');
-    return audio;
-  })();
-  starting.catch((err) => { toast(`Audio failed to start: ${err.message}`); starting = null; });
-  return starting;
-}
-const post = (m) => { if (live) audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
-function applyMix() { if (audio) audio.chain.apply(P, trimGain('huygens')); } // trim: level-matched across instruments
-
 let lastTable = 0;
-function onWorklet(m) {
-  if (m.type === 'state') {
+const shell = createShell({
+  ...INSTRUMENT,
+  store: paramsStore('huygens'), // the page's own name for its settings, from before the shell
+  arrows: { param: 'kick', step: 0.005 },
+  noteData: (key, vel, P) => ({ f: tunedFreq(key, P) }), // the design frequency the views mark
+  onAudio: (a) => spectrum.setAnalyser(a.analyser),
+  onMessage: (m) => {
+    if (m.type !== 'state') return;
     log.ingest(m);
     if (m.fires.length || raster.state?.fires.length) raster.set(log.recent(1));
     const now = performance.now();
     if (now - lastTable > 120) { lastTable = now; updateTables(log.analyze(), log.hold); }
-  } else if (m.type === 'stats') {
-    const el = $('#cpu');
-    el.textContent = `CPU ${(m.load * 100).toFixed(0)} %`;
-    el.classList.toggle('hot', m.load > 0.7);
-  } else if (m.type === 'error') toast(m.message);
-}
-
-// ---------------------------------------------------------------------------
-// notes, hold
-
-async function noteOn(key, own) { // own: an MPE note's own (midi.js pageMpe)
-  if (key < KEY_LO || key > KEY_HI) return;
-  latched.delete(key); sost.strike(key);
-  sounding.set(key, (sounding.get(key) || 0) + 1);
-  keyboardView.set(key, true);
-  const a = await startAudio();
-  for (const m of notes.strike(key, own)) a.node.port.postMessage(m);
-  a.node.port.postMessage({ type: 'noteOn', key, velocity: 1, data: { f: tunedFreq(key, P) } }); // the design frequency the views mark
-  refreshMarks();
-}
-function noteOff(key) {
-  const n = (sounding.get(key) || 0) - 1;
-  if (n > 0) { sounding.set(key, n); return; }
-  sounding.delete(key);
-  if (!sost.holds(key)) release(key);
-}
-function release(key) {
-  if (holding) { latched.add(key); return; }
-  keyboardView.set(key, false);
-  post({ type: 'noteOff', key });
-  refreshMarks();
-}
-function setHold(on) {
-  holding = on;
-  $('#hold').textContent = on ? 'on' : 'off';
-  $('#hold').className = on ? 'on' : 'off';
-  if (!on) {
-    for (const key of latched) { keyboardView.set(key, false); post({ type: 'noteOff', key }); }
-    latched.clear();
-    refreshMarks();
-  }
-  document.dispatchEvent(new CustomEvent('forte-sustain', { detail: on })); // the on-screen pedal and Latch follow
-}
-function panic() { post({ type: 'panic' }); log.clear(); sounding.clear(); latched.clear(); sost.clear(); held.clear(); keyboardView.clearAll(); if (holding) setHold(false); refreshMarks(); }
-const activeKeys = () => [...new Set([...sounding.keys(), ...latched, ...sost.keys()])].sort((a, b) => a - b);
-
-const LOW = ['KeyZ', 'KeyS', 'KeyX', 'KeyD', 'KeyC', 'KeyV', 'KeyG', 'KeyB', 'KeyH', 'KeyN', 'KeyJ', 'KeyM', 'Comma', 'KeyL', 'Period', 'Semicolon', 'Slash'];
-const LOW_LBL = ['z', 's', 'x', 'd', 'c', 'v', 'g', 'b', 'h', 'n', 'j', 'm', ',', 'l', '.', ';', '/'];
-const HIGH = ['KeyQ', 'Digit2', 'KeyW', 'Digit3', 'KeyE', 'KeyR', 'Digit5', 'KeyT', 'Digit6', 'KeyY', 'Digit7', 'KeyU', 'KeyI', 'Digit9', 'KeyO', 'Digit0', 'KeyP', 'BracketLeft', 'Equal', 'BracketRight'];
-const HIGH_LBL = ['q', '2', 'w', '3', 'e', 'r', '5', 't', '6', 'y', '7', 'u', 'i', '9', 'o', '0', 'p', '[', '=', ']'];
-function codeToKey(code) { let i = LOW.indexOf(code); if (i >= 0) return base + i; i = HIGH.indexOf(code); return i >= 0 ? base + 12 + i : null; }
-function keyLabels() { const m = new Map(); LOW_LBL.forEach((l, i) => m.set(base + i, l)); HIGH_LBL.forEach((l, i) => { if (!m.has(base + 12 + i)) m.set(base + 12 + i, l); }); return m; }
-const typing = (t) => t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['range', 'checkbox'].includes(t.type)));
-
-window.addEventListener('keydown', (e) => {
-  if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
-  // a focused <select> would swallow note keys (or type-ahead into a preset): hand them back
-  if (controlOwns(e)) return; // a control reached with Tab keeps its own keys (shared/focus.js)
-  if (e.target?.tagName === 'SELECT') { if (e.code === 'Space' || e.code.startsWith('Arrow') || codeToKey(e.code) !== null) e.target.blur(); else return; }
-  if (e.code === 'Space') { e.preventDefault(); if (e.isTrusted) spaceHeld = true; if (!e.repeat) setHold(true); return; }
-  if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight')) { e.preventDefault(); shiftOctave(e.code === 'ArrowLeft' ? -12 : 12); return; }
-  if ((e.code === 'ArrowUp' || e.code === 'ArrowDown')) {
-    e.preventDefault();
-    setParam('kick', Math.round(Math.min(0.15, Math.max(0, P.kick + (e.code === 'ArrowUp' ? 0.005 : -0.005))) * 1000) / 1000);
-    return;
-  }
-  const key = codeToKey(e.code);
-  if (key === null) return;
-  e.preventDefault();
-  if (e.repeat || held.has(e.code)) return;
-  held.set(e.code, key);
-  if (computerKey(key, true)) noteOn(key);
-});
-window.addEventListener('keyup', (e) => {
-  if (e.code === 'Space' && !controlOwns(e)) { if (e.isTrusted) spaceHeld = false; setHold(false); return; }
-  const key = held.get(e.code);
-  if (key !== undefined) { held.delete(e.code); if (computerKey(key, false)) noteOff(key); }
-});
-// Losing focus means no keyup will come: release held keys and a held Space bar.
-let spaceHeld = false;
-const letGo = () => { for (const k of held.values()) if (computerKey(k, false)) noteOff(k); held.clear(); if (spaceHeld) { spaceHeld = false; setHold(false); } };
-window.addEventListener('blur', letGo);
-document.addEventListener('visibilitychange', () => { if (document.hidden) letGo(); });
-function shiftOctave(d) {
-  const nb = base + d;
-  if (nb + 11 < KEY_LO || nb > KEY_HI - 12) return; // never a whole row of computer keys out of range
-  for (const k of held.values()) if (computerKey(k, false)) noteOff(k);
-  held.clear(); base = nb; keyboardView.labels(keyLabels()); updateHelp();
-}
-function updateHelp() {
-  $('#oct').textContent = `${noteName(Math.max(KEY_LO, base))}–${noteName(Math.min(KEY_HI, base + 31))}`;
-  $('#kick-read').textContent = P.kick ? `${(P.kick * 100).toFixed(1)} %` : 'off';
-}
-
-const sost = createSostenuto(); // CC66
-function initMIDI() {
-  startMIDI({ onMIDI, status: (t) => { $('#midi').textContent = t; }, button: $('#midi-btn'), controllers: ccs });
-}
-const notes = pageMpe({ post, params: () => P, modWheel: INSTRUMENT.modWheel, groups: GROUPS }); // MPE: each note's own
-const ccs = controllersOf(INSTRUMENT), ccLast = {}; // the descriptor's faders and pad (and controllers)
-pageMIDI({ onMIDI, controllers: ccs }); // a song played from a MIDI file (shared/songs.js) plays it as a keyboard would
-function onMIDI(ev) {
-  const [st, d1, d2] = ev.data, cmd = st & 0xf0, mpe = notes.midi(ev.data);
-  if (mpe.own) return;
-  if (cmd === 0x90 && d2 > 0) noteOn(d1, mpe.with);
-  else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
-  else if (cmd === 0xb0 && d1 === 1) setParam(INSTRUMENT.modWheel, wheelValue(ALL_PARAMS.find((q) => q.id === INSTRUMENT.modWheel), d2)); // at rest: the default coupling
-  else if (cmd === 0xb0 && d1 === 64) setHold(d2 >= 64);
-  else if (cmd === 0xb0 && d1 === 66) { for (const k of sost.set(d2 >= 64, [...sounding.keys(), ...latched])) if (!sounding.has(k)) release(k); }
-  else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) panic();
-  else if (cmd === 0xb0) { const set = controlled(ccs, ALL_PARAMS, P, d1, d2, ccLast); if (set) { setParam(...set); tellFader(d1, ALL_PARAMS.find((q) => q.id === set[0])); } }
-}
-
-// ---------------------------------------------------------------------------
-// on-screen keyboard
-
-const keyboardView = createKeyboard($('#keyboard'), { lo: KEY_LO, hi: KEY_HI, onDown: (k) => noteOn(k), onUp: noteOff });
-
-// ---------------------------------------------------------------------------
-// parameters
-
-const controls = new Map();
-const toSlider = (p, v) => (p.log ? (1000 * Math.log(v / p.min)) / Math.log(p.max / p.min) : (1000 * (v - p.min)) / (p.max - p.min));
-function fromSlider(p, t) {
-  let v = p.log ? p.min * (p.max / p.min) ** (t / 1000) : p.min + ((p.max - p.min) * t) / 1000;
-  if (p.step) v = Math.round(v / p.step) * p.step;
-  return Math.min(p.max, Math.max(p.min, v));
-}
-function buildControls() {
-  for (const g of GROUPS) {
-    const det = document.createElement('details');
-    det.className = 'group'; det.open = g.id !== 'sound';
-    det.innerHTML = `<summary>${g.title}</summary>`;
-    for (const p of [...g.params].sort((a, b) => !!faceOf(b) - !!faceOf(a))) { // faces first (shared/faces.js)
-      const wrap = document.createElement('div');
-      wrap.className = 'param';
-      if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
-      let input, val = null;
-      if (p.type === 'select') {
-        wrap.innerHTML = `<label for="p-${p.id}">${p.label}</label>`;
-        input = document.createElement('select'); input.id = `p-${p.id}`;
-        for (const [k, name] of p.options) input.add(new Option(name, k));
-        input.addEventListener('change', () => { setParam(p.id, typeof p.def === 'number' ? +input.value : input.value); unfocus(input); });
-        wrap.appendChild(input);
-      } else if (p.type === 'checkbox') {
-        wrap.classList.add('check');
-        input = document.createElement('input'); input.type = 'checkbox'; input.id = `p-${p.id}`;
-        input.addEventListener('change', () => setParam(p.id, input.checked));
-        const lab = document.createElement('label'); lab.htmlFor = input.id; lab.textContent = p.label;
-        wrap.append(input, lab);
-      } else {
-        wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
-        val = wrap.querySelector('.val');
-        input = document.createElement('input');
-        input.type = 'range'; input.min = 0; input.max = 1000; input.step = 1; input.id = `p-${p.id}`;
-        input.addEventListener('input', () => setParam(p.id, fromSlider(p, +input.value), true));
-        input.addEventListener('dblclick', () => setParam(p.id, p.def));
-        wrap.appendChild(input);
-      }
-      if (p.hint) { const h = document.createElement('div'); h.className = 'hint'; h.textContent = p.hint; wrap.appendChild(h); }
-      det.appendChild(wrap);
-      const face = dress(wrap, p, input, { reset: () => setParam(p.id, p.def), toSlider });
-      controls.set(p.id, { p, input, val, wrap, face });
-    }
-    $('#groups').appendChild(det);
-  }
-  const ps = $('#preset');
-  ps.add(new Option('Presets…', ''));
-  PRESETS.forEach((pr, i) => ps.add(new Option(pr.name, i)));
-  ps.addEventListener('change', () => {
-    if (ps.value === '') return;
-    setAll({ ...DEFAULTS, ...Object.fromEntries(INSTRUMENT.keep.map((k) => [k, P[k]])), ...PRESETS[+ps.value].p });
-    unfocus(ps);
-  });
-  $('#reset').addEventListener('click', () => { setAll({ ...DEFAULTS }); $('#preset').value = ''; });
-}
-function refreshControl(id, dragging = false) {
-  const c = controls.get(id);
-  if (!c) return;
-  const v = P[id];
-  if (c.p.type === 'select') { c.input.value = v; c.face?.show(); }
-  else if (c.p.type === 'checkbox') c.input.checked = !!v;
-  else { if (!dragging) c.input.value = toSlider(c.p, v); c.val.textContent = c.p.fmt ? c.p.fmt(v) : String(v); c.face?.show(); }
-}
-function refreshVisibility() { for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(P) : false; }
-function retuneSounding() { post({ type: 'retune', list: activeKeys().map((k) => [k, tunedFreq(k, P)]) }); refreshMarks(); }
-// the plugin's values (shared/in-plugin.js): one as a control moving it, several as a preset
-function fromPlugin(c) { const ids = Object.keys(c); if (ids.length === 1) setParam(ids[0], c[ids[0]]); else setAll({ ...P, ...c }); }
-function setAll(np) {
-  P = np;
-  for (const id of controls.keys()) refreshControl(id);
-  refreshVisibility(); post(paramsMessage()); applyMix(); retuneSounding(); updateHelp(); save();
-  recomputeStair(true);
-}
-function setParam(id, v, dragging = false) {
-  const p = ALL_PARAMS.find((q) => q.id === id);
-  if (P[id] === v) return;
-  P[id] = v;
-  refreshControl(id, dragging); refreshVisibility(); save(); updateHelp();
-  $('#preset').value = '';
-  if (p.kind === 'mix') applyMix();
-  else if (p.kind === 'tune' || TUNING_KEEP.includes(id)) { post(paramsMessage()); retuneSounding(); } // the engine tunes new notes itself (and the keyboard's tuning, which has no kind)
-  else {
-    post(paramsMessage());
-    if (['kick'].includes(id)) recomputeStair(false);
+  },
+  onNoteOn: () => refreshMarks(),
+  onNoteOff: () => refreshMarks(),
+  onPanic: () => { log.clear(); refreshMarks(); },
+  onParam: (id, v, P, p) => {
+    if (id === '*') { retuneSounding(); recomputeStair(true); }
+    else if (p.kind === 'tune' || TUNING_KEEP.includes(id)) retuneSounding(); // the engine tunes new notes itself (and the keyboard's tuning, which has no kind)
+    else if (id === 'kick') recomputeStair(false);
     else if (['rSrc', 'vNom', 'vStrike', 'vExt'].includes(id)) recomputeStair(true);
-  }
-}
+  },
+});
+const P = () => shell.P;
+function retuneSounding() { shell.post({ type: 'retune', list: shell.activeKeys().map((k) => [k, tunedFreq(k, P())]) }); refreshMarks(); }
 
 // ---------------------------------------------------------------------------
 // analysis + views
@@ -305,7 +56,7 @@ const stair = new StairView($('#stair'));
 const raster = new RasterView($('#raster'));
 let worker = null, stairTimer = 0;
 function recomputeStair(full) {
-  stair.kick = P.kick; stair.touch();
+  stair.kick = P().kick; stair.touch();
   clearTimeout(stairTimer);
   stairTimer = setTimeout(() => {
     if (!worker) {
@@ -314,22 +65,22 @@ function recomputeStair(full) {
         const m = e.data;
         if (m.type === 'stair') {
           stair.stair = { xs: m.xs, ys: m.ys };
-          $('#stair-read').textContent = `C4 plus a second lamp · coupling ${(P.kick * 100).toFixed(1)} %${m.delta !== undefined ? ` (δ = ${m.delta.toFixed(4)})` : ''}${m.exact ? '' : ' · simulated'}`;
+          $('#stair-read').textContent = `C4 plus a second lamp · coupling ${(P().kick * 100).toFixed(1)} %${m.delta !== undefined ? ` (δ = ${m.delta.toFixed(4)})` : ''}${m.exact ? '' : ' · simulated'}`;
         } else if (m.type === 'row') { stair.nRows = m.rows; stair.rows[m.r] = m; }
         stair.touch();
       };
     }
     stair.reset(full);
-    worker.postMessage({ P: { ...P }, rows: 24, kmax: 0.15, full });
+    worker.postMessage({ P: { ...P() }, rows: 24, kmax: 0.15, full });
   }, 250);
 }
 
 function refreshMarks() {
-  const keys = activeKeys();
+  const keys = shell.activeKeys();
   stair.touch();
   if (keys.length < 2) { stair.marks = []; return; }
-  const f0 = tunedFreq(keys[0], P);
-  stair.marks = keys.slice(1).map((k) => 1200 * Math.log2(tunedFreq(k, P) / f0));
+  const f0 = tunedFreq(keys[0], P());
+  stair.marks = keys.slice(1).map((k) => 1200 * Math.log2(tunedFreq(k, P()) / f0));
 }
 
 // an: log.analyze(). Locks come from shared firings, so their ratios are exact.
@@ -350,7 +101,7 @@ function updateTables(an, hold) {
   $('#notes').innerHTML = '<tr><th>note</th><th>designed</th><th>playing</th><th>vs equal temperament (±30 ¢)</th></tr>'
     + live.map((o) => {
       // equal temperament at the pitch standard (A4's ratio is the standard's), so a temperament shows
-      const et = keyFreq(o.key) * tuningRatio(P, 69), cd = 1200 * Math.log2(o.fTarget / et), cp = 1200 * Math.log2(o.f / et);
+      const et = keyFreq(o.key) * tuningRatio(P(), 69), cd = 1200 * Math.log2(o.fTarget / et), cp = 1200 * Math.log2(o.f / et);
       return `<tr><td>${noteName(o.key)}</td><td>${cd >= 0 ? '+' : ''}${cd.toFixed(1)} ¢</td><td>${cp >= 0 ? '+' : ''}${cp.toFixed(1)} ¢</td><td>${meter(cp, cd)}</td></tr>`;
     }).join('');
   const rows = [];
@@ -369,21 +120,6 @@ function updateTables(an, hold) {
 // views redraw only when something changed (and only while visible)
 function frame() { stair.frame(); raster.frame(); }
 
-let toastTimer = 0;
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500); }
-$('#start').addEventListener('click', (e) => { startAudio(); unfocus(e.currentTarget); });
-$('#midi-btn').addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
-if (host) startAudio(); // in a plugin's window: its sound, at once (the host has the MIDI)
-else resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click
-$('#panic').addEventListener('click', (e) => { panic(); unfocus(e.currentTarget); });
-
-buildControls();
-for (const id of controls.keys()) refreshControl(id);
-refreshVisibility();
-keyboardView.labels(keyLabels());
-updateHelp();
 updateTables({ notes: [], pairs: [] }, 0);
 recomputeStair(true);
 animate(frame);
-attachPresets({ instrument: INSTRUMENT, get: () => P, set: (v) => setAll({ ...P, ...v }), defaults: DEFAULTS, toast }); // your own presets and links
-qualityControl(); // the device's Quality, after the controls

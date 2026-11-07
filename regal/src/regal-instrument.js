@@ -4,6 +4,7 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './regal-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 export { RESONATORS } from './regal-params.js';
@@ -13,15 +14,16 @@ export const KEY_MIN = 21, KEY_MAX = 108; // with the full range open
 
 export const INSTRUMENT = {
   id: 'regal',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // C2–C6 until Full range opens the rest
   space: 'hold',                        // Space and CC64 latch the keys down (an organ has no damper)
   modWheel: 'pressure',                 // CC1: the weight on the bellows, from its default up to its maximum
-  mpe: { bend: 7 },                     // MPE: a key's own bend runs its reeds faster or slower (the wind is every key's: no slide)
+  mpe: { bend: 7, slide: { param: 'pallet', max: 0.03 } }, // MPE: a key's own bend runs its reeds faster or slower; its slide holds its pallet part open
   aftertouch: 'more weight on the bellows', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how fast its pallet closes', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   controllers: { 67: 'tremulant' },     // the soft pedal: the tremulant while it is down
   faders: ['tremRate', 'curve', 'q', 'resLength', 'pressure'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/regal), built as WebAssembly

@@ -9,6 +9,7 @@ namespace {
 // Sound pressure (Pa at 1 m) to the engine's output, and a cap's click (Pa at 1 m) per m/s
 // it lands at.
 constexpr double OUT = 0.5;
+constexpr double BEND_T = 0.02; // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double CAP_PA = 0.8;
 constexpr double FINGER_T60 = 0.3, GRAB_T60 = 0.008; // a fingertip on a tine; the thumb catching it to pluck again
 
@@ -171,7 +172,7 @@ void KalimbaEngine::setSustain(bool on) {
   if (!on && P[p::ring] < 0.5) for (Voice &v : voices) if (v.released) v.damped = true;
 }
 
-void KalimbaEngine::allNotesOff() { voices.clear(); body.reset(); }
+void KalimbaEngine::allNotesOff() { voices.clear(); body.reset(); presses.clear(); }
 
 void KalimbaEngine::noteOn(int key, double velocity) {
   if (!hasParams) return;
@@ -186,15 +187,20 @@ void KalimbaEngine::noteOn(int key, double velocity) {
   Voice v;
   v.key = key;
   v.floor = pick(1e-5, 1e-4, 1e-3);
-  const KeyModes km = keyModes(key, P.data());
+  std::array<double, p::count> Pk = P; // the tine plucked where its own slide says, or where the thumbs pluck
+  Pk[p::pluck] = own.slideOr(key, P[p::pluck]);
+  const KeyModes km = keyModes(key, Pk.data());
   const double k = 1 / fs;
   double F0 = 0;
+  v.bent = own.bendOf(key); // bent before it was plucked
   for (int i = 0; i < km.count; i++) {
     const Mode &m = km.m[i];
-    const ModeCoeffs c = modeCoeffs(m.f, m.sigma, fs);
+    const double f = m.f * v.bent;
+    const ModeCoeffs c = modeCoeffs(f, m.sigma, fs);
     const double A = m.amp * velocity;
     // released from rest: A e^(−σt) cos ωt, so y[0] = A and y[−1] = A cos(ωk) / r
-    v.modes[i] = {c.a1, c.a2, A, A * std::cos(TAU * m.f * k) * std::exp(m.sigma * k)};
+    v.modes[i] = {c.a1, c.a2, A, A * std::cos(TAU * f * k) * std::exp(m.sigma * k)};
+    v.f[i] = m.f; v.sg[i] = m.sigma;
     F0 += A; v.start += std::fabs(A);
   }
   v.count = km.count;
@@ -206,10 +212,15 @@ void KalimbaEngine::noteOn(int key, double velocity) {
   voices.push_back(v);
 }
 
-void KalimbaEngine::noteOff(int key, double) {
+// Lift: with the tines let ring, a fast lift brushes the thumb back over the tine for a moment;
+// damped on release, a slow lift lets the fingertip settle gently (a longer tail), a fast one firmly.
+void KalimbaEngine::noteOff(int key, double velocity) {
   for (Voice &v : voices) if (v.key == key && !v.released && !v.grabbed) {
     v.released = true;
-    if (!sustain && P[p::ring] < 0.5) v.damped = true;
+    if (!sustain && P[p::ring] < 0.5) {
+      v.damped = true;
+      if (const double k = liftScale(velocity); k != 1) v.fing = std::exp(-std::log(1000.0) / (FINGER_T60 * k * fs));
+    } else if (const double t = liftPast(velocity); t > 0) v.touch = (int)(0.04 * t * fs); // up to −12 dB
   }
 }
 
@@ -222,6 +233,13 @@ void KalimbaEngine::process(float *L, float *R, int n) {
     if (std::fabs(cover - builtCover) > 1e-4 || cover == coverTarget) rebuildBody();
   }
   const double finger = std::exp(-std::log(1000.0) / (FINGER_T60 * fs)), grab = std::exp(-std::log(1000.0) / (GRAB_T60 * fs));
+  for (Voice &v : voices) { // Press: a fingertip resting on the tine, as hard as its key is pressed
+    if (v.press.follow(v.released ? 0 : presses.of(v.key), n, fs)) v.pf = v.press.on() ? std::exp(v.press.p * std::log(finger)) : 1;
+    if (const double to = own.bendOf(v.key); v.bent != to) { // Glide: a fingernail on the tine at the bridge
+      v.bent = glideTo(v.bent, to, n / fs, BEND_T);
+      for (int m = 0; m < v.count; m++) { const ModeCoeffs c = modeCoeffs(v.f[m] * v.bent, v.sg[m], fs); v.modes[m].a1 = c.a1; v.modes[m].a2 = c.a2; }
+    }
+  }
   for (int i = 0; i < n; i++) {
     double F[PLATE_MODES] = {};
     for (Voice &v : voices) {
@@ -232,7 +250,9 @@ void KalimbaEngine::process(float *L, float *R, int n) {
         r.y2 = r.y1; r.y1 = y; s += y;
       }
       if (v.grabbed) v.level *= grab;
-      else if (v.damped) v.level *= finger;
+      else if (v.damped) v.level *= v.fing ? v.fing : finger;
+      else if (v.touch > 0) { v.touch--; v.level *= finger; }
+      else if (v.press.on()) v.level *= v.pf;
       s *= v.level;
       for (int j = 0; j < PLATE_MODES; j++) F[j] += s * v.w[j];
     }

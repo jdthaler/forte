@@ -19,7 +19,9 @@
 #include "blackhole-model.h"
 #include "blackhole-params.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
+#include "forte/press.h"
 
 namespace forte::blackhole {
 
@@ -42,6 +44,8 @@ struct Voice {
   double cpr[MAX_MODES], cpi[MAX_MODES], cxr[MAX_MODES], cxi[MAX_MODES];
   bool ring = false, stolen = false, dead = false;
   double fade = 1, level = 0, rise = 0, riseStep = 0;
+  // the remnant's recoil toward us or away (a note's own bend): every frequency and rate × bent
+  double bent = 1, f0 = 0, mf[MAX_MODES], mg[MAX_MODES];
   // the inspiral (hasChirp): the model's chirp, and its state
   bool hasChirp = false;
   Chirp c;
@@ -50,6 +54,7 @@ struct Voice {
 
   void start(const RingdownEngine &eng, int key, const KeyVoice &d, double vel);
   void startRing(double phase);
+  void retune(const RingdownEngine &eng); // the modes' turns, the bridge and the rise at bent
   void render(float *L, float *R, int n, const RingdownEngine &eng);
 };
 
@@ -64,6 +69,10 @@ class RingdownEngine : public Engine {
   void allNotesOff() override;
   // a note's slide: its own black hole's spin, set at the merger (a ringdown's spin is fixed)
   void slide(double value, int key) override { expr.setSlide(value, key); }
+  // a note's bend: the remnant's recoil, toward us or away: a Doppler shift of the whole wave
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
+  // a note's press: matter falling into its black hole, each clump ringing it again
+  void pressure(double value, int key) override { press.set(value, key); }
   int voiceCount() const override { return nv; }
   void process(float *L, float *R, int n) override;
 
@@ -78,6 +87,7 @@ class RingdownEngine : public Engine {
   double k, stealStep, muteStep;
   bool stereo = true, releaseMute = false;
   double master = 1;
+  double bendOf(int key) const { return expr.bendOf(key); }
 
   // the voices playing, oldest first (read by the tests through the WebAssembly's hooks)
   Voice *voices[kPool] = {};
@@ -85,6 +95,8 @@ class RingdownEngine : public Engine {
 
  private:
   Voice *slot();
+  void strike(int key, double velocity, bool ringOnly);
+  void clump(int key, double x);
   const KeyVoice &voiceFor(int key);
 
   Voice pool[kPool];
@@ -99,7 +111,11 @@ class RingdownEngine : public Engine {
   KeyVoice other;               // a key outside the range
   KeyVoice offer_;
   bool hasOffer = false;
-  forte::NoteExpression expr{0}; // each key's slide (a black hole doesn't bend)
+  double struck[128] = {}; // each key's last velocity, for a fast lift's second merger (forte/lift.h)
+  forte::Presses press;
+  bool down[128] = {};      // each key held
+  double infall[128] = {};  // until the next clump falls in while it is pressed, s (Press)
+  forte::NoteExpression expr{0.3}; // each key's slide (its spin) and bend (its recoil: ±30 ¢, a kick of about 5000 km/s)
   KeyVoice spun;                 // a key's voice at its slide's spin
   Angular spunAngular;           // and its angular functions (kept apart from the keys' own)
   int sinceVoices = 0;

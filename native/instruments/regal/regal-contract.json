@@ -10,6 +10,7 @@
     {"id":"resLength","kind":"continuous","min":0.6,"max":1.7,"def":1,"step":0,"log":true},
     {"id":"pressure","kind":"continuous","min":400,"max":1000,"def":600,"step":0,"log":true},
     {"id":"bellows","kind":"choice","def":"hand","options":["hand","blower"]},
+    {"id":"pallet","kind":"continuous","min":0.01,"max":1,"def":1,"step":0,"log":true},
     {"id":"curve","kind":"continuous","min":0.3,"max":1.2,"def":0.6,"step":0.01,"log":false},
     {"id":"thickness","kind":"continuous","min":0.7,"max":1.4,"def":1,"step":0.01,"log":false},
     {"id":"facing","kind":"choice","def":"brass","options":["brass","leather"]},
@@ -31,7 +32,12 @@
     {"id":"cents8","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"cents9","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"cents10","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
-    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false}
+    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"strikeOn","kind":"toggle","def":true},
+    {"id":"glideOn","kind":"toggle","def":true},
+    {"id":"slideOn","kind":"toggle","def":true},
+    {"id":"pressOn","kind":"toggle","def":true},
+    {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
     {"name":"Regal 8′: short brass resonators","values":{}},

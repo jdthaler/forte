@@ -50,7 +50,12 @@
         "cents8": 0,
         "cents9": 0,
         "cents10": 0,
-        "cents11": 0
+        "cents11": 0,
+        "strikeOn": true,
+        "glideOn": false,
+        "slideOn": true,
+        "pressOn": false,
+        "liftOn": true
       }
     }
   ]

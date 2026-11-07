@@ -67,7 +67,7 @@ export const GROUPS = [
         hint: 'How far the plectrum reaches past the string. More overlap: the string slides further before it slips off, at a larger force.' },
       { id: 'stagger', showIf: winged, label: 'Stagger between rows', min: 0, max: 2, def: 0.5, step: 0.05, fmt: (v) => `${v.toFixed(2)} mm`,
         hint: 'The rows are set at slightly different heights, so they pluck one after another (back 8′, front 8′, 4′) rather than all at once.' },
-      { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => `${v.toFixed(2)} (jack ${(8 * 10 ** v).toFixed(0)} cm/s)`,
+      { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => `${v.toFixed(2)} · jack ${(8 * 10 ** v).toFixed(0)} cm/s`,
         hint: 'How fast the key lifts the jack. It changes the pluck little: the plectrum lets go where it lets go. Faster keys pluck sooner, a touch brighter, with a louder knock.' },
     ],
   },

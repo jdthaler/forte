@@ -24,10 +24,13 @@ double modeSlope(int n, double x) {
 
 // The geometry that fixes how the rubbed point moves: where it is and its lever (m), for a bar
 // of length L.
-static void rubbed(int key, int build, double L, double &xc, double &arm, bool &post) {
+// `contact` (a fraction of the length) moves the glass toward where the lowest mode swings less:
+// along a bar on a post toward its back node; down a bent end, inward and lower (the lever
+// shorter), to meet the flat bar 15 % in.
+static void rubbed(int key, int build, double L, double &xc, double &arm, bool &post, double contact = 0) {
   post = build == 1 || (build == 0 && key < SPLIT);
-  if (post) { xc = POST_AT; arm = POST; }
-  else { xc = 1; arm = ARM * L; }
+  if (post) { xc = POST_AT + contact; arm = POST; }
+  else { xc = 1 - contact; arm = ARM * L * (1 - contact / 0.15); }
 }
 
 static double barLength(double f1, double h) {
@@ -70,7 +73,7 @@ Bar bar(int key, const double *P, double fs) {
   for (int pass = 0; pass < 2; pass++) {
     B.L = barLength(fbar, B.h);
     B.m = RHO_IRON * WIDTH * B.h * B.L;
-    rubbed(key, build, B.L, B.xc, B.arm, B.post);
+    rubbed(key, build, B.L, B.xc, B.arm, B.post, P[p::contact]);
     hx1 = (-B.arm / B.L) * modeSlope(0, B.xc); hy1 = modeShape(0, B.xc); n1 = std::hypot(hx1, hy1);
     const Pad pd = pad(P[p::wet], layersOf(P, B.post), B.L);
     fbar = B.f1 * std::sqrt(1 + (pd.m * n1 * n1) / B.m) * (B.post ? std::exp2(filing(key) / 1200) : 1);

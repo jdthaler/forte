@@ -4,17 +4,22 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './carillon-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'carillon',
-  groups: GROUPS,
-  presets: PRESETS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
+  presets: offInPresets(PRESETS, ['glide', 'lift']), // its presets turn off what makes little sense on it (shared/expression.js)
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   // MIDI keys: F2–C8 at sounding pitch. Below F2 a bell would outweigh the largest carillon bourdons
   // ever cast (about 20 t), so the range stops there.
   range: [41, 108],
+  lift: 'a fast lift lets go of the wire so sharply that the clapper swings back for a grace stroke', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
+  mpe: { bend: 0.3, slide: { param: 'strikeHeight', max: 0.3 } }, // MPE: a note's own bend, its bell swinging (a Doppler shift, thirty cents either way at most); its slide raises where its clapper strikes, from the soundbow up the waist
+  glide: 'the bell swinging toward you or away: a Doppler shift of a few tens of cents', // what a note's own bend does
+  aftertouch: 'a firm press holds the clapper against the bell, muting it', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   compass: { keys: [48, 96], param: 'fullRange' }, // C3–C7, a four-octave concert carillon, until Full range opens the rest
   space: null,                          // a carillon has no dampers: no pedal to offer
   faders: ['hardness', 'strikeHeight', 'clapMass', 'around', 'distance'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

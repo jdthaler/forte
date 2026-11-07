@@ -17,7 +17,7 @@
 namespace forte::gamelan {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { instrument, laras, ombak, thick, along, across, tubes, tubeTune, gongStrike, gongBeat, curvature, mallet, damping, t60, rolloff, hand, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { instrument, laras, ombak, thick, along, across, tubes, tubeTune, gongStrike, gongBeat, curvature, mallet, damping, t60, rolloff, hand, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -101,38 +101,44 @@ inline const ParamInfo kParams[p::count] = {
   {"cents9", "Major 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
+  {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::instrument, 1}, {p::ombak, 0}};
-inline const PresetValue kPreset2[] = {{p::instrument, 4}, {p::ombak, 0}};
-inline const PresetValue kPreset3[] = {{p::instrument, 2}, {p::ombak, 0}, {p::damping, 2}};
-inline const PresetValue kPreset4[] = {{p::instrument, 2}, {p::damping, 2}};
-inline const PresetValue kPreset5[] = {{p::instrument, 3}, {p::damping, 2}};
-inline const PresetValue kPreset6[] = {{p::instrument, 3}, {p::damping, 2}, {p::curvature, 0}};
-inline const PresetValue kPreset7[] = {{p::ombak, 8}};
-inline const PresetValue kPreset8[] = {{p::ombak, 2}};
-inline const PresetValue kPreset9[] = {{p::along, 0}, {p::across, 0}};
-inline const PresetValue kPreset10[] = {{p::across, 0.8}, {p::along, 0.4}};
-inline const PresetValue kPreset11[] = {{p::thick, 2.5}};
-inline const PresetValue kPreset12[] = {{p::tubes, 0}};
-inline const PresetValue kPreset13[] = {{p::damping, 2}};
-inline const PresetValue kPreset14[] = {{p::laras, 1}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::instrument, 1}, {p::ombak, 0}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::instrument, 4}, {p::ombak, 0}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::instrument, 2}, {p::ombak, 0}, {p::damping, 2}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::instrument, 2}, {p::damping, 2}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::instrument, 3}, {p::damping, 2}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::instrument, 3}, {p::damping, 2}, {p::curvature, 0}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::ombak, 8}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::ombak, 2}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::along, 0}, {p::across, 0}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::across, 0.8}, {p::along, 0.4}};
+inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::thick, 2.5}};
+inline const PresetValue kPreset12[] = {{p::glideOn, 0}, {p::tubes, 0}};
+inline const PresetValue kPreset13[] = {{p::glideOn, 0}, {p::damping, 2}};
+inline const PresetValue kPreset14[] = {{p::glideOn, 0}, {p::laras, 1}};
 inline const Preset kPresets[] = {
-  {"Gangsa pair: the shimmer", nullptr, 0},
-  {"Javanese saron (no pairs)", kPreset1, 2},
-  {"The whole gamelan, by register", kPreset2, 2},
-  {"Bonang: kettle gongs on cords", kPreset3, 3},
-  {"Paired bonang (reyong)", kPreset4, 2},
-  {"Gong ageng: its own slow beat", kPreset5, 2},
-  {"A flat gong: no curvature, no beat", kPreset6, 3},
-  {"Fast shimmer (8 Hz)", kPreset7, 1},
-  {"Slow shimmer (2 Hz)", kPreset8, 1},
-  {"Struck at the centre: no 2.76", kPreset9, 2},
-  {"Struck off the axis: the bar twists", kPreset10, 2},
-  {"Thick bars: overtones flatten", kPreset11, 1},
-  {"Bars without tubes", kPreset12, 1},
-  {"Let every note ring", kPreset13, 1},
-  {"Twelve notes (the keyboard’s tuning)", kPreset14, 1},
+  {"Gangsa pair: the shimmer", kPreset0, 1},
+  {"Javanese saron (no pairs)", kPreset1, 3},
+  {"The whole gamelan, by register", kPreset2, 3},
+  {"Bonang: kettle gongs on cords", kPreset3, 4},
+  {"Paired bonang (reyong)", kPreset4, 3},
+  {"Gong ageng: its own slow beat", kPreset5, 3},
+  {"A flat gong: no curvature, no beat", kPreset6, 4},
+  {"Fast shimmer (8 Hz)", kPreset7, 2},
+  {"Slow shimmer (2 Hz)", kPreset8, 2},
+  {"Struck at the centre: no 2.76", kPreset9, 3},
+  {"Struck off the axis: the bar twists", kPreset10, 3},
+  {"Thick bars: overtones flatten", kPreset11, 2},
+  {"Bars without tubes", kPreset12, 2},
+  {"Let every note ring", kPreset13, 2},
+  {"Twelve notes (the keyboard’s tuning)", kPreset14, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::mallet}, {109, p::along}, {111, p::gongStrike}, {113, p::across}, {114, p::ombak}};
@@ -155,6 +161,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::ombak, .modWheelMax = 15,
+    .slide = p::ombak, .slideMax = 15,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 2},
     .midiVelocity = midiVelocity, .create = create,

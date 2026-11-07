@@ -36,7 +36,9 @@ export const GROUPS = [
         hint: 'Steady: a regulator in the chest holds the pressure. Flexible, the Baroque way: the chest is fed only through the trunk from the bellows, so big chords drain it, the pressure dips and the wind “breathes”, ringing at a few hertz.' },
       { id: 'rise', label: 'Pallet: pressure rise', min: 1, max: 80, def: 12, log: true, fmt: (v) => `${v < 10 ? v.toFixed(1) : v.toFixed(0)} ms at velocity 0.7`,
         hint: 'How long the key’s pallet takes to open, so how fast the pressure rises at the pipe’s foot (Nolle & Finch 1992). Fast: the jet hits the labium at once and the upper modes speak first: more chiff. Slow: the pipe swells in more smoothly. Velocity scales it (twice as fast per +0.3).' },
-      { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => `${v.toFixed(2)} (pallet in ${(2 ** ((0.7 - v) / 0.3)).toFixed(2)} × its time)`, // ×2 per −0.3, as the engine's palletTime
+      { id: 'pallet', label: 'Pallet: how far it opens', min: 0.05, max: 1, def: 1, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %`,
+        hint: 'How far a key opens its pallet, the valve under its pipes, as the share of the chest\'s wind it lets through to their feet. Fully open, all of it; part open, the pallet throttles the wind: a softer, flatter note, and at a little the pipes barely speak. A player holds a key part way down to do this (a note\'s own slide). Applies to the keys as they open.' },
+      { id: 'velocity', label: 'Velocity (computer keys)', min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => `${v.toFixed(2)} · pallet in ${(2 ** ((0.7 - v) / 0.3)).toFixed(2)} × its time`, // ×2 per −0.3, as the engine's palletTime
         hint: 'An organ has no loudness touch: velocity only sets how fast the pallet opens, which shapes the attack (the chiff), not the level.' },
     ],
   },

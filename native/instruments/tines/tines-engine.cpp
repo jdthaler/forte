@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 
 namespace forte::tines {
 
@@ -47,7 +48,8 @@ void TinesEngine::Voice::start(TinesEngine &eng, int key_, const VoiceData &d) {
     if (d.freq[j] > fTop) continue;
     const int i = N++;
     om0[i] = TAU * d.freq[j]; sig[i] = d.sigma[j]; dw[i] = d.dampW[j];
-    w[i] = d.w[j]; pk[i] = d.pk[j];
+    w[i] = w0[i] = d.w[j]; pk[i] = d.pk[j];
+    for (int g = 0; g < STRIKES; g++) ws[(size_t)i * STRIKES + g] = d.ws[(size_t)j * STRIKES + g];
   }
   Nall = N;
   own = eng.expr.bendOf(key);
@@ -61,7 +63,8 @@ void TinesEngine::Voice::start(TinesEngine &eng, int key_, const VoiceData &d) {
   hasDamper = d.hasDamper;
   keyDown = true; damped = false; killing = false; dead = false;
   hammerOn = false; contactSamples = 0; Fmax = 0; peak = 0; quiet = 0; age = 0;
-  yMin = 0; yMax = 0;
+  yMin = 0; yMax = 0; liftK = 1;
+  press = Press{};
   setDamper(eng.P[p::damper]);
 }
 
@@ -86,11 +89,31 @@ void TinesEngine::Voice::retargetPickup(const Pickup &pu) {
 
 void TinesEngine::Voice::setDamper(double sd) {
   for (int i = 0; i < Nall; i++) {
-    const double s = sig[i] + (killing ? 300 : sd * dw[i]), o = om[i];
+    const double s = sig[i] + (killing ? 300 : sd * dw[i] / liftK), o = om[i];
     const double r = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
     a1d[i] = 2 * r * std::cos(od * k); a2d[i] = r * r;
   }
   damperSigma = sd;
+  if (press.on()) setPressed();
+}
+
+// Strike the tine mm from the clamp from now on (NaN: where the data was built for), its modes
+// weighted at that point.
+void TinesEngine::Voice::aim(double mm) {
+  if (mm == aimed || (mm != mm && aimed != aimed)) return;
+  aimed = mm;
+  for (int i = 0; i < Nall; i++) w[i] = mm == mm ? strikeWeight(&ws[(size_t)i * STRIKES], mm) : w0[i];
+  tune(bend);
+}
+
+// A finger on the tone bar: the fork loses FINGER/s at most, mostly in its upper modes
+constexpr double FINGER = 40, FINGER_F = 1200;
+void TinesEngine::Voice::setPressed() {
+  for (int i = 0; i < Nall; i++) {
+    const double o = om[i], s = sig[i] + press.loss(o * (0.5 / std::numbers::pi), FINGER, FINGER_F, 0.1);
+    const double r = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
+    a1p[i] = 2 * r * std::cos(od * k); a2p[i] = r * r;
+  }
 }
 
 void TinesEngine::Voice::strike(double v) {
@@ -127,7 +150,8 @@ double TinesEngine::Voice::contactForce(double dFree) {
 }
 
 void TinesEngine::Voice::render(double *buf, int n, TinesEngine &eng) {
-  const double *A1 = damped ? a1d.data() : a1.data(), *A2 = damped ? a2d.data() : a2.data();
+  const bool pr = !damped && press.on();
+  const double *A1 = damped ? a1d.data() : pr ? a1p.data() : a1.data(), *A2 = damped ? a2d.data() : pr ? a2p.data() : a2.data();
   const bool full = os == OS; // else Low's voice at the output rate
   const double rate = full ? eng.fs2 : eng.fs, gs = OUT_SCALE * rate, aP = full ? eng.aPick : eng.aPick1;
   const bool moving = pickupMoving;
@@ -359,6 +383,7 @@ void TinesEngine::strikeKey(int key, double velocity, const VoiceData &d) {
     voices[nVoices++] = v; byKey[key] = v;
   }
   if (v->own != expr.bendOf(key)) { v->own = expr.bendOf(key); v->tune(bendNow * v->own); v->setDamper(v->damperSigma); } // struck again: at the key's own bend
+  v->aim(expr.slideOr(key, NAN)); // its own slide: where the hammer strikes
   v->keyDown = true; v->updateDamping(*this); v->strike(velocity);
   trimVoices(v);
   last = v;
@@ -385,15 +410,16 @@ void TinesEngine::trimVoices(const Voice *keep) {
   }
 }
 
-void TinesEngine::noteOff(int key, double) {
+void TinesEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
-  if (Voice *v = byKey[key]) { v->keyDown = false; v->updateDamping(*this); }
+  // how fast the damper falls: a slow lift leaves a longer tail, a fast one a shorter (forte/lift.h)
+  if (Voice *v = byKey[key]) { v->keyDown = false; v->lifted(liftScale(velocity)); v->updateDamping(*this); }
 }
 
 void TinesEngine::setSustain(bool on) {
   sustain = on;
-  for (int i = 0; i < nVoices; i++) voices[i]->updateDamping(*this);
+  for (int i = 0; i < nVoices; i++) { if (!on) voices[i]->lifted(1); voices[i]->updateDamping(*this); } // the pedal's dampers fall as they always did
 }
 
 void TinesEngine::bend(double value) {
@@ -404,6 +430,7 @@ void TinesEngine::noteBend(double ratio, int key) { expr.setBend(ratio, key); }
 
 void TinesEngine::allNotesOff() {
   nPending = 0;
+  presses.clear();
   for (int i = 0; i < nVoices; i++) voices[i]->kill();
 }
 
@@ -423,6 +450,7 @@ void TinesEngine::process(float *L, float *R, int n) {
       Voice &v = *voices[i];
       v.own = glideTo(v.own, expr.bendOf(v.key), m / fs, BEND_T);
       if (v.bend != bendNow * v.own) { v.tune(bendNow * v.own); v.setDamper(v.damperSigma); }
+      if (v.press.follow(v.keyDown ? presses.of(v.key) : 0, m, fs)) v.setPressed();
     }
     block(L, R, off, m);
   }

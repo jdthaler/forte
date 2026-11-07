@@ -17,7 +17,7 @@ export const GROUPS = [
   {
     title: 'Action',
     params: [
-      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, step: 0.01, def: 0.7, fmt: (v) => `${hammerSpeed(v).toFixed(2)} m/s`, hint: 'Hammer speed at the string. MIDI velocity maps to 0.25–6 m/s.' },
+      { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, step: 0.01, def: 0.7, fmt: (v) => `${v.toFixed(2)} · hammer ${hammerSpeed(v).toFixed(2)} m/s`, hint: 'Hammer speed at the string. MIDI velocity maps to 0.25–6 m/s.' },
       { id: 'hardness', label: 'Felt hardness', min: 0.2, max: 5, def: 1, log: true, fmt: x, hint: 'Felt stiffness K in F = Kδᵖ. Harder felt: shorter contact, more high partials. Applies to new notes.' },
       { id: 'strike', label: 'Strike position', min: 0.03, max: 0.5, step: 0.001, def: 0.12, fmt: (v) => `${v.toFixed(3)} L (1/${(1 / v).toFixed(1)})`, hint: 'Partials with a node at the hammer are missing: striking at 1/8 removes the 8th, 16th, …; at the middle, every even partial. Applies to new notes.' },
       { id: 'damper', label: 'Damper', min: 3, max: 80, def: 25, log: true, fmt: (v) => `${v.toFixed(0)} s⁻¹`, hint: 'Decay rate the damper felt adds on release (less on partials with a node under it). Keys above E6 have none.' },

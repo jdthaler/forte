@@ -35,7 +35,6 @@
 
 import { rotaryKnob } from './faces.js';
 import { focusedByPointer, unfocus } from './focus.js';
-import { attachLayer } from './layer.js';
 import { inPlugin } from './in-plugin.js';
 
 const body = document.body;
@@ -860,9 +859,6 @@ export function attachKeyboard(kb) {
     bar.appendChild(kbtn);
     row.appendChild(pop);
   }
-  // a second instrument, layered or split (shared/layer.js)
-  const layer = inPlugin ? null : attachLayer(kb); // not in a plugin's window: the page plays nothing there
-  if (layer) { bar.appendChild(layer.button); row.appendChild(layer.pop); }
 
   // The window onto the range: as many white keys as fit at the chosen width, moved
   // an octave at a time with ◀ ▶ or anywhere by dragging the overview.
@@ -917,6 +913,16 @@ export function attachKeyboard(kb) {
     const over = bar.scrollWidth > bar.clientWidth + 1;
     bar.classList.remove('measure');
     bar.classList.toggle('stacked', over);
+    // a phone held upright: when what's left wraps onto a second line, ◀ ▶ go (the overview
+    // still pans) if that brings it back to one, leaving the views a line more
+    if (over && phoneQuery.matches && wraps()) {
+      bar.classList.add('tight');
+      if (wraps()) bar.classList.remove('tight');
+    }
+  }
+  function wraps() {
+    const tops = [...bar.children].filter((e) => e !== strip && e !== kbTools && e.offsetWidth).map((e) => e.getBoundingClientRect().top);
+    return Math.max(...tops) - Math.min(...tops) > 20; // the overview sits lower than the buttons beside it
   }
   prev.addEventListener('click', () => { show(first - 7); unfocus(prev); });
   next.addEventListener('click', () => { show(first + 7); unfocus(next); });

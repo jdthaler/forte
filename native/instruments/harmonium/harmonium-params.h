@@ -17,7 +17,7 @@
 namespace forte::harmonium {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { principal, musette, detune, bourdon, piccolo, percussion, pressure, expression, pump, set, clearance, q, throat, cell, fullRange, cassotto, cassF, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { principal, musette, detune, bourdon, piccolo, percussion, pressure, expression, pump, pallet, set, clearance, q, throat, cell, fullRange, cassotto, cassF, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -27,6 +27,7 @@ namespace musette_ { enum : int { off, two, three }; }
 inline const FormatSegment kFormat_detune[] = {{kNoLimit, "±", " ¢", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_pressure[] = {{kNoLimit, "", " Pa", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_pump[] = {{0, "steady (a blower)", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " strokes/s per foot", 1, 0, 2, false, false, false, false}};
+inline const FormatSegment kFormat_pallet[] = {{0.09999999999999999, "", " %", 100, 0, 1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_set[] = {{kNoLimit, "", " mm at C4", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_clearance[] = {{kNoLimit, "", " µm at C4", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_q[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, false}};
@@ -67,6 +68,7 @@ inline const ParamInfo kParams[p::count] = {
   {"pressure", "Bellows pressure", "Wind", ParamKind::continuous, 100, 2500, 800, 0, true, true, nullptr, 0, kFormat_pressure, 1},
   {"expression", "Expression stop", "Wind", ParamKind::toggle, 0, 1, 0, 1, false, true, nullptr, 0, nullptr, 0},
   {"pump", "Pumping", "Wind", ParamKind::continuous, 0, 3, 0, 0.05, false, false, nullptr, 0, kFormat_pump, 2},
+  {"pallet", "Pallet: how far it opens", "Wind", ParamKind::continuous, 0.01, 1, 1, 0, true, false, nullptr, 0, kFormat_pallet, 2},
   {"set", "Set: tip above the slot", "Reeds (voicing)", ParamKind::continuous, 0.3, 2.5, 0.9, 0.05, false, false, nullptr, 0, kFormat_set, 1},
   {"clearance", "Slot clearance", "Reeds (voicing)", ParamKind::continuous, 10, 200, 40, 1, false, false, nullptr, 0, kFormat_clearance, 1},
   {"q", "Reed Q (mechanical)", "Reeds (voicing)", ParamKind::continuous, 50, 800, 500, 0, true, false, nullptr, 0, kFormat_q, 1},
@@ -92,6 +94,11 @@ inline const ParamInfo kParams[p::count] = {
   {"cents9", "Major 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
+  {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
 inline const PresetValue kPreset1[] = {{p::musette, 2}};
@@ -150,6 +157,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 96, .compass = p::fullRange, .space = Space::hold,
     .modWheel = p::pressure, .modWheelMax = 2500,
+    .slide = p::pallet, .slideMax = 0.4,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -7},
     .midiVelocity = midiVelocity, .create = create,

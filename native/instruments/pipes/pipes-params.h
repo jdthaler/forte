@@ -17,7 +17,7 @@
 namespace forte::pipes {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { principal, octave, gedackt, mixture, tremulant, tremRate, tremDepth, pressure, wind, rise, cutup, gain, offset, noise, fullRange, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { principal, octave, gedackt, mixture, tremulant, tremRate, tremDepth, pressure, wind, rise, pallet, cutup, gain, offset, noise, fullRange, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -26,6 +26,7 @@ inline const FormatSegment kFormat_tremDepth[] = {{kNoLimit, "", " % of its valv
 inline const FormatSegment kFormat_pressure[] = {{kNoLimit, "", " Pa", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_wind[] = {{0.14999999999999997, "steady (Schwimmer) ", " %", 100, 0, 0, false, false, false, false}, {0.85, "", " % flexible", 100, 0, 0, false, false, false, false}, {kNoLimit, "flexible (long trunk) ", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_rise[] = {{9.999999999999998, "", " ms at velocity 0.7", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " ms at velocity 0.7", 1, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_pallet[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_cutup[] = {{0.9999999999999999, "× ", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "× ", "", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_gain[] = {{kNoLimit, "× ", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_offset[] = {{kNoLimit, "", " jet widths", 1, 0, 2, false, false, false, false}};
@@ -65,6 +66,7 @@ inline const ParamInfo kParams[p::count] = {
   {"pressure", "Wind pressure", "Wind", ParamKind::continuous, 150, 6000, 700, 0, true, false, nullptr, 0, kFormat_pressure, 1},
   {"wind", "Wind: steady … flexible", "Wind", ParamKind::continuous, 0, 1, 0.35, 0.01, false, false, nullptr, 0, kFormat_wind, 3},
   {"rise", "Pallet: pressure rise", "Wind", ParamKind::continuous, 1, 80, 12, 0, true, false, nullptr, 0, kFormat_rise, 2},
+  {"pallet", "Pallet: how far it opens", "Wind", ParamKind::continuous, 0.05, 1, 1, 0.01, false, false, nullptr, 0, kFormat_pallet, 1},
   {"cutup", "Mouth cut-up", "Voicing", ParamKind::continuous, 0.5, 2, 1, 0, true, false, nullptr, 0, kFormat_cutup, 2},
   {"gain", "Jet gain (flue and languid)", "Voicing", ParamKind::continuous, 0.4, 2.5, 1, 0, true, false, nullptr, 0, kFormat_gain, 1},
   {"offset", "Labium offset", "Voicing", ParamKind::continuous, 0, 1.5, 0.4, 0.01, false, false, nullptr, 0, kFormat_offset, 1},
@@ -87,6 +89,11 @@ inline const ParamInfo kParams[p::count] = {
   {"cents9", "Major 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
+  {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
 inline const PresetValue kPreset1[] = {{p::octave, 1}, {p::mixture, 1}};
@@ -145,6 +152,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 36, .compassHi = 89, .compass = p::fullRange, .space = Space::hold,
     .modWheel = p::pressure, .modWheelMax = 3000,
+    .slide = p::pallet, .slideMax = 0.4,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 2},
     .midiVelocity = midiVelocity, .create = create,

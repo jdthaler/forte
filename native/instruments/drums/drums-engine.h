@@ -26,6 +26,7 @@
 #include "drums-params.h"
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 
 namespace forte::drums {
@@ -66,6 +67,7 @@ class DrumEngine : public Engine {
   struct Voice {
     int key = 0, M = 0;
     bool active = false, released = false, hand = false;
+    double liftK = 1; // how many times longer than usual the hand takes to still the head (forte/lift.h)
     KeyData<KeyDrum>::Ref ref;
     const KeyDrum *kd = nullptr;
     // the modes: state, base frequency and decay, the one-sample map and the beater's response

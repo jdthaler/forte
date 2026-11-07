@@ -17,7 +17,7 @@
 namespace forte::project8 {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { source, energy, field, depth, length, gas, receiver, noise, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { source, energy, field, depth, length, gas, receiver, noise, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -83,30 +83,36 @@ inline const ParamInfo kParams[p::count] = {
   {"cents9", "Major 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
+  {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::gas, 0.000002}};
-inline const PresetValue kPreset2[] = {{p::source, 1}};
-inline const PresetValue kPreset3[] = {{p::receiver, 1}};
-inline const PresetValue kPreset4[] = {{p::depth, 8}};
-inline const PresetValue kPreset5[] = {{p::length, 60}, {p::depth, 3}};
-inline const PresetValue kPreset6[] = {{p::field, 3}};
-inline const PresetValue kPreset7[] = {{p::source, 2}, {p::energy, 300}, {p::receiver, 1}};
-inline const PresetValue kPreset8[] = {{p::gas, 1e-11}, {p::noise, 0}};
-inline const PresetValue kPreset9[] = {{p::depth, 0.02}};
-inline const PresetValue kPreset10[] = {{p::source, 1}, {p::receiver, 1}};
+inline const PresetValue kPreset0[] = {{p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::liftOn, 0}, {p::gas, 0.000002}};
+inline const PresetValue kPreset2[] = {{p::liftOn, 0}, {p::source, 1}};
+inline const PresetValue kPreset3[] = {{p::liftOn, 0}, {p::receiver, 1}};
+inline const PresetValue kPreset4[] = {{p::liftOn, 0}, {p::depth, 8}};
+inline const PresetValue kPreset5[] = {{p::liftOn, 0}, {p::length, 60}, {p::depth, 3}};
+inline const PresetValue kPreset6[] = {{p::liftOn, 0}, {p::field, 3}};
+inline const PresetValue kPreset7[] = {{p::liftOn, 0}, {p::source, 2}, {p::energy, 300}, {p::receiver, 1}};
+inline const PresetValue kPreset8[] = {{p::liftOn, 0}, {p::gas, 1e-11}, {p::noise, 0}};
+inline const PresetValue kPreset9[] = {{p::liftOn, 0}, {p::depth, 0.02}};
+inline const PresetValue kPreset10[] = {{p::liftOn, 0}, {p::source, 1}, {p::receiver, 1}};
 inline const Preset kPresets[] = {
-  {"Krypton-83m in a Phase II trap", nullptr, 0},
-  {"Phase II's gas: tracks a fifth of a millisecond long", kPreset1, 1},
-  {"Tritium: each electron sharp by its neutrino's energy", kPreset2, 1},
-  {"Antenna ring: the harmonics", kPreset3, 1},
-  {"A deep trap: wide bounces, deep vibrato", kPreset4, 1},
-  {"A long trap: a slow bounce", kPreset5, 2},
-  {"3 tesla: quick chirps", kPreset6, 1},
-  {"Relativistic: 300 keV electrons", kPreset7, 3},
-  {"Perfect vacuum, quiet amplifier", kPreset8, 2},
-  {"A shallow trap: hardly any vibrato", kPreset9, 1},
-  {"Tritium in the antenna ring: shifted harmonics", kPreset10, 2},
+  {"Krypton-83m in a Phase II trap", kPreset0, 1},
+  {"Phase II's gas: tracks a fifth of a millisecond long", kPreset1, 2},
+  {"Tritium: each electron sharp by its neutrino's energy", kPreset2, 2},
+  {"Antenna ring: the harmonics", kPreset3, 2},
+  {"A deep trap: wide bounces, deep vibrato", kPreset4, 2},
+  {"A long trap: a slow bounce", kPreset5, 3},
+  {"3 tesla: quick chirps", kPreset6, 2},
+  {"Relativistic: 300 keV electrons", kPreset7, 4},
+  {"Perfect vacuum, quiet amplifier", kPreset8, 3},
+  {"A shallow trap: hardly any vibrato", kPreset9, 2},
+  {"Tritium in the antenna ring: shifted harmonics", kPreset10, 3},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::field}, {109, p::energy}, {111, p::noise}, {113, p::depth}, {114, p::gas}};
@@ -129,6 +135,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::gas, .modWheelMax = 0.000003,
+    .slide = p::gas, .slideMax = 0.000003,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -2},
     .midiVelocity = midiVelocity, .create = create,

@@ -4,12 +4,13 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './trautonium-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'trautonium',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', 'swell', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: all 88, A0–C8
@@ -20,6 +21,7 @@ export const INSTRUMENT = {
   // CC74 tunes its own first circuit; its pressure presses its wire harder
   mpe: { bend: 48, slide: true },
   aftertouch: 'presses the wire harder onto the rail: louder', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how fast the finger leaves the wire: a slow lift eases off as the resistance rises, so the pitch slides up; a fast one lets go at once', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   controllers: { 11: 'swell' },          // MIDI CC11, the expression pedal: the 1930 instrument's volume pedal
   faders: ['sync', 'q1', 'q2', 'f2', 'f1'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/trautonium), built as WebAssembly

@@ -4,19 +4,21 @@
 
 import { GROUPS, DEFAULTS, PRESETS, LO, HI, KEY_MIN, KEY_MAX } from './clavier-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'clavier',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
   compass: { keys: [LO, HI], param: 'fullRange' }, // the D6's F1–E6, 29–88, until Full range opens the rest
   space: 'sustain',                     // Space and CC64: sent to the engine, which reads it as the mute bar
-  mpe: { bend: 2, press: true },        // a note's own bend presses its key as the wheel does: up to 2 semitones, tens of cents
+  mpe: { bend: 2, press: true, slide: { param: 'mute', max: 1 } }, // a note's own bend presses its key as the wheel does: up to 2 semitones, tens of cents; its slide lays the mute bar's felt on its strings alone
   aftertouch: 'the tangent presses harder: the pitch rises', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how fast the tangent leaves the string: a fast lift pulls it off sharply, with its thwack; a slow one eases it off', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['mute', 'press', 'hf', 'xUpper', 'gain'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/clavier), built as WebAssembly
   wasm: { name: 'ClavierWasmEngine', module: new URL('./clavier-wasm.js', import.meta.url).href, binary: new URL('../wasm/clavier.wasm', import.meta.url).href },

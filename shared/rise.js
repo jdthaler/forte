@@ -20,7 +20,8 @@
 
 import { createMpe, MEMBER_BEND, slideFrom } from './mpe.js';
 import { FADERS, controllersOf, ccValue, mpeMode, signed } from './midi.js';
-import { IDENTIFY, parse, differences, forForte, set as setting, PARAMS } from './rise-sysex.js';
+import { IDENTIFY, parse, differences, forForte, faderLights, set as setting, PARAMS } from './rise-sysex.js';
+import { slideOf } from './expression.js';
 
 export const KEYS = 25;                 // a RISE 25's keywave: two octaves, C to C
 export const DIMENSIONS = [
@@ -108,6 +109,7 @@ export function riseModel({ now = () => performance.now() / 1000 } = {}) {
 
 const STORE = 'forte/rise/v1';
 const ANSWER = 1500; // ms: how long the RISE has to answer an identify
+const POLL = 2000;   // ms: how often the panel reads it again (its octave buttons send nothing)
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 const CHEVRON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5"/></svg>';
 const BLACK = [1, 3, 6, 8, 10];
@@ -116,14 +118,13 @@ const BLACK = [1, 3, 6, 8, 10];
 function meanings(I, params) {
   const out = {};
   const { bend = 0, slide = false, press = false } = I?.mpe ?? {};
-  const wheel = I?.modWheel && (typeof I.modWheel === 'string' ? I.modWheel : I.modWheel.param);
-  const wp = params.find((p) => p.id === wheel);
-  out.strike = 'how loud, as a key\'s velocity';
-  out.glide = !I ? '' : press && bend ? `presses the key as the wheel does, up to ${bend} semitones`
+  const wp = I && params.find((p) => p.id === slideOf(I)?.param); // what a slide moves (shared/expression.js)
+  out.strike = I?.strike === false ? 'nothing here' : typeof I?.strike === 'string' ? I.strike : 'how loud, as a key\'s velocity';
+  out.glide = !I ? '' : bend && I.glide ? I.glide : press && bend ? `presses the key as the wheel does, up to ${bend} semitones`
     : bend ? `bends the note alone, up to ±${bend} semitones` : 'nothing here: each note keeps its own pitch';
   out.slide = !I ? '' : slide && wp ? `${wp.label}, for that note alone, as far as the finger slides from where it landed` : 'nothing here';
   out.press = !I ? '' : I.aftertouch ? I.aftertouch : 'nothing here';
-  out.lift = 'how fast the note is let go';
+  out.lift = !I ? '' : I.lift ? I.lift : 'nothing here: every note is let go alike'; // (the descriptor's lift, shared/expression.js)
   if (mpeMode() === 'off') out.glide = out.slide = out.press = 'MPE is off in the MIDI menu: every note moves together';
   return out;
 }
@@ -195,7 +196,14 @@ export function risePanel() {
   });
   dims.append(...rows.map((x) => x.r));
   const note = el('p', 'forte-rise-note');
-  const own = settingsSection(() => [...inputs.values()][0] ?? '');
+  // its octave and transpose, once read (and every couple of seconds after): the keywave's notes move
+  // with its octave buttons, by as much as they move (a note played puts them right, as before)
+  let shifted = null; // 48 + 12 × octave + transpose, as last read
+  const own = settingsSection(() => [...inputs.values()][0] ?? '', (s) => {
+    const b = 48 + 12 * s.octave + s.transpose;
+    if (shifted === null) { if (!model.fingers.size) base = b; } else base += b - shifted;
+    shifted = b; transpose = s.transpose; request();
+  });
   body.append(slab, dims, note, own.element);
   aside.append(head, body);
 
@@ -238,7 +246,27 @@ export function risePanel() {
   }
   labels();
 
-  let raf = 0, base = 48;
+  // A preset puts the faders' and the pad's controls somewhere new (shared/shell.js, 'forte-preset'):
+  // the panel shows them there, and so do the RISE's fader lights, in its MIDI mode (white), where
+  // they show the faders' values (in its cyan mode they show its own sensitivities: left alone)
+  const position = (p, x) => { // the CC value (0..127) that puts p nearest x (shared/midi.js ccValue)
+    let best = 0, gap = Infinity;
+    for (let v = 0; v <= 127; v++) {
+      const y = ccValue(p, v), d = typeof x === 'number' && typeof y === 'number' ? Math.abs(p.log ? Math.log(y / x) : y - x) : y == x ? 0 : 1; // eslint-disable-line eqeqeq
+      if (d < gap) { gap = d; best = v; }
+    }
+    return best;
+  };
+  document.addEventListener('forte-preset', (e) => {
+    const P = e.detail ?? {};
+    let any = false;
+    for (const c of controls) { const p = paramOf(c.n); if (p && P[p.id] !== undefined) { model.cc[c.n] = position(p, P[p.id]); any = true; } }
+    if (!any) return;
+    if (model.faderMode === 'midi') own.lights(faders.map((x) => model.cc[x.n] ?? 0));
+    request();
+  });
+
+  let raf = 0, base = 48, transpose = 0;
   const fmtDim = (id, v) => {
     if (Number.isNaN(v)) return '–';
     if (id === 'glide') return `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(Math.abs(v) < 10 ? 2 : 1)} st`;
@@ -268,7 +296,7 @@ export function risePanel() {
     const keysDown = [...model.fingers.values()].map((f) => f.key);
     if (keysDown.length) {
       const lo = Math.min(...keysDown), hi = Math.max(...keysDown);
-      if (lo < base || hi >= base + KEYS) base = 12 * Math.floor(lo / 12);
+      if (lo < base || hi >= base + KEYS) base = 12 * Math.floor((lo - transpose) / 12) + transpose;
     }
     range.textContent = `${name(base)}–${name(base + KEYS - 1)}`;
     const m = model.master();
@@ -328,6 +356,7 @@ export function risePanel() {
       const had = inputs.size;
       if (connected) inputs.set(id, nm || 'Seaboard'); else inputs.delete(id);
       if (!connected) model.midi([0xb0, 123, 0]);
+      if (!inputs.size) shifted = null;
       if (inputs.size !== had || connected) show();
       own.connected(inputs.size > 0, connected);
     },
@@ -340,7 +369,8 @@ export function risePanel() {
 //
 // Reading asks the browser for SysEx (its own permission, "control and reprogram your MIDI devices"),
 // on a button the first time and by itself once granted. Nothing is written but by a button or a
-// slider here: Set up for Forte (after a second press to confirm) and the five sensitivities.
+// slider here: Set up for Forte (after a second press to confirm) and the five sensitivities, and
+// a preset, which sets the faders' lights (in MIDI mode; they hold no setting).
 
 let link = null; // the SysEx MIDI access, asked for once
 async function ports(name) {
@@ -374,7 +404,7 @@ const granted = async () => {
 };
 
 const SENS = [['strike', 'Strike'], ['glide', 'Glide'], ['slide', 'Slide'], ['pressSens', 'Press', 'press'], ['lift', 'Lift']];
-function settingsSection(nameOf) {
+function settingsSection(nameOf, onSettings = () => {}) {
   const box = el('section', 'forte-rise-own');
   box.setAttribute('aria-label', 'The RISE\'s own settings');
   const h = el('h3', '', 'On the RISE');
@@ -404,11 +434,12 @@ function settingsSection(nameOf) {
   sens.append(sensNote);
   box.append(h, status, list, buttons, sens);
 
-  let state = null, busy = false, armed = 0;
+  let state = null, busy = false, armed = 0, poll = 0, missed = 0;
   const say = (t) => { status.textContent = t; };
   const row = (k, v) => { list.append(el('dt', '', k), el('dd', '', v)); };
   function show(s) {
     state = s;
+    onSettings(s);
     list.replaceChildren();
     row('MIDI mode', s.mode === 'mpe' ? `MPE, ${s.upper ? 'upper' : 'lower'} zone of ${s.members}, bend ±${s.bend}`
       : s.mode === 'single' ? `Single Channel, channel ${s.channel}, bend ±${s.bend}` : `Multi Channel, bend ±${s.bend}`);
@@ -430,7 +461,7 @@ function settingsSection(nameOf) {
     if (busy) return;
     busy = true; readB.disabled = forteB.disabled = true;
     if (!quiet) say('Asking the RISE…');
-    try { show(await identify(nameOf())); }
+    try { show(await identify(nameOf())); missed = 0; watch(); }
     catch (e) {
       const why = e?.message;
       if (!quiet || state) say(why === 'denied' ? 'The browser didn\'t let this page talk SysEx to the RISE. Allow MIDI device control for this site, then read again.'
@@ -438,6 +469,23 @@ function settingsSection(nameOf) {
         : 'The RISE didn\'t answer. An original RISE or a RISE 2 should: is it on its USB cable, not Bluetooth?');
     } finally { busy = false; readB.disabled = forteB.disabled = false; }
   }
+  // Once read, read it again every couple of seconds while the page shows: its octave buttons (and,
+  // in its cyan mode, its faders' sensitivities) change it and say nothing over MIDI. Quietly: only a
+  // change is drawn, and not while a slider here is held; three silences in a row and it stops.
+  function watch() {
+    if (poll) return;
+    poll = setInterval(async () => {
+      if (busy || !state || document.hidden) return;
+      busy = true;
+      try {
+        const s = await identify(nameOf());
+        missed = 0;
+        const held = sliders.some((x) => x.input.matches(':active, :focus-visible'));
+        if (JSON.stringify(s) !== JSON.stringify(state) && !held && !armed) show(s);
+      } catch { if (++missed >= 3) stop(); } finally { busy = false; }
+    }, POLL);
+  }
+  const stop = () => { clearInterval(poll); poll = 0; };
   const disarm = () => { clearTimeout(armed); armed = 0; forteB.textContent = 'Set up for Forte'; forteB.classList.remove('armed'); };
   readB.addEventListener('click', () => read());
   forteB.addEventListener('click', async () => {
@@ -454,9 +502,11 @@ function settingsSection(nameOf) {
   });
   return {
     element: box,
+    /** the faders' lights to these (0..127), once its settings have been read (so SysEx is allowed) */
+    lights(values) { if (state) write(nameOf(), faderLights(values)).catch(() => {}); },
     /** a Seaboard came or went: read it by itself if the browser already allows SysEx */
     async connected(any, arrived) {
-      if (!any) { state = null; list.hidden = sens.hidden = forteB.hidden = true; readB.textContent = 'Read its settings'; say(''); disarm(); return; }
+      if (!any) { stop(); state = null; list.hidden = sens.hidden = forteB.hidden = true; readB.textContent = 'Read its settings'; say(''); disarm(); return; }
       if (!arrived || state) return;
       say('Its own settings (MIDI mode, Slide, sensitivity) can be read and set from here.');
       if (await granted()) read({ quiet: true });

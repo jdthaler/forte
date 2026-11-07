@@ -23,6 +23,8 @@
 
 #include "forte/background.h" // FORTE_THREADS
 #include "forte/engine.h"
+#include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "forte/queue.h"
 #include "gongs-model.h"
@@ -142,6 +144,10 @@ class Voice {
   View *full = &views[0], *lite = &views[1], *cs = &views[0];
   double vScale = 0;
   double extra = 0;
+  double liftK = 1; // how many times longer than usual the hand takes to still it (forte/lift.h)
+  double bent = 1;  // its plate × this (a note's own bend): its step in the plate's time, k, goes as it
+  void bend(double r) { bent = r; k = g.k * r; setDamping(); }
+  Press press;      // the mallet held against it while its key is down (forte/press.h)
   bool released = false, damped = false, killing = false, dead = false;
   int m = 1;
   double h = 0, calm = 0;
@@ -177,6 +183,9 @@ class GongEngine : public Engine {
   void setSustain(bool on) override;
   void allNotesOff() override;
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's strike point, at its next strike
+  // Glide: a hand pressing the rim, stiffening the plate: a few cents sharp
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
+  void pressure(double value, int key) override { presses.set(value, key); } // a firm press: the mallet held against the plate, muting it
   int voiceCount() const override { return nv; }
   void process(float *L, float *R, int n) override;
 
@@ -216,7 +225,8 @@ class GongEngine : public Engine {
   int nv = 0;
   std::array<Upsampler, 4> buses;
   bool sustain = false;
-  NoteExpression expr{0}; // each key's own strike point (no bend: a plate is cut to its pitch)
+  Presses presses; // each key's pressure and the channel's
+  NoteExpression expr{0, 0.1}; // each key's own strike point, and its bend (up only, ten cents at most)
   Voice *focus = nullptr;
   int64_t frame = 0, sinceView = 0;
   uint32_t serials = 0;

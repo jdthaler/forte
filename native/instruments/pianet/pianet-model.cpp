@@ -136,6 +136,16 @@ KeyReed keyReed(int m, double tipMass, double loss, double fs, double ratio) {
   return kr;
 }
 
+KeyReed padAt(const KeyReed &kr, double x) {
+  KeyReed o = kr;
+  for (int n = 0; n < o.N; n++) o.modes[n].phiC = o.nrm * o.unit.shape(n, x);
+  double cc = 0, ct = 0;
+  for (int n = 0; n < o.N; n++) { const ReedMode &md = o.modes[n]; const double w2 = pow(TWO_PI * md.f, 2); cc += pow(md.phiC, 2) / w2; ct += (md.phiC * md.phiT) / w2; }
+  for (int n = 0; n < o.N; n++) { ReedMode &md = o.modes[n]; md.release = md.phiC / pow(TWO_PI * md.f, 2) / cc; }
+  o.xc = x * o.L; o.kc = 1 / cc; o.tipGain = ct / cc;
+  return o;
+}
+
 // ---- pickups -----------------------------------------------------------------------------------
 double voicingT(int m) { const double r = 261.63 / keyFreq(m); return r >= 1 ? std::sqrt(r) : std::sqrt(std::sqrt(r)); }
 double emH2(double Y, double g) { const double e = Y / (EM_ELL + g); return (2 * (1 - std::sqrt(1 - e * e))) / e; }
@@ -158,11 +168,14 @@ Pluck::Pluck(const KeyReed &r, const PadParams &P, double fs_, double bend_, int
 // The modes at bend × their frequencies (the reed's stiffness × bend²): the recursions, the
 // compliances at the pad and the tip, and the end stop. A mode bent past 0.45 × the rate (where
 // keyReed cuts them) stays there: far above the output's band, and its recursion stays stable.
+constexpr double HAND_F = 2500; // Hz: a hand mutes the modes above this fully, those below by half
 void Pluck::coeffs(double r) {
   double Csum = 0, cs = 0, Ctip = 0;
   for (int i = 0; i < N; i++) {
     const ReedMode &md = kr->modes[i];
-    const double rr = fdlibm::exp(-md.sigma * k), wd = std::min(TWO_PI * md.f * r, TWO_PI * 0.45 * fs);
+    const double x2 = hand > 0 ? (md.f * r / HAND_F) * (md.f * r / HAND_F) : 0;
+    const double sg = hand > 0 ? md.sigma + hand * (0.5 + x2) / (1 + x2) : md.sigma;
+    const double rr = fdlibm::exp(-sg * k), wd = std::min(TWO_PI * md.f * r, TWO_PI * 0.45 * fs);
     A1[i] = 2 * rr * fdlibm::cos(wd * k); A2[i] = rr * rr;
     const double b = (k * rr * fdlibm::sin(wd * k)) / wd;
     PC[i] = md.phiC; PT[i] = md.phiT; B[i] = b * md.phiC; BT[i] = b * md.phiT;
@@ -192,7 +205,7 @@ void Pluck::setPad(const PadParams &P) {
 
 double Pluck::tip() const { double s = 0; for (int i = 0; i < N; i++) s += PT[i] * q[i]; return s; }
 void Pluck::press(double vel) { V = keySpeed(vel); hv = V; hT = hRest + PAD.travel; down = true; t = 0; released = false; }
-void Pluck::lift() { hv = -PAD.vRet; hT = hRest; down = false; }
+void Pluck::lift(double scale) { hv = -PAD.vRet / scale; hT = hRest; down = false; } // a fast lift slaps the pad back onto the reed
 
 double Pluck::step() {
   if (hv != 0) {

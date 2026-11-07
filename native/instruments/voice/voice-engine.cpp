@@ -94,7 +94,7 @@ void VoiceEngine::shape(Voice &v, double vowel, double jaw) {
 
 void VoiceEngine::start(Voice &v, int key, double velocity) {
   v.alive = true; v.held = true; v.stolen = false;
-  v.key = key; v.born = t; v.vel = std::clamp(velocity, 0.0, 1.0); v.after = 0;
+  v.key = key; v.born = t; v.vel = std::clamp(velocity, 0.0, 1.0); v.after = 0; v.liftK = 1;
   v.folds = Folds{};
   v.N = std::clamp((int)std::lround((P[p::length] / 100) * fo / C), 8, MAXN);
   for (int j = 0; j < MAXN; j++) v.F[0][j] = v.B[0][j] = v.F[1][j] = v.B[1][j] = 0;
@@ -147,9 +147,12 @@ void VoiceEngine::noteOn(int key, double velocity) {
   if (live > pick(kMaxVoices, 8, 6)) steal(v); // Quality: fewer singers at once
 }
 
-void VoiceEngine::noteOff(int key, double) {
+// Lift: how fast the breath falls: a slow lift is a sighing release (up to four times the usual),
+// a fast one a clean stop (a quarter of it).
+void VoiceEngine::noteOff(int key, double velocity) {
   for (Voice &v : voices) if (v.alive && v.held && v.key == key) {
-    v.held = false;
+    const double s = liftScale(velocity);
+    v.held = false; v.liftK = s * s;
     // the singer remembers the tension that sang this note (relative to the nominal one)
     if (v.fMeas > 0) learned[key] = std::clamp(v.Q / nominalQ(v.fT), 0.25, 4.0);
   }
@@ -194,7 +197,7 @@ void VoiceEngine::run(Voice &v, double *out, int m) {
   }
   v.fT = std::clamp(keyFreq(v.key) * keyboard.ratio(v.key) * bendNow * v.bend * pow(2.0, (depth * sin(v.vibPhase) + flutter) / 1200), 10.0, 0.2 * fo);
   // the lungs
-  const double tau = v.stolen ? STEAL_T : v.held ? P[p::onset] : P[p::release];
+  const double tau = v.stolen ? STEAL_T : v.held ? P[p::onset] : P[p::release] * v.liftK;
   const double gEnv = 1 - exp(-dt / tau), target = v.held ? 1 : 0;
   const double Pfull = P[p::pressure] * CMH2O * (0.35 + 0.95 * v.vel) * (1 + 0.8 * v.after) * lungs(v.Q);
   const double gMean = 1 - exp(-2 * PI * (v.fT / 6) * dt), gNoise = 1 - exp(-2 * PI * NOISE_HZ * dt);

@@ -4,12 +4,13 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './saw-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'saw',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: all 88, A0–C8 (past a real saw's two octaves, a bigger or smaller blade)
@@ -19,6 +20,7 @@ export const INSTRUMENT = {
   // its pressure presses the bow harder
   mpe: { bend: 48, slide: true },
   aftertouch: 'the bow presses harder', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how the bow leaves the blade: a fast lift springs it clear and the trapped note rings on, a slow one drags it off, damping the blade', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['bend', 'force', 'place', 'speed', 'vibrato'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/saw), built as WebAssembly
   wasm: { name: 'SawWasmEngine', module: new URL('./saw-wasm.js', import.meta.url).href, binary: new URL('../wasm/saw.wasm', import.meta.url).href },

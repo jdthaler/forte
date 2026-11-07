@@ -3,15 +3,17 @@
 // are the Web Audio specification's (the knee k found from the ratio; makeup = (1 / curve(1))^0.6),
 // so levels below the threshold come out as on the page. It has no look-ahead (Web Audio delays
 // the signal 6 ms to look ahead): the plugins have no latency, and a fast transient may overshoot
-// the threshold for the attack time.
+// the threshold for the attack time, but never kCeiling: a sample that would pass it takes the
+// gain down at once, and the gain comes back over the release (shared/limiter.js, the same).
 #pragma once
 
 namespace forte {
 
 class Limiter {
  public:
+  static constexpr double kCeiling = 0.95; // −0.45 dB re full scale: no sample leaves louder
   void set(double thresholdDb, double kneeDb, double ratio, double attack, double release, double fs);
-  void reset() { gain = 1; }
+  void reset() { gain = 1; ceiling = 1; }
   void process(float *L, float *R, int n);
   // the static curve, for tests: input amplitude → output amplitude (before the makeup gain)
   double curve(double x) const;
@@ -19,7 +21,7 @@ class Limiter {
 
  private:
   double linearThreshold = 1, kneeEnd = 1, kneeEndOut = 1, k = 1, ratio = 12;
-  double attackCoef = 0, releaseCoef = 0, gain = 1;
+  double attackCoef = 0, releaseCoef = 0, gain = 1, ceiling = 1;
   double kneeCurve(double x) const;
 };
 

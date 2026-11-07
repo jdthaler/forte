@@ -8,7 +8,7 @@
 import { INSTRUMENTS, SECTIONS, FILTERS, FORTE_VERSION } from './shared/registry.js';
 import { downloadLinks, withPlugins, latestRelease, releaseLine } from './shared/plugins.js';
 import { renderMarkdown } from './shared/markdown.js';
-import { FIELDS, words, hits, matches } from './shared/search.js';
+import { FIELDS, words, hits, matches, correct } from './shared/search.js';
 
 const $ = (s) => document.querySelector(s);
 const attr = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -133,7 +133,7 @@ function renderChips(ws, cur) {
 
 // Show what the tab, the search and the filters leave in, with the search's words marked
 function apply() {
-  const cur = current(), ws = words(box.value), on = filtering();
+  const cur = current(), ws = correct(words(box.value), ready), on = filtering(); // a slip stands for the words it could mean
   const hit = new Set(ready.filter((i) => matches(i, ws, chosen)).map((i) => i.id));
   const counts = { all: hit.size };
   for (const s of SECTIONS) counts[s.id] = ready.filter((i) => i.section === s.id && hit.has(i.id)).length;

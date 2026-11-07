@@ -17,11 +17,12 @@
 namespace forte::glass {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { press, wet, v0, rough, speed, treadle, split, loss, water, fullRange, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { press, rub, wet, v0, rough, speed, treadle, split, loss, water, fullRange, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
 inline const FormatSegment kFormat_press[] = {{kNoLimit, "", " × speaking threshold", 1, 0, 1, false, false, false, false}};
+inline const FormatSegment kFormat_rub[] = {{0.24999999999999997, "at the rim", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", "° below the rim", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_wet[] = {{0.24999999999999997, "dry · ", " %", 100, 0, 0, false, false, false, false}, {0.5999999999999999, "damp · ", " %", 100, 0, 0, false, false, false, false}, {kNoLimit, "wet · ", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_v0[] = {{kNoLimit, "", " cm/s", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_rough[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
@@ -56,6 +57,7 @@ inline const FormatSegment kFormat_cents11[] = {{kNoLimit, "", " ¢", 1, 0, 2, f
 
 inline const ParamInfo kParams[p::count] = {
   {"press", "Finger pressure", "Finger", ParamKind::continuous, 0.1, 20, 6, 0, true, true, nullptr, 0, kFormat_press, 1},
+  {"rub", "Finger below the rim", "Finger", ParamKind::continuous, 0, 10, 0, 0.5, false, false, nullptr, 0, kFormat_rub, 2},
   {"wet", "Skin moisture", "Finger", ParamKind::continuous, 0, 1, 0.85, 0.01, false, false, nullptr, 0, kFormat_wet, 3},
   {"v0", "Stribeck speed v₀", "Finger", ParamKind::continuous, 0.05, 2, 0.5, 0, true, false, nullptr, 0, kFormat_v0, 1},
   {"rough", "Skin ridges (friction noise)", "Finger", ParamKind::continuous, 0, 0.1, 0.02, 0.001, false, false, nullptr, 0, kFormat_rough, 1},
@@ -82,13 +84,18 @@ inline const ParamInfo kParams[p::count] = {
   {"cents9", "Major 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
+  {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
 inline const PresetValue kPreset1[] = {{p::split, 0}, {p::treadle, 0}};
 inline const PresetValue kPreset2[] = {{p::speed, 0.25}};
 inline const PresetValue kPreset3[] = {{p::speed, 1.2}};
 inline const PresetValue kPreset4[] = {{p::split, 30}};
-inline const PresetValue kPreset5[] = {{p::wet, 0.1}};
+inline const PresetValue kPreset5[] = {{p::wet, 0.1}, {p::press, 20}};
 inline const PresetValue kPreset6[] = {{p::press, 10}};
 inline const PresetValue kPreset7[] = {{p::water, 0.5}};
 inline const PresetValue kPreset8[] = {{p::loss, 0.0001}};
@@ -101,7 +108,7 @@ inline const Preset kPresets[] = {
   {"Lazy treadle (slow warble)", kPreset2, 1},
   {"Fast treadle (big bowls struggle)", kPreset3, 1},
   {"Badly blown bowls (deep warble)", kPreset4, 1},
-  {"Dry fingers (no grip)", kPreset5, 1},
+  {"Dry fingers (no grip)", kPreset5, 2},
   {"Pressing hard (the skin squeals)", kPreset6, 1},
   {"Bowls half full of water", kPreset7, 1},
   {"Lead crystal (rings for ages)", kPreset8, 1},
@@ -130,6 +137,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .compassLo = 53, .compassHi = 93, .compass = p::fullRange, .space = Space::hold,
     .modWheel = p::speed, .modWheelMax = 1,
+    .slide = p::rub, .slideMax = 5,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 0.5},
     .midiVelocity = midiVelocity, .create = create,

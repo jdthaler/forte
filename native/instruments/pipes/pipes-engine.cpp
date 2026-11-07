@@ -159,6 +159,17 @@ void PipeEngine::setParams(const double *p) {
   }
   if (!started) { Pset = Pr = Pc = P[p::pressure]; nz = NOISE * P[p::noise]; started = true; }
   if (P[p::wind] != stiff) { stiff = P[p::wind]; wsys = windSystem(P[p::wind]); }
+  for (int i = 0; i < nVoices; i++) { Voice *v = voices[i]; if (v->down && !v->fading) { v->wind = palletOf(v->key); if (v->wind >= 1) v->aTarget = 1; } } // the held keys' pallets follow the knob
+}
+
+// How far a key's pallet opens, as the share of the chest's wind it lets through: the knob's, or
+// the key's own slide.
+double PipeEngine::palletOf(int key) const { return std::clamp(expr.slideOr(key, P[p::pallet]), 0.05, 1.0); }
+
+void PipeEngine::slide(double value, int key) {
+  expr.setSlide(value, key);
+  if (key < 0 || key > 127) return;
+  if (Voice *v = byKey[key]; v && v->down && !v->fading) { v->wind = palletOf(key); if (v->wind >= 1) v->aTarget = 1; }
 }
 
 // A free voice with room for `need` doubles of delay lines; when every one is busy, the most
@@ -232,7 +243,7 @@ bool PipeEngine::startKey(int key, double velocity, const KeyModels *models, Dat
     }
   }
   v->nb = expr.bendOf(key); // a key pressed again starts at its own bend, at once (process retimes its pipes)
-  v->down = true; v->aTarget = 1; v->aRate = 1 / (palletTime(velocity, P[p::rise]) * fs);
+  v->down = true; v->aTarget = 1; v->wind = palletOf(key); v->aRate = 1 / (palletTime(velocity, P[p::rise]) * fs);
   for (int r = 0; r < RANKS; r++) if (v->slider[r] > 0) v->pipes[r].asleep = false;
   focus = v;
   return true;
@@ -360,8 +371,6 @@ void PipeEngine::processBlock(float *L, float *R, int n) {
     for (int k = 0; k < nVoices; k++) {
       Voice *v = voices[k];
       if (v->dead) continue;
-      double a = v->a;
-      if (a != v->aTarget) { a = v->aTarget > a ? std::min(v->aTarget, a + v->aRate) : std::max(v->aTarget, a - v->aRate); v->a = a; }
       // the groove: the pallet's flow equals the flues' (quasi-static); the sliders move towards
       // their stops, each opening its pipe's foot as a valve (smoothstep)
       double kk = 0;
@@ -374,6 +383,11 @@ void PipeEngine::processBlock(float *L, float *R, int n) {
         kk += v->list[r]->flue * v->open[q];
       }
       kk *= v->kPal;
+      // a pallet held part open (a key's own slide): open as far as lets that share of the wind
+      // through to the feet, a²/(a² + kk²) = wind
+      if (v->wind < 1 && v->down && !v->fading) v->aTarget = std::min(1.0, kk * std::sqrt(v->wind / (1 - v->wind)));
+      double a = v->a;
+      if (a != v->aTarget) { a = v->aTarget > a ? std::min(v->aTarget, a + v->aRate) : std::max(v->aTarget, a - v->aRate); v->a = a; }
       const double pg = a > 0 ? (pc * a * a) / (a * a + kk * kk) : 0;
       v->pg = pg;
       double s1 = 0, s2a = 0, s2b = 0, s4[4] = {0, 0, 0, 0};

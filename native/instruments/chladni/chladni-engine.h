@@ -23,6 +23,7 @@
 #include "chladni-params.h"
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 
 namespace forte::chladni {
@@ -50,12 +51,16 @@ class ChladniPlateEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override; // aftertouch: the bow presses harder
   void slide(double value, int key) override { expr.setSlide(value, key); } // MPE: one note's bow along its edge
+  // Glide: that plate's clamp tightened, stiffening it: up to a semitone sharp
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   int voiceCount() const override { return count; }
   void process(float *L, float *R, int n) override;
 
   struct Voice {
     int key = 0;
     bool touch = false, dead = false, hand = false, stick = false;
+    double ringK = 1; // how many times longer than usual it rings on under the hand after this lift (forte/lift.h)
+    double bent = 1;  // its modes × this (a note's own bend: the clamp tightened)
     double vel = 0, after = 0, bite = 0;
     double N = 0, V = 0;       // the bow's force on the edge (N) and its speed (m/s)
     double shift = 0, s = 0;   // the bow's shift along the edge, glided, and its place on the path
@@ -84,7 +89,7 @@ class ChladniPlateEngine : public Engine {
   double pressureAll = 0;
   uint64_t version = 1;
   KeyData<Plate> plates;
-  NoteExpression expr{0};
+  NoteExpression expr{0, 1}; // each note's own bow place, and its bend (up only, a semitone at most)
   struct Pending { int key; double vel; };
   std::array<Pending, NK> pending{};
   int npending = 0;

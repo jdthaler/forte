@@ -25,6 +25,7 @@
 #include "forte/background.h"
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "cristal-model.h"
 #include "cristal-params.h"
@@ -55,6 +56,8 @@ class CristalEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override; // aftertouch: the finger presses harder
   void slide(double value, int key) override;    // MPE: one finger's own stroke speed
+  // Glide: a finger loading the rod's tip, adding to its mass: a few cents flat
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   int voiceCount() const override { return count; }
   // the tests: whether the key's stem for the current parameters is built (asks for it if not)
   bool ready(int key) { return bool(stems.get(key, version)); }
@@ -64,6 +67,7 @@ class CristalEngine : public Engine {
     int key = 0;
     double Nreg = 0, after = 0, vel = 0;
     bool touch = false, stick = false, dead = false, built = false;
+    double lamOff = 0; // how fast the fingers leave the rod after this lift, a sample (0: as usual; forte/lift.h)
     double Nn = 0, Nlift = 0, nz = 0, peak = 0, uf = 0, v = 0, F = 0;
     double pos = 0, t = 0; // along the stroke (m); time into a turn or a return (s)
     double firm = 0;       // how much harder than it holds the finger still presses, after landing
@@ -75,6 +79,7 @@ class CristalEngine : public Engine {
     int N = 0;
     int cap = MODES; // the modes it plays (the Quality when it started: build)
     double Y = 0;    // the rod's velocity per newton of friction, one sample on
+    double bent = 1; // its modes × this (a note's own bend)
     std::array<double, MODES> q{}, q1{}, a1{}, a2{}, b{}, tip{}, col{};
   };
 
@@ -101,7 +106,7 @@ class CristalEngine : public Engine {
   const double k;
   Friction fr{};
   double pressureAll = 0;
-  NoteExpression expr{0};
+  NoteExpression expr{0.1, 0}; // each finger's own stroke speed, and its bend (down only, ten cents at most)
   int32_t rng = 31415;
   int focus = -1, tick = 0;
   std::array<Voice, NK> slots{};

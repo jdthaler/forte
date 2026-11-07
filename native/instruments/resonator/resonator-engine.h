@@ -30,6 +30,7 @@
 
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 #include "resonator-model.h"
 #include "resonator-params.h"
@@ -60,6 +61,9 @@ class ResonatorEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override; // pressing a held key harder: more current
   void slide(double value, int key) override;    // MPE: the note's own brightness
+  // Glide: the loop moved up (or down) the string's harmonics to the one nearest the bent pitch, as
+  // the MRP's own pitch bend does
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   int voiceCount() const override { return count; }
   void process(float *L, float *R, int n) override;
 
@@ -81,9 +85,11 @@ class ResonatorEngine : public Engine {
     int key = 0;
     bool keyDown = false, driven = false, damped = false, hammerOn = false, contact = false;
     double vel = 0, press = 0, bright = 0;
+    double liftK = 1; // how many times longer than usual its drive and damper take to stop it (forte/lift.h)
     double env = 0, current = 0, Inote = 0; // the drive's envelope, the coil's current (A), the note's signal current (A)
     uint64_t order = 0;     // when it was given its channel
     int nLoops = 1, N = 0, np = 0, nu = 1, quiet = 0;
+    double loopR = 1; // the note's own bend its loops were set for
     Loop loops[3];
     double g[DRIVE_HARMONICS]{};
     Strings s;
@@ -107,6 +113,7 @@ class ResonatorEngine : public Engine {
  private:
   void build(Voice &v, int key);
   void setDamper(Voice &v);
+  void lifted(Voice &v, double scale); // the damper's recursions for a lift `scale` times as long as usual
   void drive(Voice &v, double velocity);
   void loopsFor(Voice &v);
   void run(float *L, float *R, int n);
@@ -122,7 +129,9 @@ class ResonatorEngine : public Engine {
   uint64_t clock = 0;
   uint32_t rng = 2009;
   int focus = -1, tick = 0;
-  NoteExpression expr{0};
+  NoteExpression expr{24, 36}; // each key's own slide, and its bend: from two octaves down (a higher harmonic's
+                               // way back to the fundamental) to the 8th harmonic
+  int harmonicFor(int h0, double r, int np) const;
   std::array<Voice, NK> slots{};
   std::array<float, 128> heard{}; // this block's pickup
 };

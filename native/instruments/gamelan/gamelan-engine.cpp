@@ -10,6 +10,7 @@
 namespace forte::gamelan {
 
 constexpr double OUT = 0.3;
+constexpr double BEND_T = 0.02;   // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double CHORD = 0.04;    // s: strokes this close together are a chord, and the hand spares them
 constexpr int POST_EVERY = 2048;  // samples between the views' messages
 
@@ -44,8 +45,8 @@ void GamelanEngine::tune(Voice &v, double beat) {
     const double r = u.f1 / v.d.f1;
     for (int i = 0; i < v.count; i++) {
       const Mode &m = v.d.m[i];
-      const ModeCoeffs c = modeCoeffs(m.f * r, m.sigma + (v.damped ? hand : 0), fs);
-      u.m[i].a1 = c.a1; u.m[i].a2 = c.a2; u.m[i].b = c.b; u.m[i].w = TAU * m.f * r; u.m[i].out = m.out;
+      const ModeCoeffs c = modeCoeffs(m.f * r * v.bent, m.sigma + (v.damped ? hand / v.liftK : v.press.on() ? hand * v.press.p : 0), fs);
+      u.m[i].a1 = c.a1; u.m[i].a2 = c.a2; u.m[i].b = c.b; u.m[i].w = TAU * m.f * r * v.bent; u.m[i].out = m.out;
     }
     if (v.d.hasTube) {
       const ModeCoeffs c = modeCoeffs(v.d.tube.f, v.d.tube.sigma, fs);
@@ -71,7 +72,7 @@ void GamelanEngine::stroke(Voice &v, double velocity) {
   const int count = std::min(v.d.count, pick(kModes, 10, 6));
   for (int i = v.count; i < count; i++) for (Sub &s : v.sub) s.m[i] = Res{}; // modes this voice had no room for
   v.count = count;
-  v.damped = false;
+  v.damped = false; v.liftK = 1; v.bent = expr.bendOf(v.key); // (bent before it was struck)
   tune(v, v.d.pairs ? beatOf(v.key) : 0);
   // each partner's player strikes their own bar: the pair carries the single instrument's power
   const double share = v.subs == 2 ? std::sqrt(0.5) : 1;
@@ -117,10 +118,15 @@ void GamelanEngine::noteOn(int key, double velocity) {
   post(m);
 }
 
-void GamelanEngine::noteOff(int key, double) {
+// Lift: with the hand damping on release, how firmly it lands (a slow lift lets the bar ring
+// longer, a fast one stops it sooner); with it damping at the next stroke, a fast lift damps at once.
+void GamelanEngine::noteOff(int key, double velocity) {
+  const int mode = (int)P[p::damping];
   for (Voice &v : voices) if (v.key == key && v.held) {
     v.held = false; v.released = true;
-    if ((int)P[p::damping] == damping_::release && !sustain) damp(v);
+    if (sustain) continue;
+    if (mode == damping_::release) { v.liftK = liftScale(velocity); damp(v); }
+    else if (mode == damping_::next && liftPast(velocity) > 0) { v.liftK = liftScale(velocity); damp(v); }
   }
 }
 
@@ -128,7 +134,7 @@ void GamelanEngine::setSustain(bool on) {
   sustain = on;
   if (on) return;
   const int mode = (int)P[p::damping];
-  if (mode == damping_::release) { for (Voice &v : voices) if (v.released) damp(v); return; }
+  if (mode == damping_::release) { for (Voice &v : voices) if (v.released && !v.damped) { v.liftK = 1; damp(v); } return; }
   if (mode != damping_::next) return;
   // the hand comes back down on every bar but each player's last stroke (and its chord)
   for (Voice &v : voices) {
@@ -153,6 +159,8 @@ void GamelanEngine::process(float *L, float *R, int n) {
   for (int i = 0; i < n; i++) L[i] = R[i] = 0;
   for (Voice &v : voices) {
     if (v.d.pairs) { const double b = beatOf(v.key); if (b != v.beat) tune(v, b); }
+    if (v.press.follow(v.held ? presses.of(v.key) : 0, n, fs) && !v.damped) tune(v, v.beat);
+    if (const double to = expr.bendOf(v.key); v.bent != to) { v.bent = glideTo(v.bent, to, n / fs, BEND_T); tune(v, v.beat); } // Glide: a hand on the bar
     const int count = v.count;
     const bool tube = v.d.hasTube, nl = v.d.G > 0 && v.d.round2 >= 0 && v.d.round2 < count;
     const int k2 = v.d.round2;

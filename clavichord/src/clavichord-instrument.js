@@ -4,22 +4,26 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './clavichord-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'clavichord',
-  groups: GROUPS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
   presets: PRESETS,
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: A0–C8
   compass: { keys: [29, 89], param: 'fullRange' }, // FF–f³, until Full range opens the rest
   space: 'hold',                        // Space and CC64 hold the keys down (a clavichord has no dampers to lift)
   modWheel: 'bebung',                   // CC1: the Bebung's depth
-  // MPE: no bend (the only way to bend a clavichord's note is to press it, and pressure does
-  // that); the slide sets the note's own Bebung, its pressure how hard its key is held.
-  mpe: { bend: 0, slide: true },
+  // MPE: the only way to bend a clavichord's note is to press it: a note's own bend presses its key
+  // (up only, a semitone's bend as hard as full pressure); the slide sets the note's own Bebung, its
+  // pressure how hard its key is held.
+  mpe: { bend: 1, press: true, slide: true },
+  glide: 'the finger rocking onto the key, as Press does: the note goes sharp', // what a note's own bend does
   aftertouch: 'the tangent presses harder: the note goes sharp', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'how fast the tangent leaves the strings', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['rate', 'listing', 'detune', 'press', 'bebung'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/clavichord), built as WebAssembly
   wasm: { name: 'ClavichordWasmEngine', module: new URL('./clavichord-wasm.js', import.meta.url).href, binary: new URL('../wasm/clavichord.wasm', import.meta.url).href },

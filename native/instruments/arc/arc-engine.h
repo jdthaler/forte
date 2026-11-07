@@ -27,6 +27,7 @@
 #include "arc-voice.h"
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
 
 namespace forte::arc {
@@ -55,11 +56,13 @@ struct Arc {
   int mKey[MAXE] = {}; double mC[MAXE] = {}; int nM = 0;
   int tKey[MAXE] = {}; double tC[MAXE] = {}, tV[MAXE] = {}, tI[MAXE] = {}, tR[MAXE] = {}, tY[MAXE] = {}, tW[MAXE] = {};
   int8_t tDir[MAXE] = {}; int nT = 0;
+  double tS[MAXE] = {}; // how fast an opening contact parts, × the usual (a lift's: forte/lift.h)
+  double tK[MAXE] = {}; // how fast a closing contact closes, × the usual (a soft strike's)
   double capV[128], capT[128] = {};
   double CB = 0, vB = 0, ic = 0, is = 0, X = 1, u = 0, ia = 0, P = 0, uDC = 0, Imean = 0;
   uint32_t seed = 1; double nf = 0;
   double gl, gr;
-  double onset = 0, released = 0; int pendKey = NONE; double pendC = 0, pendAt = 0;
+  double onset = 0, released = 0; int pendKey = NONE; double pendC = 0, pendAt = 0, pendVel = 0.75;
   double stP = 0, stI2 = 0, stOut = 0, stN = 0, stUmax = 0;
   float trail[2 * TRAIL] = {}; int ti = 0, tcount = 0, dec = 1;
   int bendKey = NONE; double lb = 1; // the key whose own bend (MPE) slides this arc's core, and L's factor 1/r²
@@ -70,8 +73,8 @@ struct Arc {
   bool held() const;
   bool has(int key) const;
   bool holds(int key) const;
-  void engage(int key, double C);
-  void release(int key);
+  void engage(int key, double C, double velocity = 0.75); // velocity: the strike's (closeSpeed, kickOf)
+  void release(int key, double speed = 1);
   void releaseAll();
   int lead() const; // the newest key it holds
   void run(int n, const double *emf);
@@ -92,6 +95,9 @@ class ArcEngine : public Engine {
   void bend(double value) override; // the coil's iron core slides: L by 1/r², the note by r (talk: the voice's pitch)
   // MPE: a key's own bend slides the core of the arc that sings it (one arc: the newest key's)
   void noteBend(double ratio, int key) override { ex.setBend(ratio, key); }
+  // and its slide sets the electrode gap, its press the arc current: the newest held key's (one supply)
+  void slide(double value, int key) override;
+  void pressure(double value, int key) override;
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -119,6 +125,10 @@ class ArcEngine : public Engine {
 
  private:
   void setup(double seed, bool quiet, int os);
+  void live(); // the gap and the current: the knobs', or the newest key's slide and press
+  NewestKey newest;
+  std::array<double, 128> press{};
+  double chanPress = 0;
   void reconfigure(int mode, int nArcs);
   double capOf(int key);
   void block(float *L, float *R, int s0, int n);

@@ -4,18 +4,24 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './whistlers-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
+import { EXPRESSION, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 export const INSTRUMENT = {
   id: 'whistlers',
-  groups: GROUPS,
-  presets: PRESETS,
+  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
+  presets: offInPresets(PRESETS, ['lift']), // its presets turn off what makes little sense on it (shared/expression.js)
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: all 88, A0–C8
   space: 'sustain',                     // Space and CC64: keeps the receivers open
   modWheel: { param: 'chorus', max: 20 }, // CC1: chorus on the held keys' field lines
+  // MPE: a note's own bend moves it to a field line farther in or out; its slide, before the
+  // stroke, is its own line's plasma density (up to ten times the knob's default)
+  mpe: { bend: 2, slide: { param: 'density', max: 10 } },
+  glide: 'the field line\'s L-shell: the nose higher or lower', // what a note's own bend does
   aftertouch: 'more chorus', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  lift: 'a slow lift lets the whistler fade slowly; a fast one sends an echo hopping back from the other hemisphere', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['ducts', 'echo', 'density', 'sferic', 'chorus'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/whistlers), built as WebAssembly
   wasm: { name: 'WhistlersWasmEngine', module: new URL('./whistlers-wasm.js', import.meta.url).href, binary: new URL('../wasm/whistlers.wasm', import.meta.url).href },

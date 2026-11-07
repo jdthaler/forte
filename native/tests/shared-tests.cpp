@@ -149,6 +149,19 @@ TEST("limiter: Web Audio's curve and makeup gain; below the threshold, a constan
   for (int i = 0; i < 48000 / 8; i++) { float a = 3, b = 3; l.process(&a, &b, 1); if (i > 2000) CHECK(a < 1.05 * l.makeup); } // a loud input settles under 0 dB (× makeup)
 }
 
+TEST("limiter: no sample leaves louder than the ceiling, even a spike the attack would let through") {
+  Limiter l;
+  l.set(-3, 3, 12, 0.002, 0.15, 48000);
+  const int n = 48000;
+  std::vector<float> L(n), R(n);
+  for (int i = 0; i < n; i++) L[i] = R[i] = (float)(0.1 * std::sin(i * 0.05) + (i < 2400 && i % 120 < 3 ? 2 : 0));
+  l.process(L.data(), R.data(), n);
+  double pk = 0;
+  for (int i = 0; i < n; i++) pk = std::max({pk, (double)std::fabs(L[i]), (double)std::fabs(R[i])});
+  CHECK(pk <= Limiter::kCeiling + 1e-6);
+  CHECK_NEAR(L[n - 1] / (0.1 * std::sin((n - 1) * 0.05)), l.makeup, 0.02); // the gain has come back
+}
+
 TEST("chain: tone, body, room and volume as the pages' chain gives them (no limiter)") {
   Chain c;
   c.volume = 0; c.room = 1; c.roomSeconds = 1.2; c.tone = 2; c.body = 3; c.bodySeconds = 0.3; c.bodyDry = 0.7; c.bodyWet = 1.2;

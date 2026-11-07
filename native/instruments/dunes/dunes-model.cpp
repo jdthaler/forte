@@ -97,12 +97,16 @@ void Population::init(int count, double f0, double spread, double fs, uint32_t s
     w[j] = f0 * (1 + spread * invNormal((j + 0.5) / n)) / fs;
     phase[j] = (xorshift(seed) >> 8) / 16777216.0; // incoherent: the avalanche starts at random
   }
-  const double tau = 2 * CAVITY_Q / (TAU * f0), r = exp(-1 / (tau * fs));
-  rr = r * cos(TAU * f0 / fs); ri = r * sin(TAU * f0 / fs);
+  tune(f0, fs);
   zr = zi = 0;
   double sr = 0, si = 0;
   for (int j = 0; j < n; j++) { sr += cos(TAU * phase[j]); si += sin(TAU * phase[j]); }
   mr = sr / n; mi = si / n;
+}
+
+void Population::tune(double f0, double fs) {
+  const double tau = 2 * CAVITY_Q / (TAU * f0), r = exp(-1 / (tau * fs));
+  rr = r * cos(TAU * f0 / fs); ri = r * sin(TAU * f0 / fs);
 }
 
 void Population::step(double kdt, double ndt, const float *pulse, double &a, double &b) {

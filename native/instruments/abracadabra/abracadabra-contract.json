@@ -25,17 +25,22 @@
     {"id":"cents8","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"cents9","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"cents10","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
-    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false}
+    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"strikeOn","kind":"toggle","def":true},
+    {"id":"glideOn","kind":"toggle","def":true},
+    {"id":"slideOn","kind":"toggle","def":true},
+    {"id":"pressOn","kind":"toggle","def":true},
+    {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"ABRACADABRA-10 cm and a strongly coupled axion","values":{}},
-    {"name":"At the CAST limit: lost in the SQUID's noise","values":{"coupling":6.6e-11}},
-    {"name":"A meter-scale toroid at 5 T hears it","values":{"coupling":6.6e-11,"size":100,"field":5}},
-    {"name":"A cold stream beside the halo: beats","values":{"stream":0.3}},
-    {"name":"A cold halo: long, slow swells","values":{"halo":40}},
-    {"name":"A galaxy cluster's hot halo: a band of noise","values":{"halo":1200}},
-    {"name":"A slow magnet: notes that charge up","values":{"ramp":1.5}},
-    {"name":"A noiseless SQUID: the axion alone","values":{"noise":0}},
-    {"name":"A fast stream (700 km/s): a second line, sharp of the halo","values":{"stream":0.4,"streamSpeed":700}}
+    {"name":"ABRACADABRA-10 cm and a strongly coupled axion","values":{"glideOn":false,"liftOn":false}},
+    {"name":"At the CAST limit: lost in the SQUID's noise","values":{"glideOn":false,"liftOn":false,"coupling":6.6e-11}},
+    {"name":"A meter-scale toroid at 5 T hears it","values":{"glideOn":false,"liftOn":false,"coupling":6.6e-11,"size":100,"field":5}},
+    {"name":"A cold stream beside the halo: beats","values":{"glideOn":false,"liftOn":false,"stream":0.3}},
+    {"name":"A cold halo: long, slow swells","values":{"glideOn":false,"liftOn":false,"halo":40}},
+    {"name":"A galaxy cluster's hot halo: a band of noise","values":{"glideOn":false,"liftOn":false,"halo":1200}},
+    {"name":"A slow magnet: notes that charge up","values":{"glideOn":false,"liftOn":false,"ramp":1.5}},
+    {"name":"A noiseless SQUID: the axion alone","values":{"glideOn":false,"liftOn":false,"noise":0}},
+    {"name":"A fast stream (700 km/s): a second line, sharp of the halo","values":{"glideOn":false,"liftOn":false,"stream":0.4,"streamSpeed":700}}
   ]
 }

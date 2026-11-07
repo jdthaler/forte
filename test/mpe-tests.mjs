@@ -9,6 +9,8 @@ import assert from 'node:assert/strict';
 import { createMpe, bendRatio, slideFrom, MEMBER_BEND } from '../shared/mpe.js';
 import { tunedFreq } from '../shared/tuning.js';
 import { INSTRUMENTS } from '../shared/registry.js';
+import { slideOf } from '../shared/expression.js';
+import { wheelValue } from '../shared/midi.js';
 import { loadInstrument, defaultsOf, Player } from '../tools/headless.mjs';
 import { loadEngine } from '../tools/engine.mjs';
 import { fft } from '../tools/audio-util.mjs';
@@ -165,16 +167,27 @@ function shift(a, b, guess) {
   return (l + r) / 2;
 }
 // Instruments whose spectrum does not stretch with the pitch (test/tuning-tests.mjs OWN), or whose
-// bend does not (the NMR keyboard's moves every line by the same hertz): their own suites measure
-// a note's bend
-const OWN = ['bubbles', 'stars', 'quantum', 'blackhole', 'nmr'];
+// bend does not (the NMR keyboard's moves every line by the same hertz; the resonator piano's moves
+// its drive to another harmonic; a whistler sweeps too broad a band to find a shift in): their own
+// suites measure a note's bend
+const OWN = ['bubbles', 'quantum', 'blackhole', 'nmr', 'resonator', 'whistlers', 'ring'];
 // Instruments whose physics pulls a bent note off its ratio, as it pulls the wheel's (their own
 // suites check a note's bend against the wheel's): cents allowed
-const LOOSE = { windharp: 8, arc: 12 }; // the wake pulls a string toward its shedding; the arc's lag pulls its coil
+const LOOSE = { windharp: 8, arc: 12, cellulophone: 10, telharmonium: 10 }; // the wake pulls a string toward its shedding; the arc's lag pulls its coil;
+// the discs and the shafts reach a struck note's bend through their inertia (one motor: the newest key's)
 
 // Instruments whose pressure takes a while to be heard (the hydraulis's pumps), or is heard only
 // with a control on (the cimbalom's tremolo)
-const PRESS_SLOW = ['hydraulis'], PRESS_WITH = { cimbalom: { roll: 12 } };
+const PRESS_SLOW = ['hydraulis', 'project8'], PRESS_WITH = { cimbalom: { roll: 12 } };
+// Instruments whose note's bend is measured with the strings that don't bend silent (the hurdy-gurdy's drones),
+// or the Telharmonium's flywheel at its lightest
+const BEND_WITH = { hurdygurdy: { trompette: false, mouche: false, gros: false }, vibraphone: { tubes: false }, marimba: { tubes: false }, telharmonium: { flywheel: 0.2 } }; // (and the bars' tubes, which stay on the note)
+// Instruments whose note's bend is heard only past a certain reach (the resonator piano's: another harmonic)
+const BEND_FAR = { resonator: 4 };
+// Instruments whose one motor turns every note: it follows the newest held key's own bend
+const ONE_MOTOR = ['organ', 'telharmonium', 'cellulophone'];
+// Instruments whose slide is heard only with a control set (the birdsong's syllable rate: a whistle has none)
+const SLIDE_WITH = { birdsong: { syllable: 'trill' } };
 
 console.log('the instruments');
 for (const slug of slugs) {
@@ -184,30 +197,49 @@ for (const slug of slugs) {
   const play = (events, sec = 0.6, fs = FS) => new Player(I, Engine, fs, D).render(sec, [...keys.flatMap((k) => [[0.01, 'on', k, 0.7], [0.45, 'off', k]]), ...events]);
   const plain = play([]);
   const { bend = 0, slide = false, press = false } = I.mpe ?? {};
-  await test(`${slug}: ${bend ? `one note bends up to ±${bend} semitones` : 'no note bends alone'}${slide ? `, and slides its own ${I.modWheel.param ?? I.modWheel}` : ''}; a bend and a slide of none, before and while a note sounds, change nothing at all`, () => {
-    if (I.mpe) assert.deepEqual(Object.keys(I.mpe).filter((k) => !['bend', 'slide', 'press'].includes(k)), [], 'mpe: { bend, slide, press }');
-    if (slide) assert.ok(I.modWheel, 'a slide is a mod wheel of its own');
+  const sl = slideOf(I), slP = sl && I.groups.flatMap((g) => g.params).find((q) => q.id === sl.param);
+  await test(`${slug}: ${bend ? `one note bends ${I.mpe.way || press ? `${I.mpe.way ?? 'up'} by ` : '±'}${bend} semitones` : 'no note bends alone'}${slide ? `, and slides its own ${sl.param}` : ''}; a bend and a slide of none, before and while a note sounds, change nothing at all`, () => {
+    if (I.mpe) assert.deepEqual(Object.keys(I.mpe).filter((k) => !['bend', 'slide', 'press', 'way'].includes(k)), [], 'mpe: { bend, slide, press, way }');
+    if (I.mpe?.way !== undefined) assert.ok(['up', 'down'].includes(I.mpe.way) && bend > 0, "mpe.way: 'up' or 'down', for a note that bends");
+    if (I.glide !== undefined) assert.ok(bend > 0 && typeof I.glide === 'string' && I.glide.length > 3 && I.glide.length < 90 && !/[.]$/.test(I.glide), 'glide: a short phrase, no full stop, for a note that bends');
+    if (slide) assert.ok(slP, 'a slide moves a parameter of its own (the mod wheel\'s, or the one mpe.slide names)');
     const none = play(keys.flatMap((k) => [[0, 'noteBend', k, 0], [0, 'slide', k, NaN], [0.2, 'noteBend', k, 0], [0.2, 'slide', k, NaN]]));
     assert.ok(!differs(none[0], plain[0]) && !differs(none[1], plain[1]), 'a bend of 0 and no slide change the sound');
-    const bent = play([[0, 'noteBend', keys[0], 5], [0.2, 'noteBend', keys[1], -3], [0.25, 'noteBend', keys[2], 2]]) /* every key: one arc follows only its newest */, slid = play([[0, 'slide', keys[0], 1], [0.2, 'slide', keys[1], 0.5]]);
+    const far = BEND_FAR[slug] ?? 1, bent = play([[0, 'noteBend', keys[0], 5 * far], [0.2, 'noteBend', keys[1], -3 * far], [0.25, 'noteBend', keys[2], 2 * far]]) /* every key: one arc follows only its newest */, slid = play([[0, 'slide', keys[0], 1], [0.2, 'slide', keys[1], 0.5]]);
     assert.equal(differs(bent[0], plain[0]), bend > 0, bend ? 'a note\'s bend changes the sound' : 'an instrument that cannot bend one note ignores its bend');
     if (!slide) assert.ok(!differs(slid[0], plain[0]), 'an instrument whose notes have no slide ignores it');
+    else { // slid as far as it goes before its note: it sounds otherwise
+      const P = { ...D, ...SLIDE_WITH[slug] }, playAt = (ev) => new Player(I, Engine, FS, P).render(0.6, [...keys.flatMap((k) => [[0.01, 'on', k, 0.7], [0.45, 'off', k]]), ...ev]);
+      const base = playAt([]), far = playAt(keys.map((k) => [0, 'slide', k, 1])); // every key: an arc follows only its newest
+      assert.ok(differs(far[0], base[0]) || differs(far[1], base[1]), `its notes slid fully (${sl.param} ${wheelValue(slP, 127, sl.max ?? slP.max)}) sounds otherwise`);
+    }
   });
   if (bend && press) {
     // it bends a note as its wheel does, by pressing its key harder: up only, as far as a press goes
-    await test(`${slug}: a note struck bent fully up sounds as sharp as its wheel at full; one bent down sounds as it was`, () => {
+    // (or, with no wheel to bend it, as its key pressed fully: the clavichord's)
+    await test(`${slug}: a note struck bent fully up sounds as sharp as its wheel at full, or its key pressed fully; one bent down sounds as it was`, () => {
       const key = keys[1], one = (s, ev = []) => spectrum(new Player(I, Engine, FS, D).render(1.4, [[0, 'noteBend', key, s], ...ev, [0, 'on', key, 0.7]]), FS);
       const base = one(0), up = shift(base, one(bend), 20), wheel = shift(base, one(0, [[0, 'bend', 1]]), 20);
+      const full = Math.abs(wheel) > 0.5 ? wheel : shift(base, one(0, [[0, 'pressure', 1, key]]), 20);
       assert.ok(up > 5, `+${bend} semitones: ${up.toFixed(1)} ¢`);
-      near(up, wheel, 1, 'as the wheel at full');
+      near(up, full, 1, Math.abs(wheel) > 0.5 ? 'as the wheel at full' : 'as the key pressed fully');
       near(shift(base, one(-bend), 0), 0, 0.5, 'bent down');
     });
   } else if (bend && !OWN.includes(slug)) {
-    await test(`${slug}: a note struck bent sounds its bend (+35 ¢ and −2 semitones) wherever its spectrum shows it`, () => {
-      const key = keys[1], one = (s) => spectrum(new Player(I, Engine, FS, D).render(1.4, [[0, 'noteBend', key, s], [0, 'on', key, 0.7]]), FS);
+    // as far as it reaches, and only its way (mpe.way)
+    const way = I.mpe.way, up = way === 'down' ? 0 : 100 * Math.min(0.35, bend), down = way === 'up' ? 0 : -100 * Math.min(2, bend);
+    await test(`${slug}: a note struck bent +35 ¢ and −2 semitones sounds ${up.toFixed(0)} ¢ and ${down.toFixed(0)} ¢ wherever its spectrum shows it`, () => {
+      const key = keys[1], one = (s) => spectrum(new Player(I, Engine, FS, { ...D, ...BEND_WITH[slug] }).render(1.4, [[0, 'noteBend', key, s], [0, 'on', key, 0.7]]), FS);
       const base = one(0);
-      near(shift(base, one(0.35), 35), 35, LOOSE[slug] ?? 3, '+35 ¢');
-      near(shift(base, one(-2), -200), -200, LOOSE[slug] ?? 3, '−2 semitones');
+      near(shift(base, one(0.35), up), up, LOOSE[slug] ?? 3, '+35 ¢');
+      near(shift(base, one(-2), down), down, LOOSE[slug] ?? 3, '−2 semitones');
+    });
+  }
+  if (ONE_MOTOR.includes(slug)) {
+    await test(`${slug}: one motor turns every note: an older held key's bend changes nothing, the newest key's moves them all`, () => {
+      const older = play([[0.2, 'noteBend', keys[0], 2]]), newest = play([[0.2, 'noteBend', keys[2], 2]]);
+      assert.ok(!differs(older[0], plain[0]) && !differs(older[1], plain[1]), 'an older key\'s bend');
+      assert.ok(differs(newest[0], plain[0]), 'the newest key\'s bend');
     });
   }
   // Press (aftertouch, MPE pressure): the descriptor says what it does (the RISE's panel, shared/rise.js

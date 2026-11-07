@@ -11,6 +11,7 @@ namespace forte::cristal {
 constexpr int MAX_VOICES = 36;     // beyond this, the quietest rod nobody is stroking is let go (else the oldest)
 constexpr int REPORT_BLOCKS = 12;  // the page's state every few blocks
 constexpr double RIDGE = 4.5e-4;   // fingerprint ridge spacing (m)
+constexpr double BEND_T = 0.02;    // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double LAND = 0.012;     // s: the finger's force comes and goes this fast
 constexpr double T_TURN = 0.08;    // s: the finger turns round at a stroke's end
 constexpr double T_RETURN = 0.15;  // s: lifted, back to the rod's far end
@@ -112,6 +113,7 @@ void CristalEngine::start(Voice &v, int key) {
   v = Voice{};
   v.key = key;
   v.cap = STEM_MODES[(int)quality];
+  v.bent = expr.bendOf(key); // bent before it was touched
   v.Nreg = regulation(key);
   v.after = pressureAll;
   // where the stem stands along the collector, from the big cone's end to the small one's
@@ -127,7 +129,7 @@ void CristalEngine::build(Voice &v, const Stem &s, uint64_t ver) {
   double Y = 0;
   for (int i = 0; i < N; i++) {
     const Mode &m = s.modes[i];
-    const ModeCoeffs c = modeCoeffs(std::min(m.f, 0.45 * fs), m.zeta * TAU * m.f, fs);
+    const ModeCoeffs c = modeCoeffs(std::min(m.f * v.bent, 0.45 * fs), m.zeta * TAU * m.f, fs);
     v.a1[i] = c.a1; v.a2[i] = c.a2; v.b[i] = c.b; v.tip[i] = m.tip; v.col[i] = m.col;
     Y += m.tip * m.tip * c.b;
   }
@@ -160,13 +162,16 @@ void CristalEngine::noteOn(int key, double velocity) {
       if (q) q->dead = true;
     }
   }
-  v->touch = true; v->vel = velocity;
+  v->touch = true; v->vel = velocity; v->lamOff = 0;
   v->phase = 0; v->pos = 0; v->dir = 1; v->t = 0; v->firm = LAND_PRESS; // a new stroke, from the rod's far end, landing firmly
   focus = key;
 }
 
-void CristalEngine::noteOff(int key, double) {
-  for (int i = 0; i < count; i++) if (voices[i]->key == key) voices[i]->touch = false;
+// Lift: how fast the wet fingers leave the rods: a slow lift drags them off (over up to four times
+// the usual), quieting the rods as they go; a fast one leaves them ringing.
+void CristalEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity), lamOff = s == 1 ? 0 : 1 - std::exp(-k / (LAND * s * s));
+  for (int i = 0; i < count; i++) if (voices[i]->key == key) { voices[i]->touch = false; voices[i]->lamOff = lamOff; }
 }
 
 void CristalEngine::allNotesOff() { count = 0; }
@@ -200,6 +205,10 @@ void CristalEngine::run(float *L, float *R, int n) {
   for (int vi = 0; vi < count; vi++) {
     Voice &v = *voices[vi];
     if (v.dead || !v.built) continue;
+    if (const double to = expr.bendOf(v.key); v.bent != to) { // Glide: a finger on the rod's tip
+      v.bent = glideTo(v.bent, to, n * k, BEND_T);
+      for (int i = 0; i < v.N; i++) { const Mode &m = v.s.modes[i]; const ModeCoeffs c = modeCoeffs(std::min(m.f * v.bent, 0.45 * fs), m.zeta * TAU * m.f, fs); v.a1[i] = c.a1; v.a2[i] = c.a2; }
+    }
     const int NM = v.N;
     double *q = v.q.data(), *q1 = v.q1.data();
     const double *a1 = v.a1.data(), *a2 = v.a2.data(), *b = v.b.data(), *tip = v.tip.data(), *col = v.col.data();
@@ -225,7 +234,7 @@ void CristalEngine::run(float *L, float *R, int n) {
         if (v.t >= T_RETURN) { v.phase = 0; v.pos = 0; v.firm = LAND_PRESS; }
       }
       v.firm *= ease;
-      v.Nn += ((on ? Nhold + Nfirm * v.firm : 0) - v.Nn) * lam;
+      v.Nn += ((on ? Nhold + Nfirm * v.firm : 0) - v.Nn) * (!v.touch && v.lamOff ? v.lamOff : lam);
       if (!on && v.Nn < 1e-6 * v.Nreg) v.Nn = 0;
       const double Nf = v.Nn;
       // the modes, free; the rod's velocity without friction this sample

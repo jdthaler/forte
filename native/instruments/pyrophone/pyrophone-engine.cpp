@@ -102,7 +102,7 @@ void PyrophoneEngine::Voice::render(PyrophoneEngine &eng, float *L, float *R, in
   const double fr = d - di;
   // turbulence rms; parting the flames stirs the gas: a puff that settles in ~40 ms
   const double puff = 1 + PUFF * (keyDown ? vel0 : 0) * fd::exp(-since / 0.04);
-  const double kb = eng.kSep, eps = eng.P[p::noise] * eng.turbNorm * puff, kt = eng.kTurb;
+  const double kb = !keyDown && kUp ? kUp : eng.kSep, eps = eng.P[p::noise] * eng.turbNorm * puff, kt = eng.kTurb;
   const double iW2 = 1 / (W * W), c1 = std::fabs(cf[0]);
   const double og = OUT * gain;
   double b = beta, tb = turb, g1 = 1, pk = 0, uf2 = 0;
@@ -273,17 +273,23 @@ void PyrophoneEngine::start(int key, double velocity) {
     voices[nVoices++] = v;
   } else if (v->amp < 0.02) v->tune(*this, b); // a silent tube may be re-cut; a singing one keeps its length
   v->vel0 = velocity; v->press = pressure_; v->since = 0;
-  v->keyDown = true;
+  v->keyDown = true; v->kUp = 0;
   v->betaT = betaDown(key, velocity, v->press);
   v->nb = ex.bendOf(key); // the key's own bend from the strike, without a glide
   focus = key;
 }
 
-void PyrophoneEngine::noteOff(int key, double) {
+// Lift: how fast the parted flames close up: a slow lift lets them come together over up to four
+// times the usual, the tone fading as the flames rejoin; a fast one in a quarter of it.
+void PyrophoneEngine::noteOff(int key, double velocity) {
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
+  const double s = liftScale(velocity);
   for (int i = 0; i < nVoices; i++) {
     Voice &v = *voices[i];
-    if (v.key == key && v.keyDown) { v.keyDown = false; v.betaT = betaUp(); v.rel = 0; v.chkT = 0; v.chkA = INFINITY; }
+    if (v.key == key && v.keyDown) {
+      v.keyDown = false; v.betaT = betaUp(); v.rel = 0; v.chkT = 0; v.chkA = INFINITY;
+      v.kUp = s == 1 ? 0 : 1 - fd::exp(-1 / (SEP * s * s * fs));
+    }
   }
 }
 

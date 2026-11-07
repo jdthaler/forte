@@ -216,6 +216,36 @@ test('a change of parameters while playing glides through a crossfade: no step',
   const jump = maxStep(out, 4800, out.length), steady = maxStep(render(57, quiet(), 1, 1), 4800, 48000);
   assert.ok(jump < 1.05 * steady, `step ${jump.toFixed(4)}, the central dip's own ${steady.toFixed(4)}`);
 });
+test('Press: a held key\'s planet grows with its press, its transit up to twice as deep; the star\'s own noise as it was', () => {
+  // the key held, its press from the block at 0.5 s (188 blocks), measured from 0.6 s on
+  const run = (press, key = 60) => {
+    const e = new TessEngine(FS); e.setParams(DEFAULTS); e.noteOn(60, 0.8);
+    const n = 3 * FS, L = new Float32Array(n), b = new Float32Array(128), c = new Float32Array(128);
+    for (let s = 0; s < n; s += 128) { if (press !== undefined && s === 128 * 188) e.handle({ type: 'pressure', key, value: press }); e.process(b, c, 128); L.set(b.subarray(0, Math.min(128, n - s)), s); }
+    return L;
+  };
+  const level = (x) => { let s = 0; for (let i = 0.6 * FS; i < 2.9 * FS; i++) s += x[i] * x[i]; return Math.sqrt(s); };
+  const plain = run(), full = run(1), half = run(0.5);
+  assert.deepEqual(full.subarray(0, 128 * 188), plain.subarray(0, 128 * 188), 'before the press');
+  assert.deepEqual(run(0), plain, 'a press of none');
+  assert.ok(Math.abs(level(full) / level(plain) / 1.99 - 1) < 0.01, `pressed fully: ${(level(full) / level(plain)).toFixed(3)}×`);
+  assert.ok(Math.abs(level(half) / level(plain) / 1.494 - 1) < 0.01, `pressed halfway: ${(level(half) / level(plain)).toFixed(3)}×`);
+  assert.deepEqual(run(1, -1), full, 'the channel\'s pressure as the key\'s');
+  assert.deepEqual(run(1, 61), plain, 'another key\'s');
+});
+test('Slide: a note\'s own path across the star, as the Impact knob there sets it; slid fully, a grazing transit, shallower; a key beside it keeps the knob\'s', () => {
+  const run = (o, slide, key = 60) => {
+    const e = new TessEngine(FS); e.setParams({ ...DEFAULTS, noise: 0, ...o });
+    if (slide !== undefined) e.handle({ type: 'slide', key, value: slide });
+    e.noteOn(60, 0.8);
+    const n = 2 * FS, L = new Float32Array(n), b = new Float32Array(128), c = new Float32Array(128);
+    for (let s = 0; s < n; s += 128) { e.process(b, c, 128); L.set(b.subarray(0, Math.min(128, n - s)), s); }
+    return L;
+  };
+  assert.deepEqual(run({}, 0.6), run({ impact: 0.6 }), 'slid as the knob there');
+  assert.ok(rms(run({}, 1)) < 0.9 * rms(run({})), `grazing: ${(rms(run({}, 1)) / rms(run({}))).toFixed(3)}`);
+  assert.deepEqual(run({}, 1, 61), run({}), 'another key\'s slide');
+});
 test('CPU: ten planets with their noise render 20 times faster than real time', () => {
   const e = new TessEngine(FS), bL = new Float32Array(128), bR = new Float32Array(128);
   e.setParams(P());

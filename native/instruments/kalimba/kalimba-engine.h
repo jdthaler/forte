@@ -5,6 +5,9 @@
 #include <array>
 #include <vector>
 #include "forte/engine.h"
+#include "forte/expression.h"
+#include "forte/lift.h"
+#include "forte/press.h"
 #include "kalimba-model.h"
 #include "kalimba-params.h"
 namespace forte::kalimba {
@@ -44,6 +47,11 @@ class KalimbaEngine : public Engine {
   void setParams(const double *P) override;
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
+  // a note's own slide: where the thumb pushes its tine down (pluck), at its next pluck
+  void slide(double value, int key) override { own.setSlide(value, key); }
+  // Glide: a fingernail pressing the tine down on its bridge, shortening it: up to a semitone sharp
+  void noteBend(double ratio, int key) override { own.setBend(ratio, key); }
+  void pressure(double value, int key) override { presses.set(value, key); } // a finger resting on the tine, damping it
   void setSustain(bool on) override;
   void allNotesOff() override;
   int voiceCount() const override { return (int)voices.size(); }
@@ -59,9 +67,17 @@ class KalimbaEngine : public Engine {
     double level = 1, start = 0;         // start: Σ|force| at release, for when it has died away
     double floor = 1e-5;                 // …this far under it (Quality's, when it was plucked)
     bool released = false, damped = false, grabbed = false;
+    double fing = 0;   // the fingertip's damping per sample after this lift (0: the usual; forte/lift.h)
+    Press press;       // a finger resting on it while its key is held (forte/press.h)
+    double pf = 1;     // and the level it keeps each sample for it
+    int touch = 0;     // samples the thumb still rests on the tine after a fast lift
+    std::array<double, MAX_MODES> f{}, sg{}; // its modes' frequencies (as plucked, unbent) and losses
+    double bent = 1;   // its modes × this (a note's own bend)
   };
   void rebuildBody();
   std::array<double, p::count> P{};
+  Presses presses; // each key's pressure and the channel's
+  NoteExpression own{0, 1}; // each key's own slide, and its bend (up only, a semitone at most; forte/expression.h)
   bool hasParams = false, sustain = false;
   double cover = -1, coverTarget = 0, builtBox = -1, builtHole = -1, builtCover = -1;
   int builtCaps = -1;

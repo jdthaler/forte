@@ -139,8 +139,9 @@ instrument.
 **MPE:** a controller that gives each note a channel of its own (a ROLI
 Seaboard, a LinnStrument, an Expressive E Osmose) bends, slides and presses
 each note alone, wherever the instrument can: a reed, a pipe, a string or a
-bow bends; a struck bar or bell keeps its pitch, but its slide (CC74) still
-moves what the mod wheel moves, for that note. MPE in the MIDI menu is on
+bow bends; a struck string, bar or bell bends only as far as a hand on it
+takes it (a semitone at most, a few cents for most bars), and its slide
+(CC74) moves what the mod wheel moves, for that note. MPE in the MIDI menu is on
 Auto, which turns MPE on when the controller announces it (its
 MPE Configuration Message) and leaves any other keyboard as it was; On
 reads channels 2–16 as MPE without the announcement, and Off never does.
@@ -158,25 +159,101 @@ moves its control across the slider's whole range; a fader on a stop pulls
 it at halfway up. The first touch of each shows which control it moves. Pad Y
 is the mod wheel's control wherever the instrument has one.
 
+**Expression:** every instrument's Expression group has a switch for each
+of the five ways a key is played beyond which key it is, as a Seaboard names
+them: Strike (how hard it goes down), Glide (a note's own pitch bend), Slide
+(its own CC74), Press (aftertouch and MPE pressure) and Lift (how fast it
+comes up). Each is on until you or a preset turns it off: Strike off plays
+every note as hard as the computer keys, Lift off lets every note go at the
+instrument's own speed, and Glide, Slide and Press off are ignored (the pitch
+and mod wheels stay). A page shows the switches its instrument answers to,
+and so do the plugins. Presets turn off what makes little sense on their
+instrument: a struck string's or bar's Glide, a palm on a piano's strings,
+the Lift of a phenomenon whose release only stops the recording. Every
+instrument answers to Lift: a slow lift lets a
+note go gently (a damper settling, a reed closing, a field falling away), up
+to twice as long as usual, and a fast one as much sooner, with what only a
+quick hand does (a mallet's touch on a bar, a grace stroke on a bell). A
+key let go with no release velocity (the computer keys, a keyboard that
+sends none) or a middling one plays as it always did. Slide moves where a
+struck, plucked or bowed note is played: the hammer, quill, mallet, clapper
+or thumb along the string, bar, bell, tine or reed as it strikes (the Ribbon
+Piano, Electric Grand, Harpsichord, Vibraphone, Carillon, Kalimba, Tine and
+Reed pianos), the wheel along
+the Viola Organista's string, the pad along the Sticky-Pad Piano's reed
+where it grabs it, the felt onto the Tangent Clavier's, the
+chanterelles' pressure on the Hurdy-Gurdy's wheel, the finger down the Glass
+Armonica's bowl from its rim, the glass along the Clavicylinder's bar. On
+the Pipe Organ, Free-Reed Organ, Regal and Hydraulis it is a key held part
+way: its pallet (the Hydraulis's slide) part open, so less wind and a
+softer, flatter note. A key held part way on the Tonewheel Organ closes
+only the first few of its nine contacts, so some of the drawbars' pitches
+are missing, a different few on each key; on the Telharmonium a note's
+slide sets how many of its harmonics its relay draws, from all eight down
+to the ground tone alone. Press on the Tonewheel Organ opens the swell
+pedal the rest of the way, from the newest held note. The Singing Arc's
+newest note sets its electrode gap with Slide and its current with Press
+(up to twice the knob's, a louder arc), and its Strike is how hard the key
+closes the contact: a soft key's note swells in later, a hard one jolts the
+circuit and sounds at once. On the Huygens Keyboard a note's
+Slide sets how hard the other lamps' firings kick its own (fully, a tritone
+is pulled into a fifth), Press opens its keyer further, a stronger
+flash, and Strike is how fast the key brings its lamp's supply on. On the physics instruments Press shapes the held note: a pulsar's
+beam, ABRACADABRA's magnet, the Hydrogen Lamp's current, the Early
+Universe's amplitude and TESS's planet grow with it; Project 8's trap
+deepens, so its electron stays longer; on the NMR Spin Echo a firm press
+runs the key's own echo train; on Ringing Planets it sets off aftershocks,
+and on the Black-Hole Keyboard it drops matter in, each clump ringing the
+hole again. On the Ion Chain a held key's laser pushes its ions, so a firm
+press keeps them ringing. Slide, set before a strike, is TESS's planet's
+path across its star, CUORE's own thermistor bias, where a Collider Showers
+particle lands, and a Whistlers line's plasma density; on the Wind Harp it
+is how gusty the wind is at that key's strings.
+Glide on the struck and plucked strings is a finger pressing a note's
+strings behind the bridge, up to a semitone sharp (the Ribbon Piano,
+Electric Grand, Harpsichord and Cimbalom), the Hurdy-Gurdy's tangent pushed
+harder, the Clavichord's finger rocking onto its key as Press does, and the
+Magnetic Resonator Piano's drive moving up the string's harmonics. On the
+bars and bells it is a hard mallet dragged along the bar (a semitone flat:
+the Vibraphone, Marimba and Xylophone), a fingernail on the Kalimba's tine
+or a clamp tightened on the Chladni Plate (a semitone sharp), a hand on the
+Steel Pan's rim (a quarter tone), a hand or finger on the Celesta, Gamelan,
+Cristal Baschet, Clavicylinder and Gong Keyboard (a few cents), the
+Carillon's and Tubular Bells' swing (a Doppler shift), and a hand
+stretching the Spring Keyboard's coil (two semitones). The Tonewheel
+Organ, Telharmonium and Cellulophone have one motor that turns every note:
+Glide moves its speed (two semitones either way) from the newest held
+note, and the others follow it. On the physics instruments it is what
+moves each one's pitch: a Doppler shift (the Pulsars' and the Star
+Keyboard's binary orbits, the Black-Hole Keyboard's recoil, ABRACADABRA's
+Earth through the halo), TESS's transit-timing variations, the Early
+Universe's sound speed, the Singing Dunes' shear, the Collider Showers'
+crystal temperature, the Whistlers' L-shell, the Quantum Keyboard's well
+squeezed, and the Storage Ring's tune (its sidebands move; its pitch can't).
+
 **The RISE's panel:** while a Seaboard is plugged in, each page draws it at
 the left: its faders and pad with the controls they move and where they are,
 its keywave with a dot for each finger (across: the key and its Glide; up:
 its Slide; size: its Press), and its five dimensions (Strike, Glide, Slide,
 Press and Lift), each lit as it comes in, with what it does on that
-instrument. Press (the note's own pressure, as any aftertouch) does something
-on most instruments that hold their notes, and nothing on the struck and
-plucked ones, which can't change a note once it sounds. The chevron folds the
+instrument. Press (the note's own pressure, as any aftertouch) shapes the
+notes of most instruments that hold them; on the struck and plucked ones a
+firm press (past half way, so a finger resting on a key changes nothing) lays
+a palm, a hand, a mallet or a felt on what rings and damps it, as hard as the
+key is pressed. The chevron folds the
 panel to a rail. (Pages only: the plugins' window doesn't show it.)
 
 **The RISE's own settings:** under *On the RISE*, the panel reads the RISE's
 settings over SysEx (the browser asks once to let the page "control and
 reprogram" MIDI devices): its MIDI mode, bend range, how it sends Press and
 Slide, its faders' CCs, octave and firmware, and says what differs from what
-Forte expects. *Set up for Forte* (press it twice) writes MPE on 15 channels
+Forte expects, and keeps them up to date (it reads them every two seconds, so the
+keywave follows the octave buttons). A preset sets the RISE's fader lights to its values.
+*Set up for Forte* (press it twice) writes MPE on 15 channels
 at ±48, Slide on CC74, Press as channel pressure and the faders on their
 usual CCs; the *Sensitivity* sliders set its Strike, Glide, Slide, Press and
 Lift. The RISE keeps what's written, as when ROLI Dashboard writes it, and
-nothing is written unless one of those is pressed or moved. The protocol is
+apart from the fader lights nothing is written unless one of those is pressed or moved. The protocol is
 the one [GRAB](https://github.com/demixme/GRAB) decoded, on the original RISE
 and the RISE 2; Chrome and Edge only (Safari has no Web MIDI).
 
@@ -367,11 +444,12 @@ aftertouch (Viola Organista, Tangent Clavier, Free-Reed Organ, Glass
 Armonica, Pyrophone, Gong Keyboard, Bubble Organ, Star Keyboard and Wind
 Harp), lean on a held key: slide the finger along it, either way, to
 press harder. The pedal button stands in for `Space`, and ⌨ lists the
-computer keys. **+ Layer**, beside ⌨, adds a second instrument: layered
-with the page's (both play every key) or split from it (the second plays
-the keys below the split point, any key you choose or press), with its
-own preset and volume, as in the Forte app. Each page remembers its
-second. On a
+computer keys.
+
+To play several instruments at once, open **Combinations** (on the front
+page, and in every page's menu): up to four, each on the keys you give it,
+so the same keys layer them and keys apart split the keyboard, with its
+own octave, preset and level ([combine/](combine/README.md)). On a
 phone the page scrolls between the header and the keys, which stay put, with the
 controls' bar and its presets just above the keys; turn it sideways
 for wider keys. Use

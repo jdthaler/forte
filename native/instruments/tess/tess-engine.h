@@ -9,6 +9,9 @@
 
 #include "forte/dsp.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
+#include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/fft.h"
 #include "tess-model.h"
 #include "tess-params.h"
@@ -25,6 +28,9 @@ class TessEngine : public Engine {
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override;
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // a second planet's tug: its transits early or late
+  void slide(double value, int key) override { expr.setSlide(value, key); }   // its planet's path across the star (impact parameter)
+  void pressure(double value, int key) override { press.set(value, key); }    // its planet's size: up to twice as deep a transit
   void allNotesOff() override { for (Voice &v : voices) v.active = false; }
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
@@ -34,18 +40,23 @@ class TessEngine : public Engine {
  private:
   static constexpr int kMaxVoices = 48;
   struct Voice {
-    bool active = false, held = false, ending = false;
+    bool active = false, held = false, ending = false, fadeOut = false; // fadeOut: a slow lift's, which fades through the dips (forte/lift.h)
     int key = 0, H = 1, cur = 0, built = -1;
     uint64_t age = 0;
-    double vel = 0, gl = 0, gr = 0, phase = 0, inc = 0;
+    double vel = 0, gl = 0, gr = 0, phase = 0, inc = 0, bent = 1; // bent: its year sped or slowed by a second planet's tug (a note's own bend)
     double gain = 0, sigma = 0, quietFrom = 0.5, quietTo = 0.5; // the out-of-transit stretch of the year
     double env = 1, envStep = 0;                                 // a fade, where the year has no quiet stretch
+    double impact = -1;                                          // the path its table was built for
+    double depth = 1;                                            // its transit's depth over the planet's own (Press: up to twice)
     float *table[2] = {nullptr, nullptr};
   };
   void build(Voice &v, float *into);
-  void end(Voice &v);
+  void end(Voice &v, double velocity = -1);
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
+  double impactOf(int key) const; // the knob's, or the key's own slide
+  forte::Pressures press; // each key's pressure (MPE), and the channel's
+  forte::NoteExpression expr{0.1}; // each key's own bend: transit-timing variations, ±10 ¢
   int version = 0, next = 0;
   uint64_t clock = 0;
   Occultation occ;

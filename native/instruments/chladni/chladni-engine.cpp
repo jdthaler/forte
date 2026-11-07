@@ -11,6 +11,7 @@
 namespace forte::chladni {
 
 constexpr double OUT = 6.0;          // the microphones: the plate's velocity under them (m/s), as heard
+constexpr double BEND_T = 0.02;      // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double LAND = 0.015;       // s: the bow set on the edge
 constexpr double LIFT = 0.008;       // s: and lifted off
 constexpr double DRAW = 0.02;        // s: the bow getting up to speed
@@ -48,10 +49,10 @@ void ChladniPlateEngine::coefficients(Voice &v) {
   const int d = (finger ? 1 : 0) | (v.hand ? 2 : 0);
   if (d == v.damp) return;
   v.damp = d;
-  const double hand = v.hand ? std::log(1000.0) / P[p::hand] : 0;
+  const double hand = v.hand ? std::log(1000.0) / (P[p::hand] * v.ringK) : 0;
   for (int j = 0; j < v.M; j++) {
     const double sf = finger ? (FINGER * v.fin[j]) / (2 * v.kp.mass) : 0;
-    const ModeCoeffs c = modeCoeffs(v.kp.f[j], v.kp.sigma[j] + sf + hand, fs);
+    const ModeCoeffs c = modeCoeffs(v.kp.f[j] * v.bent, v.kp.sigma[j] + sf + hand, fs);
     v.a1[j] = c.a1; v.a2[j] = c.a2; v.bf[j] = c.b / v.kp.mass; // displacement per newton, a sample
   }
   place(v);
@@ -88,6 +89,7 @@ void ChladniPlateEngine::start(Voice &v, int key, KeyData<Plate>::Ref ref) {
     v.fin[j] = sp.finger[j];
   }
   v.shift = expr.slideOr(key, P[p::shift]);
+  v.bent = expr.bendOf(key); // bent before it was bowed
   v.Nth = threshold(v.kp, P.data());
   coefficients(v);
 }
@@ -121,21 +123,24 @@ void ChladniPlateEngine::noteOn(int key, double velocity) {
     }
   }
   if (fresh) start(*v, key, ref);
-  v->touch = true; v->vel = velocity; v->hand = false;
+  v->touch = true; v->vel = velocity; v->hand = false; v->ringK = 1;
   v->bite = BITE * velocity; // the bow set on the edge bites: pressed harder for its first strokes
   coefficients(*v);
   focus = key;
 }
 
-void ChladniPlateEngine::noteOff(int key, double) {
+// Lift: how the bow leaves the plate. A fast lift springs it clear and the plate rings on (the
+// hand settles lightly: up to four times as long), a slow one drags it off, damping it.
+void ChladniPlateEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
   for (int i = 0; i < npending; i++) if (pending[i].key == key) { pending[i] = pending[--npending]; return; }
   for (int i = 0; i < count; i++)
-    if (voices[i]->key == key) { voices[i]->touch = false; if (!sustain) { voices[i]->hand = true; coefficients(*voices[i]); } }
+    if (voices[i]->key == key) { voices[i]->touch = false; if (!sustain) { voices[i]->hand = true; voices[i]->ringK = 1 / (s * s); coefficients(*voices[i]); } }
 }
 
 void ChladniPlateEngine::setSustain(bool on) {
   sustain = on;
-  if (!on) for (int i = 0; i < count; i++) if (!voices[i]->touch) { voices[i]->hand = true; coefficients(*voices[i]); }
+  if (!on) for (int i = 0; i < count; i++) if (!voices[i]->touch && !voices[i]->hand) { voices[i]->hand = true; voices[i]->ringK = 1; coefficients(*voices[i]); }
 }
 
 void ChladniPlateEngine::kill(Voice &v) {
@@ -167,7 +172,8 @@ void ChladniPlateEngine::run(float *L, float *R, int n) {
   for (int vi = 0; vi < count; vi++) {
     Voice &v = *voices[vi];
     if (v.dead) continue;
-    coefficients(v); // the finger lifted or set down
+    if (const double to = expr.bendOf(v.key); v.bent != to) { v.bent = glideTo(v.bent, to, bn, BEND_T); v.damp = -1; } // Glide: the clamp tightened
+    coefficients(v); // the finger lifted or set down (or the plate retuned)
     const double to = expr.slideOr(v.key, P[p::shift]);
     if (to != v.shift) { v.shift = glideTo(v.shift, to, bn, SHIFT_T); place(v); }
     const int M = v.M;

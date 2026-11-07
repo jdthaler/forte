@@ -17,7 +17,7 @@
 namespace forte::telharmonium {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { shafts, intonation, top, tooth, voicing, droop, flywheel, keyTouch, split, tau, contact, robbing, a1, a2, a3, a4, a5, a6, a7, a8, m1, m2, m3, m4, m5, m6, m7, m8, cable, distance, receiver, magnet, horn, swell, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { shafts, intonation, top, tooth, voicing, droop, flywheel, keyTouch, split, tau, contact, draws, robbing, a1, a2, a3, a4, a5, a6, a7, a8, m1, m2, m3, m4, m5, m6, m7, m8, cable, distance, receiver, magnet, horn, swell, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -36,6 +36,7 @@ inline const FormatSegment kFormat_keyTouch[] = {{kNoLimit, "", " %", 100, 0, 0,
 inline const FormatSegment kFormat_split[] = {{kNoLimit, "", "", 1, 0, 0, false, false, false, true}};
 inline const FormatSegment kFormat_tau[] = {{kNoLimit, "", " ms", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_contact[] = {{0.049999999999999996, "instant", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " ms", 1, 0, 1, false, false, false, false}};
+inline const FormatSegment kFormat_draws[] = {{1.4999999999999998, "the ground tone alone", "", 1, 1, -1, false, false, false, false}, {2.4999999999999996, "the ", "nd (octave)", 1, 0, 0, false, false, false, false}, {3.4999999999999996, "the ", "rd (twelfth)", 1, 0, 0, false, false, false, false}, {4.499999999999999, "the ", "th (fifteenth)", 1, 0, 0, false, false, false, false}, {5.499999999999999, "the ", "th (seventeenth)", 1, 0, 0, false, false, false, false}, {6.499999999999999, "the ", "th (nineteenth)", 1, 0, 0, false, false, false, false}, {7.499999999999999, "the ", "th (flat twenty-first)", 1, 0, 0, false, false, false, false}, {kNoLimit, "the ", "th (twenty-second)", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_robbing[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_a1[] = {{0.49999999999999994, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " of 8", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_a2[] = {{0.49999999999999994, "off", "", 1, 0, -1, false, false, false, false}, {kNoLimit, "", " of 8", 1, 0, 0, false, false, false, false}};
@@ -99,6 +100,7 @@ inline const ParamInfo kParams[p::count] = {
   {"split", "Melody manual from", "Keys", ParamKind::continuous, 36, 96, 60, 1, false, false, nullptr, 0, kFormat_split, 1},
   {"tau", "Circuit time constant (L/R)", "Keys", ParamKind::continuous, 0.5, 40, 4, 0, true, false, nullptr, 0, kFormat_tau, 1},
   {"contact", "Relay contacts (closing time)", "Keys", ParamKind::continuous, 0, 20, 6, 0.1, false, false, nullptr, 0, kFormat_contact, 2},
+  {"draws", "Relay draws: harmonics up to", "Keys", ParamKind::continuous, 1, 8, 8, 1, false, false, nullptr, 0, kFormat_draws, 8},
   {"robbing", "Bus load (robbing)", "Keys", ParamKind::continuous, 0, 1, 0.15, 0.01, false, false, nullptr, 0, kFormat_robbing, 1},
   {"a1", "1st harmonic (ground tone)", "Manual I stops (accompaniment)", ParamKind::continuous, 0, 8, 8, 1, false, false, nullptr, 0, kFormat_a1, 2},
   {"a2", "2nd harmonic (octave)", "Manual I stops (accompaniment)", ParamKind::continuous, 0, 8, 5, 1, false, false, nullptr, 0, kFormat_a2, 2},
@@ -139,42 +141,48 @@ inline const ParamInfo kParams[p::count] = {
   {"cents9", "Major 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
+  {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::shafts, 1}, {p::pitch, 5}, {p::keyTouch, 0}};
-inline const PresetValue kPreset2[] = {{p::intonation, 1}};
-inline const PresetValue kPreset3[] = {{p::a1, 8}, {p::m1, 8}, {p::a2, 0}, {p::m2, 0}, {p::a3, 0}, {p::m3, 0}, {p::a4, 0}, {p::m4, 0}, {p::a5, 0}, {p::m5, 0}, {p::a6, 0}, {p::m6, 0}, {p::a7, 0}, {p::m7, 0}, {p::a8, 0}, {p::m8, 0}, {p::tooth, 0}};
-inline const PresetValue kPreset4[] = {{p::a1, 8}, {p::m1, 8}, {p::a2, 0}, {p::m2, 0}, {p::a3, 7}, {p::m3, 7}, {p::a4, 0}, {p::m4, 0}, {p::a5, 5}, {p::m5, 5}, {p::a6, 0}, {p::m6, 0}, {p::a7, 4}, {p::m7, 4}, {p::a8, 0}, {p::m8, 0}};
-inline const PresetValue kPreset5[] = {{p::a1, 7}, {p::m1, 7}, {p::a2, 8}, {p::m2, 8}, {p::a3, 8}, {p::m3, 8}, {p::a4, 7}, {p::m4, 7}, {p::a5, 6}, {p::m5, 6}, {p::a6, 5}, {p::m6, 5}, {p::a7, 5}, {p::m7, 5}, {p::a8, 4}, {p::m8, 4}};
-inline const PresetValue kPreset6[] = {{p::a1, 6}, {p::m1, 6}, {p::a2, 8}, {p::m2, 8}, {p::a3, 7}, {p::m3, 7}, {p::a4, 7}, {p::m4, 7}, {p::a5, 6}, {p::m5, 6}, {p::a6, 6}, {p::m6, 6}, {p::a7, 5}, {p::m7, 5}, {p::a8, 5}, {p::m8, 5}};
-inline const PresetValue kPreset7[] = {{p::a1, 0}, {p::m1, 0}, {p::a2, 8}, {p::m2, 8}, {p::a3, 7}, {p::m3, 7}, {p::a4, 6}, {p::m4, 6}, {p::a5, 5}, {p::m5, 5}, {p::a6, 4}, {p::m6, 4}, {p::a7, 0}, {p::m7, 0}, {p::a8, 3}, {p::m8, 3}, {p::magnet, 40}};
-inline const PresetValue kPreset8[] = {{p::a1, 6}, {p::m1, 6}, {p::a2, 6}, {p::m2, 6}, {p::a3, 5}, {p::m3, 5}, {p::a4, 5}, {p::m4, 5}, {p::a5, 4}, {p::m5, 4}, {p::a6, 0}, {p::m6, 0}, {p::a7, 0}, {p::m7, 0}, {p::a8, 0}, {p::m8, 0}, {p::robbing, 0.5}};
-inline const PresetValue kPreset9[] = {{p::distance, 2}};
-inline const PresetValue kPreset10[] = {{p::cable, 1}, {p::distance, 160}};
-inline const PresetValue kPreset11[] = {{p::distance, 25}};
-inline const PresetValue kPreset12[] = {{p::magnet, 20}, {p::split, 48}};
-inline const PresetValue kPreset13[] = {{p::receiver, 1}, {p::magnet, 1000}};
-inline const PresetValue kPreset14[] = {{p::horn, 0}};
-inline const PresetValue kPreset15[] = {{p::droop, 40}, {p::flywheel, 0.8}};
-inline const PresetValue kPreset16[] = {{p::tau, 25}, {p::keyTouch, 0}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::shafts, 1}, {p::pitch, 5}, {p::keyTouch, 0}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::intonation, 1}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::a1, 8}, {p::m1, 8}, {p::a2, 0}, {p::m2, 0}, {p::a3, 0}, {p::m3, 0}, {p::a4, 0}, {p::m4, 0}, {p::a5, 0}, {p::m5, 0}, {p::a6, 0}, {p::m6, 0}, {p::a7, 0}, {p::m7, 0}, {p::a8, 0}, {p::m8, 0}, {p::tooth, 0}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::a1, 8}, {p::m1, 8}, {p::a2, 0}, {p::m2, 0}, {p::a3, 7}, {p::m3, 7}, {p::a4, 0}, {p::m4, 0}, {p::a5, 5}, {p::m5, 5}, {p::a6, 0}, {p::m6, 0}, {p::a7, 4}, {p::m7, 4}, {p::a8, 0}, {p::m8, 0}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::a1, 7}, {p::m1, 7}, {p::a2, 8}, {p::m2, 8}, {p::a3, 8}, {p::m3, 8}, {p::a4, 7}, {p::m4, 7}, {p::a5, 6}, {p::m5, 6}, {p::a6, 5}, {p::m6, 5}, {p::a7, 5}, {p::m7, 5}, {p::a8, 4}, {p::m8, 4}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::a1, 6}, {p::m1, 6}, {p::a2, 8}, {p::m2, 8}, {p::a3, 7}, {p::m3, 7}, {p::a4, 7}, {p::m4, 7}, {p::a5, 6}, {p::m5, 6}, {p::a6, 6}, {p::m6, 6}, {p::a7, 5}, {p::m7, 5}, {p::a8, 5}, {p::m8, 5}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::a1, 0}, {p::m1, 0}, {p::a2, 8}, {p::m2, 8}, {p::a3, 7}, {p::m3, 7}, {p::a4, 6}, {p::m4, 6}, {p::a5, 5}, {p::m5, 5}, {p::a6, 4}, {p::m6, 4}, {p::a7, 0}, {p::m7, 0}, {p::a8, 3}, {p::m8, 3}, {p::magnet, 40}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::a1, 6}, {p::m1, 6}, {p::a2, 6}, {p::m2, 6}, {p::a3, 5}, {p::m3, 5}, {p::a4, 5}, {p::m4, 5}, {p::a5, 4}, {p::m5, 4}, {p::a6, 0}, {p::m6, 0}, {p::a7, 0}, {p::m7, 0}, {p::a8, 0}, {p::m8, 0}, {p::robbing, 0.5}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::distance, 2}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::cable, 1}, {p::distance, 160}};
+inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::distance, 25}};
+inline const PresetValue kPreset12[] = {{p::glideOn, 0}, {p::magnet, 20}, {p::split, 48}};
+inline const PresetValue kPreset13[] = {{p::glideOn, 0}, {p::receiver, 1}, {p::magnet, 1000}};
+inline const PresetValue kPreset14[] = {{p::glideOn, 0}, {p::horn, 0}};
+inline const PresetValue kPreset15[] = {{p::glideOn, 0}, {p::droop, 40}, {p::flywheel, 0.8}};
+inline const PresetValue kPreset16[] = {{p::glideOn, 0}, {p::tau, 25}, {p::keyTouch, 0}};
 inline const Preset kPresets[] = {
-  {"Telharmonic Hall, 1906: flute and oboe", nullptr, 0},
-  {"As built: eight shafts at A = 435 Hz", kPreset1, 3},
-  {"Pierce's just thirds and sevenths", kPreset2, 1},
-  {"Pure ground tone (sine alternators)", kPreset3, 17},
-  {"Clarinet: the odd harmonics", kPreset4, 16},
-  {"Horn, with the seventh harmonic (1907)", kPreset5, 16},
-  {"Cello: every harmonic, falling", kPreset6, 16},
-  {"Harmonics without the ground tone (Hope-Jones's resultant)", kPreset7, 17},
-  {"Robbing: soft stops, many notes", kPreset8, 17},
-  {"Down Broadway to the Café Martin (2 km of cable)", kPreset9, 1},
-  {"160 km of open wire (Cahill, 1904)", kPreset10, 2},
-  {"Far down a city cable (25 km)", kPreset11, 1},
-  {"Growling bass: a weak receiver magnet", kPreset12, 2},
-  {"Arthur Cahill's receiver (1911)", kPreset13, 2},
-  {"The bare receiver (no horn)", kPreset14, 1},
-  {"A struggling motor: big droop, light flywheel", kPreset15, 2},
-  {"Heavy thumps: a long L/R", kPreset16, 2},
+  {"Telharmonic Hall, 1906: flute and oboe", kPreset0, 1},
+  {"As built: eight shafts at A = 435 Hz", kPreset1, 4},
+  {"Pierce's just thirds and sevenths", kPreset2, 2},
+  {"Pure ground tone (sine alternators)", kPreset3, 18},
+  {"Clarinet: the odd harmonics", kPreset4, 17},
+  {"Horn, with the seventh harmonic (1907)", kPreset5, 17},
+  {"Cello: every harmonic, falling", kPreset6, 17},
+  {"Harmonics without the ground tone (Hope-Jones's resultant)", kPreset7, 18},
+  {"Robbing: soft stops, many notes", kPreset8, 18},
+  {"Down Broadway to the Café Martin (2 km of cable)", kPreset9, 2},
+  {"160 km of open wire (Cahill, 1904)", kPreset10, 3},
+  {"Far down a city cable (25 km)", kPreset11, 2},
+  {"Growling bass: a weak receiver magnet", kPreset12, 3},
+  {"Arthur Cahill's receiver (1911)", kPreset13, 3},
+  {"The bare receiver (no horn)", kPreset14, 2},
+  {"A struggling motor: big droop, light flywheel", kPreset15, 3},
+  {"Heavy thumps: a long L/R", kPreset16, 3},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::swell, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{11, p::swell}, {107, p::m1}, {109, p::m3}, {111, p::m5}, {113, p::distance}, {114, p::swell}};
@@ -197,6 +205,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 18,
     .keyLo = 21, .keyHi = 108, .space = Space::hold,
     .modWheel = p::swell, .modWheelMax = 1,
+    .slide = p::draws, .slideMax = 1,
     .controllers = kControllers, .controllerCount = 6,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -4.5},
     .midiVelocity = midiVelocity, .create = create,

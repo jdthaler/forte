@@ -65,6 +65,7 @@ void StarEngine::Voice::start(StarEngine &eng, int key_, const Star &d, uint64_t
   gl = fd::cos(a); gr = fd::sin(a);
   vel = 0.7; pressure = 1; held = false; age = 0; fade = 1; fading = false; dead = false;
   spin = eng.expr.slideOr(key, eng.S[kSpin]); slid = false; // a slide starts there
+  bent = eng.expr.bendOf(key); // and a bend
   peak = 1e-12; level = 0; seed = Rng(key * 104729 + (int)(eng.presses++ & 0xffff));
   compact();
   freqs(eng); coeffs(eng); gains(eng, true);
@@ -103,9 +104,10 @@ void StarEngine::Voice::trim(StarEngine &eng) {
 void StarEngine::Voice::compact() { int k = 0; for (int r = 0; r < N; r++) if (act[r]) idx[k++] = r; nAct = k; }
 
 // The star's rotation this block: the knob's, or gliding toward its slide (and back to the knob's
-// once the slide is gone). Whether it moved.
+// once the slide is gone), and its Doppler factor gliding toward its bend. Whether either moved.
 bool StarEngine::Voice::turn(const StarEngine &eng, int n) {
-  const double x = eng.expr.slideOr(key, NAN), was = spin;
+  const double x = eng.expr.slideOr(key, NAN), was = spin, wasBent = bent;
+  bent = glideTo(bent, eng.expr.bendOf(key), n / eng.fs, GLIDE);
   const bool own = x == x;
   if (own) slid = true;
   if (!slid) spin = eng.S[kSpin];
@@ -114,14 +116,14 @@ bool StarEngine::Voice::turn(const StarEngine &eng, int n) {
     spin = glideTo(spin, to, n / eng.fs, GLIDE);
     if (!own && spin == to) slid = false;
   }
-  return spin != was;
+  return spin != was || bent != wasBent;
 }
 
 // frequencies with rotational splitting: δν = m (w_env Ω_env + w_core Ω_core)/2π, sped up K times
 void StarEngine::Voice::freqs(const StarEngine &eng) {
   const double Kc = K * 1e-6, env = spin * SUN.rot, core = env * (dscuti ? 1 : eng.S[kCore]), fs = eng.fs;
   for (int i = 0; i < N; i++) {
-    const double f = jsMin(0.45 * fs, jsMax(1, F0[i] + M[i] * Kc * (WE[i] * env + WC[i] * core)));
+    const double f = jsMin(0.45 * fs, jsMax(1, (F0[i] + M[i] * Kc * (WE[i] * env + WC[i] * core)) * bent));
     const double w = (2 * pi * f) / fs;
     W[i] = w; C[i] = fd::cos(w); S[i] = fd::sin(w);
   }
@@ -159,7 +161,7 @@ double StarEngine::Voice::amp2(int i) const {
 // Key-down: the convection drives the star, and a flare kicks every mode at once (a point on the
 // star, random and seeded; each mode pushed by its spherical harmonic there, in sine phase).
 void StarEngine::Voice::press(const StarEngine &eng, double velocity) {
-  vel = velocity; held = true; fading = false; fade = 1; dead = false; age = 0;
+  vel = velocity; held = true; fading = false; fade = 1; dead = false; age = 0; tail = 0;
   if (nAct < nOn) { for (int i = 0; i < N; i++) act[i] = on[i]; compact(); }
   const double F = eng.S[kFlare] * velocity * (dscuti ? 0.3 : 1);
   if (!(F > 0)) return;
@@ -209,14 +211,16 @@ static void ring(const double *A1, const double *A2, double *Y1, double *Y2, dou
 void StarEngine::Voice::render(float *Lo, float *Ro, int n, StarEngine &eng) {
   double *buf = eng.buf.data();
   const double glide = 1 - fd::exp(-n / (GLIDE * eng.fs));
-  const bool driving = held || eng.sustain;
+  const bool driving = held || eng.sustain || tail > 0;
+  const double drive = held || eng.sustain ? 1 : tail;
+  if (!held && !eng.sustain && tail > 0) { tail *= fd::exp(-n / (tailT * eng.fs)); if (tail < 1e-3) tail = 0; }
   if (turn(eng, n) || eng.freqMoved) { freqs(eng); coeffs(eng); }
   else if (eng.dampMoved) coeffs(eng);
   if (eng.inclMoved) gains(eng, false);
   if (dscuti) landau(eng, n, driving);
   else if (driving) {
     // the convection: one random push per mode per block, a force impulse of variance p·D²·(1 − ρ^2n)
-    const double D = eng.S[kDriving] * vel * pressure;
+    const double D = eng.S[kDriving] * vel * pressure * drive;
     const double *tab = eng.gauss.data();
     uint32_t st = eng.rs;
     for (int q = 0; q < nAct; q++) {
@@ -461,10 +465,16 @@ void StarEngine::startNote(int key, double velocity, const Star &d, uint64_t id)
   }
 }
 
-void StarEngine::noteOff(int key, double) {
+// Lift: a slow lift lets the convection's driving die away over up to 0.4 s (its time constant),
+// rather than stop at once.
+void StarEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
-  if (Voice *v = byKey[key]) v->held = false;
+  if (Voice *v = byKey[key]) {
+    const double s = liftScale(velocity);
+    v->held = false;
+    if (s > 1) { v->tail = 1; v->tailT = 0.4 * (s - 1); }
+  }
 }
 
 void StarEngine::allNotesOff() {

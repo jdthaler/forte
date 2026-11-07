@@ -25,6 +25,8 @@
 
 #include "forte/convolver.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
+#include "forte/lift.h"
 #include "forte/tuning.h"
 #include "telharmonium-model.h"
 #include "telharmonium-params.h"
@@ -62,6 +64,7 @@ struct Key {
   int64_t born = 0;
   double vel = 0, after = 0, gain = 0, gainNow = 0;
   int count = 0;              // its windings on the buses (closing, closed or opening)
+  int reach = HARMONICS;      // how many of its harmonics its relay draws (Slide)
   std::array<Source, HARMONICS> src;
   bool alive() const { return on || count > 0; }
 };
@@ -78,6 +81,8 @@ class TelharmoniumEngine : public Engine {
   void allNotesOff() override;
   void pressure(double value, int key) override;
   void bend(double value) override;
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the newest key's: the shafts' speed
+  void slide(double value, int key) override; // how many harmonics the key's relay draws
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -92,13 +97,17 @@ class TelharmoniumEngine : public Engine {
  private:
   static constexpr int CHUNK = 32;
   void start(Key &k);
-  void open(Key &k);          // the relay opens: its contacts part over the contact time
+  void open(Key &k, double scale = 1); // the relay opens: its contacts part over the contact time (× scale: a lift's, forte/lift.h)
   void drop(Key &k);          // its windings leave at once
   void dropSource(Key &k, int i);
   void settle(Source &s, const Key &k, int64_t now);
   double steady(const Source &s, const Key &k) const;
   double emf(const Source &s, const Key &k) const;
   void connect(Key &k);
+  void addSource(Key &k, int h);
+  void openSource(Key &k, int i, double scale);
+  int reachOf(int key) const;
+  void redraw(Key &k);
   int acquire(int shaft, int teeth);
   void place(Alternator &a) const;
   double busSum(int b) const;
@@ -121,6 +130,8 @@ class TelharmoniumEngine : public Engine {
   int split = 60;
   bool eight = false, pierce = false;
   double speed = 1, bendCents = 0, droop = 0, flywheel = 3;
+  forte::NoteExpression expr{kBendSemitones}; // each key's own bend (MPE): the newest held key's sets the motor's rheostat
+  forte::NewestKey newest;
   double swell = 1, swellNow = 1;
   int64_t t = 0;
   // the output chain, per manual

@@ -10,6 +10,8 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "gamelan-model.h"
 #include "gamelan-params.h"
@@ -23,8 +25,11 @@ class GamelanEngine : public Engine {
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override;
-  void allNotesOff() override { voices.clear(); }
+  void allNotesOff() override { voices.clear(); presses.clear(); }
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's own beat
+  // Glide: a hand pressing the bar's end (or the gong's rim), loading it: a few cents flat
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
+  void pressure(double value, int key) override { presses.set(value, key); } // the other hand on the bar, damping it as it rings
   int voiceCount() const override { return (int)voices.size(); }
   void process(float *L, float *R, int n) override;
 
@@ -47,6 +52,9 @@ class GamelanEngine : public Engine {
     int subs = 1, count = 0;          // partners sounding; modes each
     double beat = 0, vel = 0;         // the pair's beat now (Hz)
     bool held = false, released = false, damped = false;
+    Press press; // the other hand resting on it while its key is held (forte/press.h)
+    double liftK = 1; // how many times longer than usual the hand takes to stop it (forte/lift.h)
+    double bent = 1;  // its modes × this (a note's own bend)
     int age = 0;                      // samples since its last stroke
   };
   const Voice *voice(int key) const { for (const Voice &v : voices) if (v.key == key) return &v; return nullptr; }
@@ -64,7 +72,8 @@ class GamelanEngine : public Engine {
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
   int focus = -1, sincePost = 0;
-  NoteExpression expr{0};
+  Presses presses; // each key's pressure and the channel's
+  NoteExpression expr{0.1, 0}; // each key's own beat, and its bend (down only, ten cents at most)
   std::vector<Voice> voices; // reserved: never reallocates
 };
 

@@ -17,6 +17,7 @@ constexpr double SILENT = 1e-11;    // a voice whose reading's energy falls belo
 constexpr double MODE_SILENT = 1e-16;
 constexpr double STEAL_T = 0.004;   // s: a stolen voice's amplitudes fade with this time constant
 constexpr double MIN_SHARE = 2e-4;  // a neighbour holding less of the shower than this is left alone
+constexpr double BEND_T = 0.02;    // s: a note's own bend glides this fast
 constexpr int FIRST = 21, LAST = 108; // the keys there are crystals for
 constexpr double PREAMP_HZ = 20;    // the piezo preamp's high-pass, through which the static strain fades
 
@@ -69,6 +70,7 @@ ColliderShowersEngine::Voice *ColliderShowersEngine::voiceFor(int key) {
   Voice &v = voices.back();
   v.key = key;
   v.damped = !sustain;
+  v.bent = expr.bendOf(key);
   build(v);
   return &v;
 }
@@ -92,14 +94,14 @@ void ColliderShowersEngine::kick(Voice &v, const Kicks &k, double scale, double 
 }
 
 // A particle of `energy` GeV at `velocity` landing on key's crystal: it and its neighbours take
-// their shares.
-void ColliderShowersEngine::deposit(int key, const Deposit &d, double energy, double velocity, Particle kind) {
+// their shares, as it lands `offset` off the crystal's axis.
+void ColliderShowersEngine::deposit(int key, const Deposit &d, double energy, double velocity, Particle kind, double offset) {
   const double slender = slenderness(P[p::depth], P[p::width]);
   const Kicks k = kicksOf(d, slender);
   for (int j = -2; j <= 2; j++) {
     const int kk = key + j;
     if (kk < FIRST || kk > LAST) continue;
-    const Share s = crystalShare(P[p::offset], P[p::width], j);
+    const Share s = crystalShare(offset, P[p::width], j);
     if (j != 0 && s.e < MIN_SHARE) continue;
     Voice *v = nullptr;
     for (Voice &x : voices) if (x.key == kk && !x.stolen) { v = &x; break; }
@@ -121,21 +123,36 @@ void ColliderShowersEngine::deposit(int key, const Deposit &d, double energy, do
   }
 }
 
+// Where key's particle lands off the axis: the knob's, or the note's own slide.
+double ColliderShowersEngine::impact(int key) const { return std::clamp(expr.slideOr(key, P[p::offset]), 0.0, 0.5); }
+
 void ColliderShowersEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < FIRST || key > LAST) return;
   Voice *v = voiceFor(key);
   v->held = true; v->damped = false;
   v->toNext = 0;
+  struck[key] = velocity;
   focus = key;
   const Particle kind = (Particle)(int)P[p::particle];
   const double E = velocity * P[p::energy];
   Deposit d;
   shower(d, kind, E, P[p::depth], rng);
-  deposit(key, d, E, velocity, kind);
+  deposit(key, d, E, velocity, kind, impact(key));
 }
 
-void ColliderShowersEngine::noteOff(int key, double) {
+// Lift: a fast lift is a pile-up: a second, smaller shower (up to 0.4 × the first's energy) lands
+// in the crystal as the key comes up.
+void ColliderShowersEngine::noteOff(int key, double velocity) {
   for (Voice &v : voices) if (v.key == key && v.held) { v.held = false; v.damped = !sustain; }
+  if (!hasParams || key < FIRST || key > LAST) return;
+  if (const double t = liftPast(velocity), was = struck[key]; t > 0 && was > 0) {
+    struck[key] = 0;
+    const Particle kind = (Particle)(int)P[p::particle];
+    const double vel = 0.4 * t * was, E = vel * P[p::energy];
+    Deposit d;
+    shower(d, kind, E, P[p::depth], rng);
+    deposit(key, d, E, vel, kind, impact(key));
+  }
 }
 
 void ColliderShowersEngine::pressure(double value, int key) {
@@ -151,14 +168,15 @@ void ColliderShowersEngine::process(float *L, float *R, int n) {
   for (Voice &v : voices) {
     const Crystal &c = v.c;
     v.press += (v.pressTarget - v.press) * (1 - std::exp(-dt / PRESS_T));
+    v.bent = glideTo(v.bent, expr.bendOf(v.key), dt, BEND_T); // the crystal's temperature: its modes all a little faster or slower
     // each mode's turn and decay this block
     double level = 0;
     for (int j = 0; j < c.count; j++) {
       const Mode &m = c.modes[j];
       const double sig = m.sigma + (v.damped ? (std::numbers::pi * m.f) / Qd : 0) + (v.stolen ? 1 / STEAL_T : 0);
       const double g = std::exp(-sig / fs);
-      v.rr[j] = g * std::cos(v.w[j]);
-      v.ri[j] = g * std::sin(v.w[j]);
+      v.rr[j] = g * std::cos(v.w[j] * v.bent);
+      v.ri[j] = g * std::sin(v.w[j] * v.bent);
       const double e = v.ar[j] * v.ar[j] + v.ai[j] * v.ai[j];
       level += e * m.hear * m.hear;
       if (e * m.hear * m.hear < MODE_SILENT && e < MODE_SILENT) { v.ar[j] = v.ai[j] = 0; v.on[j] = false; }

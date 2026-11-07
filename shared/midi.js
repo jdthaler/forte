@@ -42,7 +42,6 @@
 
 import { unfocus } from './focus.js';
 import { MODES, createMpe, bendRatio } from './mpe.js';
-import { midiTap } from './taps.js';
 
 const KEY = 'forte/midi/v1';
 const TOUCH_KEY = 'forte/touch/v1';
@@ -159,7 +158,7 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
   navigator.requestMIDIAccess().then((acc) => {
     try { localStorage.setItem(KEY, '1'); } catch { /* storage blocked */ }
     const inputs = new Map(); // input id → its createInput
-    const send = (data) => { if (midiTap(data)) onMIDI({ data }); }; // a second instrument (shared/layer.js) takes its share first
+    const send = (data) => onMIDI({ data });
     const letGo = (id) => { inputs.get(id)?.letGo(); inputs.delete(id); };
     // a device's keys follow Octave and Transpose (shift)
     const input = (id) => { let i = inputs.get(id); if (!i) inputs.set(id, (i = createInput(send, controllers, { shift: true }))); return i; };
@@ -342,17 +341,18 @@ export function createSostenuto() {
 /**
  * A page's MPE (shared/mpe.js, in the mode the player chose): each note's own bend, slide and
  * pressure as the engine's messages, which shared/shell.js and the pages with their own MIDI post.
- *   const notes = pageMpe({ post, params: () => P, modWheel })   (modWheel: the descriptor's, or none)
+ *   const notes = pageMpe({ post, params: () => P, slide, groups })   (slide: what a slide moves,
+ *                                shared/expression.js slideOf; or modWheel: the descriptor's; or none)
  *   const r = notes.midi(data)   r.own: MPE's own message (the page does nothing more with it);
  *                                r.with: a note-on's own expression, to post just before its noteOn
  *   notes.strike(key, own)       what to post before a key's noteOn: its own (r.with), or, for a note
  *                                without, a reset if the key had some
  * A bend becomes { type: 'noteBend', key, value: the frequency ratio along the tuning }, a slide
- * { type: 'slide', key, value: the mod wheel's parameter as the wheel would set it (NaN: none) },
+ * { type: 'slide', key, value: the slide's parameter as the wheel would set it (NaN: none) },
  * pressure { type: 'pressure', value, key }.
  */
-export function pageMpe({ post, params, modWheel, groups = [] }) {
-  const wheel = modWheel && (typeof modWheel === 'string' ? { param: modWheel } : modWheel);
+export function pageMpe({ post, params, slide, modWheel, groups = [] }) {
+  const wheel = slide ?? (modWheel && (typeof modWheel === 'string' ? { param: modWheel } : modWheel));
   const p = wheel && groups.flatMap((g) => g.params).find((q) => q.id === wheel.param);
   const expressed = new Set(); // keys the engine was given their own bend or slide
   let gathering = null;        // a note-on's own, gathered to go with it

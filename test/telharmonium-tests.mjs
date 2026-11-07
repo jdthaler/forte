@@ -393,5 +393,33 @@ test('CPU: twenty keys with every stop out, through 25 km of cable, render well 
   assert.ok(dt < 0.6, `${((dt / 2) * 100).toFixed(1)} % of real time`);
 });
 
+test(`Slide: a key's relay draws its harmonics from the ground tone up, as many as the Relay draws knob says or the key's own slide (down to ${INSTRUMENT.mpe.slide.max}): just those buses carry it; a slide matches the knob; a held key's relay opens and closes blades as it changes, with or without contact time`, () => {
+  assert.equal(INSTRUMENT.mpe.slide.param, 'draws');
+  const all = { ...both([8, 8, 8, 8, 8, 8, 8, 8]), tooth: 0, droop: 0 };
+  const buses = (e) => Array.from({ length: 8 }, (_, h) => e.busCount(8 + h)).join('');
+  for (const n of [1, 3, 8]) {
+    const knob = engine(P({ ...all, draws: n })), own = engine(P(all));
+    own.handle({ type: 'slide', key: 60, value: n });
+    knob.noteOn(60, 1); own.noteOn(60, 1);
+    const a = run(knob, 0.2)[1], b = run(own, 0.2)[1];
+    assert.equal(buses(knob), '1'.repeat(n) + '0'.repeat(8 - n), `${n}`);
+    assert.deepEqual(a, b, `${n}: the slide and the knob`);
+  }
+  for (const contact of [6, 0]) {
+    const e = engine(P({ ...all, contact }), { tap: 1 });
+    e.noteOn(60, 1);
+    const f = keyHz(60), x0 = run(e, 0.3)[1];
+    e.handle({ type: 'slide', key: 60, value: 1 });
+    const x1 = run(e, 0.3)[1];
+    assert.equal(buses(e), '10000000', `${contact} ms: let up`);
+    assert.ok(tone(x1, 2 * f, 4800, 14400) < 0.01 * tone(x0, 2 * f, 4800, 14400), `${contact} ms: the octave gone`);
+    e.handle({ type: 'slide', key: 60, value: 8 });
+    const x2 = run(e, 0.3)[1];
+    assert.equal(buses(e), '11111111', `${contact} ms: back`);
+    near(tone(x2, 2 * f, 4800, 14400) / tone(x0, 2 * f, 4800, 14400), 1, 0.05, `${contact} ms: the octave back`);
+    for (const x of [x1, x2]) assert.ok(x.every(Number.isFinite));
+  }
+});
+
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');
 process.exit(failures ? 1 : 0);

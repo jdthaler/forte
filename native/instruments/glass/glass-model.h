@@ -31,6 +31,14 @@ Rayleigh rayleighOf(int n);      // any n ≥ 2 (computes)
 // Rayleigh's inextensional field itself (unit sphere): u, v, w.
 void rayleighField(int n, double th, double ph, double out[3]);
 double liquidJ(int n, double thetaD);
+// How much family n moves along the rim's direction at `below` radians under the rim of a
+// hemispherical bowl, as a fraction of how much it moves at the rim: sin θ tan^n(θ/2), θ from the
+// pole (Rayleigh's v), over its value at θ = π/2 (1).
+inline double rubShape(int n, double below) {
+  if (below == 0) return 1;
+  const double th = std::numbers::pi / 2 - below;
+  return std::sin(th) * std::pow(std::tan(th / 2), n);
+}
 // A thin ring (Rayleigh, Hoppe): the same modes in the limit of a short cylinder.
 inline double ringRatio(int n) { return (n * (n * n - 1.0)) / std::sqrt(n * n + 1.0) / (6 / std::sqrt(5.0)); }
 inline double ringBryan(int n) { return 2 / (n * n + 1.0); }

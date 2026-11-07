@@ -44,22 +44,27 @@
     {"id":"cents8","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"cents9","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"cents10","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
-    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false}
+    {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
+    {"id":"strikeOn","kind":"toggle","def":true},
+    {"id":"glideOn","kind":"toggle","def":true},
+    {"id":"slideOn","kind":"toggle","def":true},
+    {"id":"pressOn","kind":"toggle","def":true},
+    {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"CP-70","values":{}},
-    {"name":"Same strings on a soundboard, heard by microphones","values":{"mount":"board","listen":1}},
-    {"name":"Same strings on a soundboard, through the piezo","values":{"mount":"board","listen":0}},
-    {"name":"Concert-grand scale (long bass strings)","values":{"scale":"concert","stringing":"grand"}},
-    {"name":"Ideal flexible strings (harmonic)","values":{"stiffness":0}},
-    {"name":"Honky-tonk unisons (10 ¢)","values":{"detune":10}},
-    {"name":"Weinreich: one string, tilted bridge, soundboard","values":{"stringing":"single","mount":"board","listen":0,"tilt":20,"pickH":0.6}},
-    {"name":"Struck at the middle (odd partials)","values":{"strike":0.5}},
-    {"name":"Low-impedance preamp (thin bass)","values":{"rIn":22}},
-    {"name":"Stage EQ: bright and scooped","values":{"bass":4,"mid":-5,"treble":7}},
-    {"name":"Stereo tremolo","values":{"tremDepth":0.6,"tremRate":5.5}},
-    {"name":"Hard, worn felt: a bright clank","values":{"hardness":4}},
-    {"name":"Struck near the end: every partial bright","values":{"strike":0.03}},
-    {"name":"Strong sympathetic resonance (hold the pedal)","values":{"sympathy":0.8}}
+    {"name":"CP-70","values":{"glideOn":false,"pressOn":false}},
+    {"name":"Same strings on a soundboard, heard by microphones","values":{"glideOn":false,"pressOn":false,"mount":"board","listen":1}},
+    {"name":"Same strings on a soundboard, through the piezo","values":{"glideOn":false,"pressOn":false,"mount":"board","listen":0}},
+    {"name":"Concert-grand scale (long bass strings)","values":{"glideOn":false,"pressOn":false,"scale":"concert","stringing":"grand"}},
+    {"name":"Ideal flexible strings (harmonic)","values":{"glideOn":false,"pressOn":false,"stiffness":0}},
+    {"name":"Honky-tonk unisons (10 ¢)","values":{"glideOn":false,"pressOn":false,"detune":10}},
+    {"name":"Weinreich: one string, tilted bridge, soundboard","values":{"glideOn":false,"pressOn":false,"stringing":"single","mount":"board","listen":0,"tilt":20,"pickH":0.6}},
+    {"name":"Struck at the middle (odd partials)","values":{"glideOn":false,"pressOn":false,"strike":0.5}},
+    {"name":"Low-impedance preamp (thin bass)","values":{"glideOn":false,"pressOn":false,"rIn":22}},
+    {"name":"Stage EQ: bright and scooped","values":{"glideOn":false,"pressOn":false,"bass":4,"mid":-5,"treble":7}},
+    {"name":"Stereo tremolo","values":{"glideOn":false,"pressOn":false,"tremDepth":0.6,"tremRate":5.5}},
+    {"name":"Hard, worn felt: a bright clank","values":{"glideOn":false,"pressOn":false,"hardness":4}},
+    {"name":"Struck near the end: every partial bright","values":{"glideOn":false,"pressOn":false,"strike":0.03}},
+    {"name":"Strong sympathetic resonance (hold the pedal)","values":{"glideOn":false,"pressOn":false,"sympathy":0.8}}
   ]
 }

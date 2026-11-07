@@ -101,6 +101,10 @@ test('SysEx: MPE on a lower zone (the flag, RPN 6 on channels 2 and 1, then RPN 
   assert.deepEqual(hex(sx.transpose(-2)), nrpn(3, '3e'));
 });
 
+test('SysEx: the faders\' lights (3D 14, 15, 16), held to 0..127', () => {
+  assert.deepEqual(hex(sx.faderLights([0, 64.4, 300, 9])), ['f0 00 21 10 78 3d 14 00 f7', 'f0 00 21 10 78 3d 15 40 f7', 'f0 00 21 10 78 3d 16 7f f7']);
+});
+
 test('SysEx: Set up for Forte is MPE ±48 on 15, Slide CC74 absolute, channel pressure, the faders and pad on their CCs; nothing else', () => {
   const all = sx.forForte();
   for (const m of all) assert.ok(m[0] === 0xf0 ? m.at(-1) === 0xf7 && m.slice(1, -1).every((b) => b < 0x80) : m.length === 3 && m.slice(1).every((b) => b < 0x80));

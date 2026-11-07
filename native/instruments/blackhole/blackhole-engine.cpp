@@ -11,7 +11,9 @@ namespace forte::blackhole {
 
 namespace fd = forte::fdlibm;
 static constexpr double PI = 3.141592653589793, TAU = 2 * PI;
+static constexpr double BEND_T = 0.02;           // s: a note's own bend glides this fast
 static constexpr double STEAL_TAU = 0.0015;      // a stolen voice fades out with this time constant (gone in ~10 ms)
+static constexpr double INFALL_T = 0.15;         // s between the clumps a pressed key drops in (Press)
 static constexpr int VOICES_EVERY = 48 * 128;    // samples between voice counts for the page
 
 void Voice::start(const RingdownEngine &eng, int key_, const KeyVoice &d, double vel_) {
@@ -20,10 +22,10 @@ void Voice::start(const RingdownEngine &eng, int key_, const KeyVoice &d, double
   n = d.count;
   for (int i = 0; i < n; i++) {
     const Mode &md = d.modes[i];
-    const double r = fd::exp(-md.gamma * k), th = -TAU * md.f * k;
-    rr[i] = r * fd::cos(th); ri[i] = r * fd::sin(th);
+    mf[i] = md.f; mg[i] = md.gamma;
     cpr[i] = md.cpr; cpi[i] = md.cpi; cxr[i] = md.cxr; cxi[i] = md.cxi;
   }
+  bent = eng.bendOf(key); f0 = d.info.f0;
   ring = false;
   fade = 1;
   stolen = false;
@@ -31,15 +33,25 @@ void Voice::start(const RingdownEngine &eng, int key_, const KeyVoice &d, double
   // the strain rises through the merger peak rather than jumping: a raised-cosine rise over half
   // a (2,2,0) cycle removes the onset click
   rise = d.hasChirp ? 1 : 0;
-  riseStep = 2 * d.info.f0 * k;
   dead = false;
   hasChirp = d.hasChirp;
   if (hasChirp) {
     c = d.chirp;
     t = 0; phi = 0; f = c.fStart; stage = 1; A = 0; xfade = 1;
     if (std::isnan(c.tc)) c.tc = (5.0 / 256) * fd::pow(c.Mc, -5.0 / 3) * fd::pow(PI * c.fStart, -8.0 / 3);
-    bridge = fd::exp(-k / c.tauB);
-  } else startRing(0);
+  }
+  retune(eng);
+  if (!hasChirp) startRing(0);
+}
+
+void Voice::retune(const RingdownEngine &eng) {
+  const double k = eng.k * bent;
+  for (int i = 0; i < n; i++) {
+    const double r = fd::exp(-mg[i] * k), th = -TAU * mf[i] * k;
+    rr[i] = r * fd::cos(th); ri[i] = r * fd::sin(th);
+  }
+  riseStep = 2 * f0 * k;
+  if (hasChirp) bridge = fd::exp(-k / c.tauB);
 }
 
 void Voice::startRing(double phase) {
@@ -48,7 +60,9 @@ void Voice::startRing(double phase) {
 }
 
 void Voice::render(float *L, float *R, int ns, const RingdownEngine &eng) {
-  const double k = eng.k, g = eng.master * 0.35 * vel;
+  // the remnant's recoil (a note's own bend): the whole wave Doppler-shifted, its time too
+  if (const double to = eng.bendOf(key); bent != to) { bent = glideTo(bent, to, ns * eng.k, BEND_T); retune(eng); }
+  const double k = eng.k * bent, g = eng.master * 0.35 * vel;
   const bool mono = !eng.stereo;
   const double fadeStep = stolen ? eng.stealStep : !keyDown && eng.releaseMute ? eng.muteStep : 1;
   double peak = 0;
@@ -142,12 +156,31 @@ void RingdownEngine::offer(const KeyVoice &v) { offer_ = v; hasOffer = true; }
 
 Voice *RingdownEngine::slot() { return nfree ? free_[--nfree] : nullptr; }
 
+// A clump falling in sets the hole's modes ringing again, as the merger did, in proportion to its
+// mass: up to a third of the merger's, the harder the press. A hole whose ringing has died away
+// (its key still held) rings anew; one still spiralling in takes it with the merger.
+void RingdownEngine::clump(int key, double x) {
+  Voice *v = nullptr;
+  for (int i = 0; i < nv; i++) if (voices[i]->key == key && voices[i]->keyDown && !voices[i]->stolen) v = voices[i];
+  if (!v) { if (key >= 0 && key < 128 && struck[key] > 0) strike(key, struck[key] * x / 3, true); return; }
+  if (!v->ring) return;
+  for (int m = 0; m < v->n; m++) v->zr[m] += x / 3;
+}
+
 void RingdownEngine::noteOn(int key, double velocity) {
+  if (key >= 0 && key < 128) { down[key] = true; infall[key] = 0; }
+  press.reset(key);
+  strike(key, velocity, false);
+}
+
+// ringOnly: a clump's ringing, with no inspiral, leaving the key's own velocity alone
+void RingdownEngine::strike(int key, double velocity, bool ringOnly) {
   // a key with a slide of its own: its black hole at that spin, built here (the page's voice is
   // the knob's)
   const double u = expr.slideOr(key, NAN);
   if (u == u) { ModelParams m = model; m.spinU = std::max(0.0, u); keyVoice(key, m, fs, spun, &spunAngular); }
   const KeyVoice &d = u == u ? spun : hasOffer ? offer_ : voiceFor(key);
+  if (key >= 0 && key < 128 && !ringOnly) struck[key] = velocity;
   hasOffer = false;
   // over the limit: fade out the quietest voice that is not already going
   int live = 0;
@@ -161,6 +194,7 @@ void RingdownEngine::noteOn(int key, double velocity) {
   Voice *v = slot();
   if (!v) return; // never: the hard limit below keeps a slot free
   v->start(*this, key, d, velocity);
+  if (ringOnly && v->hasChirp) { v->hasChirp = false; v->rise = 0; v->startRing(0); }
   voices[nv++] = v;
   if (nv > 2 * maxVoices) { // hard limit, never reached in practice: the oldest goes
     free_[nfree++] = voices[0];
@@ -169,18 +203,39 @@ void RingdownEngine::noteOn(int key, double velocity) {
   }
 }
 
-void RingdownEngine::noteOff(int key, double) {
+// Lift: a fast lift sets off a second, smaller merger: a black hole of half the mass rings down an
+// octave up, up to half as hard as the key's last.
+void RingdownEngine::noteOff(int key, double velocity) {
   for (int i = 0; i < nv; i++) if (voices[i]->key == key) voices[i]->keyDown = false;
+  if (key < 0 || key > 127) return;
+  down[key] = false;
+  if (const double t = liftPast(velocity), vel = struck[key]; t > 0 && vel > 0) {
+    struck[key] = 0;
+    const int n = nv;
+    strike(std::min(key + 12, KEY_HI), 0.5 * t * vel, false);
+    struck[std::min(key + 12, KEY_HI)] = 0;
+    if (nv > n) voices[nv - 1]->keyDown = false; // nothing holds it
+  }
 }
 
 void RingdownEngine::allNotesOff() {
   for (int i = 0; i < nv; i++) free_[nfree++] = voices[i];
   nv = 0;
+  for (bool &d : down) d = false;
 }
 
 void RingdownEngine::process(float *L, float *R, int n) {
   std::fill(L, L + n, 0.0f);
   std::fill(R, R + n, 0.0f);
+  // Press: matter falling in. A firm press into a held key drops a clump into its black hole at
+  // once, and another every INFALL_T while it stays pressed
+  for (int key = 0; key < 128; key++) {
+    if (!down[key]) continue;
+    const double x = press.of(key);
+    if (x <= 0) { infall[key] = 0; continue; }
+    if (infall[key] <= 0) { clump(key, x); infall[key] += INFALL_T; if (infall[key] <= 0) infall[key] = INFALL_T; }
+    infall[key] -= n * k;
+  }
   int j = 0;
   for (int i = 0; i < nv; i++) {
     Voice *v = voices[i];

@@ -21,6 +21,7 @@ constexpr double MOTOR_TAU = 0.35;  // s: the shaft spins up and down with this 
 constexpr double PARK_HZ = 1.2;     // the shaft parks with a critically damped servo of this natural frequency
 constexpr double DAMP_RAMP = 0.008; // s: the damper felt lands (and lifts) over this
 constexpr int POST_BLOCKS = 4;      // live view messages every few blocks
+constexpr double BEND_T = 0.02;    // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double NYQUIST = 0.45;    // × fs: modes from here up are left out (they would alias)
 
 // ---- a voice: one bar and its tube ---------------------------------------------------------
@@ -37,6 +38,7 @@ void VibraphoneEngine::Voice::start(VibraphoneEngine &eng, Data::Ref r, uint64_t
   // −60 dB under its loudest instead of −90
   top = eng.pick(NYQUIST * eng.fs, std::min(NYQUIST * eng.fs, 16000.0), std::min(NYQUIST * eng.fs, 12000.0));
   floor = eng.pick(1e-9, 1e-7, 1e-6);
+  bent = eng.own.bendOf(key); // bent before it was struck
   coefs(eng);
 }
 
@@ -44,7 +46,7 @@ void VibraphoneEngine::Voice::start(VibraphoneEngine &eng, Data::Ref r, uint64_t
 void VibraphoneEngine::Voice::coefs(const VibraphoneEngine &eng) {
   const double k = 1 / eng.fs, ts = barTempScale(eng.P[p::temp]), sd = (6.91 / eng.P[p::damp]) * damp;
   for (int i = 0; i < N; i++) {
-    const double f = d->f[i] * ts, om = TAU * f, s = d->sigFixed[i] + pi * f * eng.P[p::eta] + sd * d->dampW[i];
+    const double f = d->f[i] * ts * bent, om = TAU * f, s = d->sigFixed[i] + pi * f * eng.P[p::eta] + sd * d->dampW[i];
     sig[i] = s;
     if (i == 0) { K11 = om * om; sig1 = s; continue; }
     cut[i] = f >= top;
@@ -75,7 +77,8 @@ void VibraphoneEngine::Voice::tube(const VibraphoneEngine &eng) {
 void VibraphoneEngine::Voice::strike(const VibraphoneEngine &eng, double velocity) {
   const double *P = eng.P.data();
   const int nx = d->nx;
-  const double u = std::min(nx - 1 - 1e-9, std::max(0.0, P[p::strike] * (nx - 1))), j = std::floor(u), fr = u - j;
+  const double at = eng.own.slideOr(key, P[p::strike]); // its own slide, or the mallets' point
+  const double u = std::min(nx - 1 - 1e-9, std::max(0.0, at * (nx - 1))), j = std::floor(u), fr = u - j;
   const int jj = (int)j;
   const double yb = P[p::across] * (d->b / 2);
   coefs(eng);
@@ -96,7 +99,7 @@ void VibraphoneEngine::Voice::strike(const VibraphoneEngine &eng, double velocit
   eta = uc - 1.5 * v * h; etaPrev = eta - v * h;
   dPrev = -1; dPrev2 = -1; malletOn = true; contact = false; inFlight = 0;
   contactSamples = 0; Fmax = 0;
-  released = false; fading = false; fade = 1; age = 0;
+  released = false; fading = false; fade = 1; age = 0; touchLeft = 0;
 }
 
 // Head force for a compression D at the next step: the discrete gradient of V = Kδ^(p+1)/(p+1)
@@ -301,13 +304,18 @@ void VibraphoneEngine::strikeKey(int key, double velocity, Data::Ref r) {
   }
 }
 
-void VibraphoneEngine::noteOff(int key, double) {
+void VibraphoneEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
-  if (Voice *v = byKey[key]) v->released = true;
+  // a fast lift touches the bar with the mallet for 0.1 s, damping it even with the pedal down
+  if (Voice *v = byKey[key]) {
+    v->released = true;
+    if (const double t = liftPast(velocity); t > 0) { v->touch = t; v->touchLeft = 0.1 * fs; }
+  }
 }
 
 void VibraphoneEngine::allNotesOff() {
+  presses.clear();
   nPending = 0;
   for (int i = 0; i < nVoices; i++) voices[i]->fading = true;
 }
@@ -363,9 +371,13 @@ void VibraphoneEngine::processBlock(float *L, float *R, int n) {
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
     // the damper felt: on every bar not held by a key, unless the pedal is down
-    const double want = v->released && !sustain && !lock ? 1 : 0;
-    if (v->damp != want) v->damp = want > v->damp ? std::min(1.0, v->damp + dStep) : std::max(0.0, v->damp - dStep);
-    if (v->damp != v->dampSet) v->coefs(*this);
+    double want = v->released && !sustain && !lock ? 1 : 0;
+    if (v->touchLeft > 0) { want += v->touch; v->touchLeft -= n; } // and a mallet's touch after a fast lift
+    if (!v->released) want = std::max(want, presses.of(v->key)); // Press: damped as hard as the key is pressed
+    if (v->damp != want) v->damp = want > v->damp ? std::min(want, v->damp + dStep) : std::max(want, v->damp - dStep);
+    const double to = own.bendOf(v->key), was = v->bent; // Glide: the mallet dragged along the bar
+    if (was != to) v->bent = glideTo(was, to, n / fs, BEND_T);
+    if (v->damp != v->dampSet || v->bent != was) v->coefs(*this);
     if (moving || v->fresh) v->tube(*this);
     v->render(L, R, n, *this);
   }

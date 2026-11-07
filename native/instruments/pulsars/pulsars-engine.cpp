@@ -13,6 +13,7 @@ constexpr double OUT = 0.08;         // a pulsar at full velocity whose sightlin
 constexpr double STEAL_T = 0.005;    // s: a stolen voice fades with this time constant
 constexpr double SILENT = 1e-5;      // a switched-off pulsar this faint is gone
 constexpr double BRIGHTEST = 5;   // no single pulse brighter than this many times the average (the log-normal's far tail cut)
+constexpr double BEND_T = 0.02;   // s: a note's own bend glides this fast
 constexpr int FIRST = 21, LAST = 108;
 
 PulsarsEngine::PulsarsEngine(double fs) : Engine(fs), rng(0x50a5a75u) {
@@ -71,10 +72,11 @@ void PulsarsEngine::startXf(Voice &v) {
 
 void PulsarsEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < FIRST || key > LAST) return;
+  press.reset(key);
   // the same key again: the pulsar switches back on, as it is
   for (Voice &x : voices) {
     if (x.key != key || x.stolen) continue;
-    x.vel = velocity; x.held = true; x.tOff = -1; x.t = 0;
+    x.vel = velocity; x.held = true; x.tOff = -1; x.t = 0; x.lg = 1; x.lgStep = 0;
     return;
   }
   // past kMaxVoices (fewer at Medium and Low Quality), the oldest let-go pulsar (or else the
@@ -110,6 +112,7 @@ void PulsarsEngine::noteOn(int key, double velocity) {
   v.cur = 0;
   fill(v, 0);
   v.inc = v.setup.f / fs;
+  v.bent = expr.bendOf(key);
   v.phase = 0.5; // between pulses
   v.aPrev = v.aNext = 1;
   // each sub-band's switch: as fast as its scattering tail lets it, and never a click
@@ -130,8 +133,16 @@ void PulsarsEngine::noteOn(int key, double velocity) {
   post(m);
 }
 
-void PulsarsEngine::noteOff(int key, double) {
-  for (Voice &v : voices) if (v.key == key && v.held && !v.stolen) { v.held = false; v.tOff = v.t; }
+// Lift: a slow lift fades the pulse train out over up to 0.6 s before the pulsar switches off; a
+// fast one cuts it, within 30 ms, the dispersed tail too.
+void PulsarsEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
+  for (Voice &v : voices) if (v.key == key && v.held && !v.stolen) {
+    v.held = false;
+    if (s > 1) { v.lgStep = -1 / (0.6 * (s - 1) * fs); continue; } // switches off once faded
+    v.tOff = v.t;
+    if (liftPast(velocity) > 0) v.lgStep = -1 / (0.03 * fs);
+  }
 }
 
 int PulsarsEngine::harmonicsOf(int key) const {
@@ -148,6 +159,11 @@ void PulsarsEngine::run(Voice &v, float *L, float *R, int n) {
   const Setup &s = v.setup;
   const bool sweep = s.dedisp == kNone && s.dm > 0;
   const double m = P[p::jitter];
+  // its binary orbit, toward us or away: the pulses come faster or slower (a note's own bend)
+  v.bent = glideTo(v.bent, expr.bendOf(v.key), n * dt, BEND_T);
+  // Press: a brighter beam, up to twice as bright, gliding (a held pulsar's own pressure)
+  v.br = glideTo(v.br, 1 + press.of(v.key), n * dt, PRESS_GLIDE);
+  const double inc = v.inc * v.bent;
   for (int i = 0; i < n; i++) {
     // the share of each sub-band the pulses reach: in from the top of the band as the pulsar
     // switches on, out the same way as it switches off
@@ -156,7 +172,7 @@ void PulsarsEngine::run(Voice &v, float *L, float *R, int n) {
     else {
       tl = sweep ? arrived(s, 0, v.t) : (v.t >= 0 ? 1 : 0);
       tr = sweep ? arrived(s, 1, v.t) : tl;
-      if (!v.held) {
+      if (!v.held && v.tOff >= 0) {
         const double u = v.t - v.tOff;
         tl = std::min(tl, 1 - (sweep ? arrived(s, 0, u) : 1.0));
         tr = std::min(tr, 1 - (sweep ? arrived(s, 1, u) : 1.0));
@@ -166,7 +182,7 @@ void PulsarsEngine::run(Voice &v, float *L, float *R, int n) {
     v.envR += (tr - v.envR) * (v.stolen ? ks : v.kR);
     // a new turn: the next pulse's brightness, log-normal with the modulation index, less as the
     // smear averages several pulses together
-    v.phase += v.inc;
+    v.phase += inc;
     if (v.phase >= 1) {
       v.phase -= 1;
       v.aPrev = v.aNext;
@@ -196,7 +212,8 @@ void PulsarsEngine::run(Voice &v, float *L, float *R, int n) {
     }
     // the power less its long-run mean (the receiver's baseline): a bright pulse rises above it,
     // a faint one leaves a dip
-    const double g = OUT * v.vel;
+    if (v.lgStep != 0) { v.lg += v.lgStep; if (v.lg <= 0) { v.lg = 0; v.lgStep = 0; if (v.tOff < 0) v.tOff = v.t; } }
+    const double g = OUT * v.vel * v.lg * v.br;
     L[i] = (float)(L[i] + g * v.envL * (a * yl + (a - 1) * dl));
     R[i] = (float)(R[i] + g * v.envR * (a * yr + (a - 1) * dr));
     v.t += dt;

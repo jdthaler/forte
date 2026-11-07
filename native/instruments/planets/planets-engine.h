@@ -7,7 +7,9 @@
 #include <vector>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
+#include "forte/press.h"
 #include "planets-model.h"
 #include "planets-params.h"
 
@@ -27,6 +29,7 @@ class PlanetEngine : public Engine {
   void bend(double value) override { wheel = value; }
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   void slide(double value, int key) override { expr.setSlide(value, key); }
+  void pressure(double value, int key) override { press.set(value, key); }
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -42,6 +45,8 @@ class PlanetEngine : public Engine {
   struct Voice {
     int key = -1;
     bool on = false, released = false, damped = false, stereo = false;
+    double after = 0; // until its next aftershock while its key is pressed, s
+    double fall = 0; // its fade a sample after this lift (0: as usual; forte/lift.h)
     double K = 1, spin = 1, level = 1;
     double Kc = 0, spinC = -1; int nC = 0; // what the oscillators' turns were made for
     int count = 0;
@@ -59,6 +64,8 @@ class PlanetEngine : public Engine {
   bool hasParams = false, sustain = false, dirty = true;
   double wheel = 0;
   NoteExpression expr{48};
+  Presses press;
+  void aftershock(Voice &v, double x);
   Response resp;
   std::vector<int> order;
   long long age = 0;

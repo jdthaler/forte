@@ -31,6 +31,15 @@
 //                 (shared/wasm.js), run by shared/worklet.js (the engine contract is there)
 //   chain         the output chain (shared/chain.js): { volume, room?, tone?, body?, … }
 //                 node → [tone low-pass] → [body] → master (+ room reverb) → limiter → speakers; analyser before the body
+//   midiVelocity(v)  a note's velocity (0..1, after the velocity curve) in the engine's units, for an
+//                 engine that wants its own (MIDI and the on-screen keys; the Combinations page does the same)
+//   keyVelocity   the velocity the computer keys play when there is no `velocity` parameter (0.75)
+//   store         the localStorage key for the settings, for a page older than the shell that kept
+//                 its own (registry.js paramsStore); otherwise forte/<id>/params/v1
+//   console       { groups, defaults, get(P), put(values, P) }: state the page keeps in P in its own
+//                 shape (the organ's drawbars and switches, organ-params.js), and as plugin parameters
+//                 (its groups) through get and put: saved, in presets and links, the plugin's window
+//                 and the faders. shell.set(changes) changes it, or several parameters at once
 //   noteData(key, vel, P, fs)  extra data attached to each noteOn message: what the page offers the
 //                 engine so the audio thread needn't build it (e.g. a key's model, from its WebAssembly model)
 //   space         'sustain' (Space / CC64 = damper pedal, sent to the engine) | 'hold' (keys latch
@@ -58,7 +67,7 @@ import { startMIDI, resumeMIDI, pageMIDI, wheelValue, SOFT_PEDAL, touched, creat
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
 import { dress, faceOf } from './faces.js';
-import { computerKey } from './taps.js'; // a second instrument's share of the computer keys (shared/layer.js)
+import { EXPRESSION_IDS, responds, slideOf } from './expression.js'; // the Expression switches
 import { host, pluginAudio, pageValue, keysFrom } from './in-plugin.js';
 
 const $ = (s) => document.querySelector(s);
@@ -84,8 +93,11 @@ export function createShell(cfg) {
   const RANGE = cfg.range || [36, 96];
   let LO, HI; // the keys that play now: the compass, or the whole range once it is opened
   const ALL = cfg.groups.flatMap((g) => g.params);
-  const DEFAULTS = Object.fromEntries(ALL.map((p) => [p.id, p.def]));
-  const STORE = `forte/${cfg.id}/params/v1`;
+  const CON = cfg.console ?? null, CON_PARAMS = CON ? CON.groups.flatMap((g) => g.params) : [];
+  const DEFAULTS = { ...Object.fromEntries(ALL.map((p) => [p.id, p.def])), ...structuredClone(CON?.defaults ?? {}) };
+  // a console's state as P keeps it: a stored value of the same shape as its default
+  const sameShape = (v, d) => typeof v === typeof d && Array.isArray(v) === Array.isArray(d) && (!Array.isArray(d) || v.length === d.length);
+  const STORE = cfg.store ?? `forte/${cfg.id}/params/v1`;
   // Stored settings may be from an older version: keep only known ids, with valid values.
   const valid = (p, v) => {
     if (p.type === 'select') return p.options.some(([k]) => k === v) ? v : p.def;
@@ -95,7 +107,9 @@ export function createShell(cfg) {
   const load = () => {
     let s = null;
     try { s = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch { /* corrupt */ }
-    return Object.fromEntries(ALL.map((p) => [p.id, s && p.id in s ? valid(p, s[p.id]) : p.def]));
+    const P = Object.fromEntries(ALL.map((p) => [p.id, s && p.id in s ? valid(p, s[p.id]) : p.def]));
+    for (const [k, d] of Object.entries(CON?.defaults ?? {})) P[k] = structuredClone(s && sameShape(s[k], d) ? s[k] : d);
+    return P;
   };
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(shell.P)); } catch { /* storage unavailable */ } };
 
@@ -131,7 +145,7 @@ export function createShell(cfg) {
       await ctx.audioWorklet.addModule(new URL('./worklet.js', import.meta.url)); // forte-processor, and the chain's limiter
       const node = new AudioWorkletNode(ctx, 'forte-processor', {
         numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
-        processorOptions: { wasm: { name: cfg.wasm.name, bytes } },
+        processorOptions: { wasm: { name: cfg.wasm.name, bytes }, keyVelocity: cfg.keyVelocity },
       });
       const chain = createChain(ctx, node, cfg.chain || {});
       const analyser = ctx.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0.55;
@@ -174,15 +188,16 @@ export function createShell(cfg) {
     starting.catch((err) => { toast(`Audio failed to start: ${err.message}`); ctx?.close?.().catch(() => {}); starting = null; });
     return starting;
   };
-  const paramsMessage = () => ({ type: 'params', P: { ...shell.P } });
-  const sendParams = () => shell.post(paramsMessage());
+  // swap: a preset's change, which the processor fades across so it doesn't click (shared/worklet.js)
+  const paramsMessage = (swap = false) => ({ type: 'params', P: { ...shell.P }, ...(swap && { swap }) });
+  const sendParams = (swap) => shell.post(paramsMessage(swap));
   shell.sendParams = sendParams;
   shell.post = (m) => { if (host) return; if (shell.audio) shell.audio.node.port.postMessage(m); else if (starting) starting.then((a) => a.node.port.postMessage(m), () => {}); };
   shell.applyMix = () => { if (shell.audio) shell.audio.chain.apply(shell.P, trimGain(cfg.id)); };
 
   // ---- notes ---------------------------------------------------------------
   // MPE: a member channel's bend, slide and pressure are its note's (a note-on's go with it)
-  const notes = pageMpe({ post: (m) => shell.post(m), params: () => shell.P, modWheel: cfg.modWheel, groups: cfg.groups });
+  const notes = pageMpe({ post: (m) => shell.post(m), params: () => shell.P, slide: slideOf(cfg), groups: cfg.groups });
   shell.mpe = notes.mpe;
   // an instrument that speaks only while held says so the first time a key is let go too soon
   const pressedAt = new Map();
@@ -238,7 +253,8 @@ export function createShell(cfg) {
   const labels = () => { const m = new Map(); LOW_LBL.forEach((l, i) => m.set(shell.base + i, l)); HIGH_LBL.forEach((l, i) => { if (!m.has(shell.base + 12 + i)) m.set(shell.base + 12 + i, l); }); return m; };
   const typing = (t) => t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['range', 'checkbox'].includes(t.type)));
   let spaceHeld = false; // the real Space bar (the on-screen pedal sends synthetic events)
-  const kbVel = () => (shell.P.velocity !== undefined ? shell.P.velocity : 0.75);
+  const kbVel = () => shell.P.velocity ?? cfg.keyVelocity ?? 0.75;
+  const engineVelocity = (v) => (cfg.midiVelocity ? cfg.midiVelocity(v) : v);
   window.addEventListener('keydown', (e) => {
     if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
     // a control reached with Tab keeps its own keys (Space ticks a stop, arrows move a slider);
@@ -263,21 +279,21 @@ export function createShell(cfg) {
     e.preventDefault();
     if (e.repeat || held.has(e.code)) return;
     held.set(e.code, key);
-    if (computerKey(key, true)) down(key, kbVel());
+    down(key, kbVel());
   });
   window.addEventListener('keyup', (e) => {
     if (e.code === 'Space' && cfg.space && !controlOwns(e)) { if (e.isTrusted) spaceHeld = false; setSustain(false); return; }
     const key = held.get(e.code);
-    if (key !== undefined) { held.delete(e.code); if (computerKey(key, false)) up(key); }
+    if (key !== undefined) { held.delete(e.code); up(key); }
   });
   // Losing focus means no keyup will come: release held keys and a held Space bar.
-  const letGo = () => { for (const k of held.values()) if (computerKey(k, false)) up(k); held.clear(); if (spaceHeld) { spaceHeld = false; setSustain(false); } };
+  const letGo = () => { for (const k of held.values()) up(k); held.clear(); if (spaceHeld) { spaceHeld = false; setSustain(false); } };
   window.addEventListener('blur', letGo);
   document.addEventListener('visibilitychange', () => { if (document.hidden) letGo(); });
   function shiftOctave(d) {
     const nb = shell.base + d;
     if (nb + 11 < LO || nb > HI - 12) return; // never a whole row of computer keys out of range
-    for (const k of held.values()) if (computerKey(k, false)) up(k);
+    for (const k of held.values()) up(k);
     held.clear(); shell.base = nb; shell.keys.labels(labels()); updateHelp();
   }
   function updateHelp() {
@@ -291,7 +307,7 @@ export function createShell(cfg) {
   // ---- on-screen keyboard (multi-touch; shared/keyboard.js) ----------------------
   if (cfg.space && !document.body.dataset.space) document.body.dataset.space = cfg.space === 'hold' ? 'Hold' : 'Sustain';
   shell.keys = createKeyboard($('#keyboard'), {
-    lo: LO, hi: HI, onDown: (k, f) => down(k, 0.2 + 0.8 * f), onUp: up,
+    lo: LO, hi: HI, onDown: (k, f) => down(k, engineVelocity(0.2 + 0.8 * f)), onUp: up,
     onPressure: (key, value) => { shell.post({ type: 'pressure', value, key }); cfg.onPressure?.(value, key); }, // as MIDI poly aftertouch
   });
 
@@ -305,12 +321,12 @@ export function createShell(cfg) {
     const [st, d1, d2] = ev.data, cmd = st & 0xf0;
     const { own: its, with: own } = notes.midi(ev.data);
     if (its) return;
-    if (cmd === 0x90 && d2 > 0) down(d1, touched(d2 / 127) * (soft ? SOFT_PEDAL : 1), own); // the velocity curve, the soft pedal
+    if (cmd === 0x90 && d2 > 0) down(d1, engineVelocity(touched(d2 / 127) * (soft ? SOFT_PEDAL : 1)), own); // the velocity curve, the soft pedal
     else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) up(d1, cmd === 0x80 ? d2 / 127 : undefined);
     else if (cmd === 0xb0) {
       if (d1 === 64 && cfg.space) setSustain(d2 >= 64);
-      else if (d1 === 66) setSostenuto(d2 >= 64);
-      else if (d1 === 67) soft = d2 >= 64;
+      else if (d1 === 66 && !(66 in ccs)) setSostenuto(d2 >= 64);
+      else if (d1 === 67 && !(67 in ccs)) soft = d2 >= 64; // unless the descriptor gives it a parameter (the Regal's tremulant), as the plugins do
       else if (d1 === 1 && cfg.modWheel) {
         // The wheel rests at 0, so rest = the parameter's default and full = its maximum
         // (a resting wheel must not drag the instrument to the bottom of its range).
@@ -319,8 +335,10 @@ export function createShell(cfg) {
         shell.setParam(p.id, wheelValue(p, d2, mw.max ?? p.max));
       } else if (d1 === 120 || d1 === 123) shell.panic();
       else {
-        const set = controlled(ccs, ALL, shell.P, d1, d2, ccLast);
-        if (set) { shell.setParam(...set); tellFader(d1, ALL.find((q) => q.id === set[0])); }
+        const set = controlled(ccs, [...ALL, ...CON_PARAMS], CON ? { ...shell.P, ...CON.get(shell.P) } : shell.P, d1, d2, ccLast);
+        const desk = set && CON_PARAMS.find((q) => q.id === set[0]); // a console's: through its state
+        if (desk) { shell.set(CON.put({ ...CON.get(shell.P), [set[0]]: set[1] }, shell.P)); tellFader(d1, desk); }
+        else if (set) { shell.setParam(...set); tellFader(d1, ALL.find((q) => q.id === set[0])); }
       }
       cfg.onCC?.(d1, d2);
     } else if (cmd === 0xd0 || cmd === 0xa0) { // channel / polyphonic aftertouch
@@ -347,8 +365,10 @@ export function createShell(cfg) {
     const det = document.createElement('details');
     det.className = 'group'; det.open = g.open !== false;
     det.innerHTML = `<summary>${g.title}</summary>`;
+    if (g.id) det.dataset.group = g.id;
     // faces first, side by side, then the rest (the page's order, not the parameters')
     for (const p of [...g.params].sort((a, b) => !!faceOf(b) - !!faceOf(a))) {
+      if (EXPRESSION_IDS.includes(p.id) && !responds(cfg, p.id)) continue; // a switch for what this instrument doesn't answer to (yet)
       const wrap = document.createElement('div');
       wrap.className = 'param';
       if (p.strip) wrap.dataset.perform = ''; // in the strip above the keys (shared/layout.js)
@@ -427,12 +447,24 @@ export function createShell(cfg) {
     shell.applyMix(); sendParams();
     cfg.onParam?.(id, v, shell.P, ALL.find((q) => q.id === id), dragging);
   };
-  shell.setAll = (np) => {
-    shell.P = { ...DEFAULTS, ...np };
+  // several values at once, a console's state among them (arrays as a whole)
+  shell.set = (changes, dragging = false) => {
+    const ids = Object.keys(changes).filter((k) => JSON.stringify(shell.P[k]) !== JSON.stringify(changes[k]));
+    if (!ids.length) return;
+    for (const k of ids) { shell.P[k] = structuredClone(changes[k]); if (k === cfg.compass?.param) rebound(); refresh(k, dragging); }
+    refreshVisibility(); save(); updateHelp();
+    if ($('#preset')) $('#preset').value = '';
+    shell.applyMix(); sendParams();
+    if (ids.length === 1) cfg.onParam?.(ids[0], shell.P[ids[0]], shell.P, ALL.find((q) => q.id === ids[0]) ?? null, dragging);
+    else cfg.onParam?.('*', null, shell.P, null, dragging);
+  };
+  shell.setAll = (np, { swap = false } = {}) => {
+    shell.P = structuredClone({ ...DEFAULTS, ...np });
     for (const id of controls.keys()) refresh(id);
     if (cfg.compass) rebound();
-    refreshVisibility(); save(); updateHelp(); shell.applyMix(); sendParams();
+    refreshVisibility(); save(); updateHelp(); shell.applyMix(); sendParams(swap);
     cfg.onParam?.('*', null, shell.P, null, false);
+    if (swap) document.dispatchEvent(new CustomEvent('forte-preset', { detail: { ...shell.P } })); // a preset: the RISE's panel shows its faders (shared/rise.js)
   };
   if ($('#preset')) {
     const ps = $('#preset');
@@ -441,13 +473,18 @@ export function createShell(cfg) {
     ps.addEventListener('change', () => {
       if (ps.value === '') return;
       const keep = Object.fromEntries((cfg.keep || []).map((k) => [k, shell.P[k]]));
-      shell.setAll({ ...DEFAULTS, ...keep, ...cfg.presets[+ps.value].p });
+      shell.setAll({ ...DEFAULTS, ...keep, ...cfg.presets[+ps.value].p }, { swap: true });
       unfocus(ps);
     });
   }
-  $('#reset')?.addEventListener('click', () => { shell.setAll({ ...DEFAULTS }); if ($('#preset')) $('#preset').value = ''; });
+  $('#reset')?.addEventListener('click', () => { shell.setAll({ ...DEFAULTS }, { swap: true }); if ($('#preset')) $('#preset').value = ''; });
   // your own presets and shared links, in the same menu (shared/user-presets.js)
-  shell.presets = attachPresets({ instrument: cfg, get: () => shell.P, set: (v) => shell.setAll({ ...shell.P, ...v }), defaults: DEFAULTS, toast });
+  // (a console's state goes in as its parameters, and comes back through put)
+  shell.presets = attachPresets({
+    instrument: cfg, get: () => shell.P, defaults: DEFAULTS, toast,
+    ...(CON && { values: (P) => ({ ...P, ...CON.get(P) }) }),
+    set: (v, o) => shell.setAll(CON ? { ...shell.P, ...Object.fromEntries(ALL.filter((p) => p.id in v).map((p) => [p.id, v[p.id]])), ...CON.put({ ...CON.get(shell.P), ...v }, shell.P) } : { ...shell.P, ...v }, o),
+  });
   $('#start')?.addEventListener('click', (e) => { shell.startAudio(); unfocus(e.currentTarget); });
   $('#midi-btn')?.addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
   if (!host) resumeMIDI(initMIDI); // MIDI was on before and the browser still grants it: on again, no click (in a plugin, the host has the MIDI)
@@ -456,24 +493,26 @@ export function createShell(cfg) {
   // ---- in the plugin's window (shared/in-plugin.js): its values, keys and pedal ----------------
   // The plugin's parameters, by its index: the page's own (a console's or the plugin's own, such as
   // the velocity curve, are not)
-  const pluginParams = host ? host.describe.params.map((q) => ALL.find((p) => p.id === q.id) ?? null) : [];
+  const pluginParams = host ? host.describe.params.map((q) => [...ALL, ...CON_PARAMS].find((p) => p.id === q.id) ?? null) : [];
   const pluginKeys = keysFrom({
     on: (key, vel) => { shell.keys.set(key, true); cfg.onNoteOn?.(key, vel); },
     off: (key) => { shell.keys.set(key, false); cfg.onNoteOff?.(key); },
     pedal: (on) => { shell.sustain = on; cfg.onSustain?.(on); document.dispatchEvent(new CustomEvent('forte-sustain', { detail: on })); },
   });
   shell.fromPlugin = (u) => {
-    const changed = [];
+    const changed = [], desk = {};
     for (const [i, , , v] of u.p || []) {
       const p = pluginParams[i];
       if (!p || v === undefined) continue;
       const value = pageValue(p, v);
+      if (CON_PARAMS.includes(p)) { if (CON.get(shell.P)[p.id] !== value) desk[p.id] = value; continue; }
       if (shell.P[p.id] === value) continue;
       shell.P[p.id] = value;
       if (p.id === cfg.compass?.param) rebound();
       refresh(p.id);
       changed.push(p);
     }
+    if (Object.keys(desk).length) { Object.assign(shell.P, structuredClone(CON.put({ ...CON.get(shell.P), ...desk }, shell.P))); changed.push(null, null); }
     if (changed.length) {
       refreshVisibility(); updateHelp();
       if (changed.length === 1) cfg.onParam?.(changed[0].id, shell.P[changed[0].id], shell.P, changed[0], false);

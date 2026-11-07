@@ -177,7 +177,7 @@ void HydrogenEngine::retune(Voice &v, double b) {
 // Each line's width (Hz) in the sound: its levels' decay in slow motion, and the atoms' Doppler
 // shifts and the ions' Stark fields in proportion to its frequency.
 void HydrogenEngine::widths(Voice &v) {
-  const double d = expr.slideOr(v.key, P[p::density]);
+  const double d = expr.slideOr(v.key, P[p::density]) * v.current; // more current, more ions: their Stark fields broaden the lines
   if (d == v.density) return;
   v.density = d;
   const Gas &a = *glows[v.glow].gas;
@@ -218,20 +218,23 @@ void HydrogenEngine::noteOn(int key, double velocity) {
   if (oldest && on >= pick(kMaxVoices, 16, 8)) { oldest->active = false; if (!slot) slot = oldest; }
   if (!slot) return;
   Voice &v = *slot;
-  v.active = true; v.held = true; v.lit = true;
+  v.active = true; v.held = true; v.lit = true; v.current = 1; press.reset(key);
   v.key = key; v.age = clock++; v.glow = live;
-  v.t = 0; v.tOff = -1; v.shut = 1;
+  v.t = 0; v.tOff = -1; v.shut = 1; v.liftK = 1;
   v.bendNow = wheel * expr.bendOf(key);
   v.peakNorm = 0;
   std::tie(v.gl, v.gr) = keyPan(key);
   light(v, velocity);
 }
 
-void HydrogenEngine::noteOff(int key, double) {
+// Lift: the afterglow when the discharge stops: a slow lift draws it out (up to four times as
+// long), a fast one cuts it short (a quarter).
+void HydrogenEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
   for (Voice &v : voices) {
     if (v.active && v.key == key && v.held) {
       v.held = false;
-      if (!sustain && v.lit) { v.lit = false; v.tOff = v.t; }
+      if (!sustain && v.lit) { v.lit = false; v.tOff = v.t; v.liftK = s * s; }
     }
   }
 }
@@ -244,12 +247,15 @@ void HydrogenEngine::update(Voice &v) {
   v.t += SUB / fs / P[p::slowmo];
   const double b = glideTo(v.bendNow, wheel * expr.bendOf(v.key), SUB / fs, BEND_T);
   if (b != v.bendNow) { v.bendNow = b; retune(v, b); v.density = -1; }
+  // Press: the lamp's discharge current, up to four times: as many more excitations (each line's
+  // power with it) and ions
+  v.current = glideTo(v.current, 1 + 3 * press.of(v.key), SUB / fs, PRESS_GLIDE);
   widths(v);
   const double nyq = 0.48 * fs;
   // each grid's row now, since the key and since its release (the slow ladder's clock runs
   // 1/SLOW_CLOCK times faster)
-  double on[2] = {g.rowAt(v.t), -1}, off[2] = {v.tOff >= 0 ? g.rowAt(v.t - v.tOff) : -1, -1};
-  if (g.slow()) { on[1] = g.rowAt(v.t / SLOW_CLOCK, 1); off[1] = v.tOff >= 0 ? g.rowAt((v.t - v.tOff) / SLOW_CLOCK, 1) : -1; }
+  double on[2] = {g.rowAt(v.t), -1}, off[2] = {v.tOff >= 0 ? g.rowAt((v.t - v.tOff) / v.liftK) : -1, -1};
+  if (g.slow()) { on[1] = g.rowAt(v.t / SLOW_CLOCK, 1); off[1] = v.tOff >= 0 ? g.rowAt((v.t - v.tOff) / v.liftK / SLOW_CLOCK, 1) : -1; }
   // the shutter: −60 dB in its time once the lamp is out, unless it is all the way open
   if (!v.lit && P[p::shutter] < SHUTTER_OPEN) v.shut *= std::exp(-std::log(1000.0) * SUB / fs / P[p::shutter]);
   double sum = 0;
@@ -258,7 +264,7 @@ void HydrogenEngine::update(Voice &v) {
     const double S = g.powerAtRow(o.kept, on[o.clock]) - g.powerAtRow(o.kept, off[o.clock]);
     const double Pw = std::max(0.0, S) * o.weight * o.win;
     sum += Pw;
-    const double amp = v.fKey * o.ratio * b < nyq ? v.gain * v.shut * std::sqrt(Pw) : 0;
+    const double amp = v.fKey * o.ratio * b < nyq ? v.gain * v.shut * std::sqrt(Pw * v.current) : 0;
     const double s = std::sqrt(std::max(0.0, 1 - o.rho * o.rho) / 2);
     o.ar = o.rho * o.ar + s * rng.gauss();
     o.ai = o.rho * o.ai + s * rng.gauss();
@@ -268,7 +274,7 @@ void HydrogenEngine::update(Voice &v) {
     o.zr *= z; o.zi *= z;
   }
   // a released lamp is out when its light has fallen 60 dB, or its response has settled
-  const bool settled = v.t - v.tOff > g.end() && (!g.slow() || (v.t - v.tOff) / SLOW_CLOCK > g.end(1));
+  const bool settled = (v.t - v.tOff) / v.liftK > g.end() && (!g.slow() || (v.t - v.tOff) / v.liftK / SLOW_CLOCK > g.end(1));
   if (!v.lit && (sum * v.shut * v.shut < 1e-6 * v.peak || settled)) v.active = false;
 }
 

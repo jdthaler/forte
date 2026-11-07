@@ -11,6 +11,9 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
+#include "forte/lift.h"
+#include "forte/press.h"
 #include "universe-model.h"
 #include "universe-params.h"
 
@@ -30,6 +33,8 @@ class EarlyUniverseEngine : public Engine {
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override;
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the plasma's sound speed: every wave faster or slower
+  void pressure(double value, int key) override { press.set(value, key); }   // its primordial amplitude, up to twice
   void allNotesOff() override;
   int voiceCount() const override { return (int)voices.size(); }
   void process(float *L, float *R, int n) override;
@@ -46,8 +51,10 @@ class EarlyUniverseEngine : public Engine {
     int key = 0;
     Data::Ref uni;          // its universe
     double f = 0;           // the fundamental (Hz)
+    double bent = 1;        // the plasma's sound speed, over its own (a note's own bend)
     double gl = 1, gr = 1;  // its place across the keyboard
     double velocity = 0;
+    double amp = 1;         // its primordial amplitude over the usual (Press: up to twice)
     int count = 0;          // harmonics played
     std::array<double, MAX_HARMONICS> c{}, s{}, rc{}, rs{}; // each harmonic's phasor, and its turn a sample
     std::array<double, MAX_HARMONICS> e{}, q{};            // the amplitudes now: cos and sin parts
@@ -57,14 +64,18 @@ class EarlyUniverseEngine : public Engine {
     double attack = 0;      // samples into the note (its first 2 ms are a ramp)
     double fade = 1;        // a stolen voice fades out
     bool held = true, released = false, streaming = false, stolen = false, done = false;
+    double liftK = 1; // how many times longer than usual its light takes to stream away after this lift (forte/lift.h)
   };
   void startStreaming(Voice &v);
   void amplitudes(Voice &v, double *e, double *q) const;
   void report(const Voice &v);
+  void retune(Voice &v) const; // each wave's turn a sample, at the voice's sound speed
   uint64_t versionOf(const double *P) const;
 
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
+  forte::Pressures press; // each key's pressure (MPE), and the channel's
+  forte::NoteExpression expr{2}; // each key's own bend: its plasma's sound speed, ±2 semitones
   int focus = -1, sinceReport = 0;
   uint64_t version = 0;
   // the cosmology of the version the worker builds (it checks the version before and after)

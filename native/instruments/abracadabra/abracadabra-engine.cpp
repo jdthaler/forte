@@ -15,6 +15,7 @@ constexpr double TAU = 2 * std::numbers::pi;
 constexpr double OUT = 0.1;          // the louder of the axion and the channel's noise, rms, at full charge
 constexpr double REL_T = 0.005;      // s: a discharged key's channel closes over this
 constexpr double STEAL_T = 0.005;    // s: a stolen voice fades with this time constant
+constexpr double BEND_T = 0.02;      // s: a note's own bend glides this fast
 constexpr double GAIN_T = 0.02;      // s: the readout's gain follows the knobs with this time constant
 constexpr double SILENT = 1e-4;      // a voice faded to this (−80 dB) is over
 constexpr double FRAME_T = 1.0 / 30; // s: how often the page hears every voice's state
@@ -122,7 +123,8 @@ void AbracadabraEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < FIRST || key >= FIRST + KEYS) return;
   Voice &v = voices[key - FIRST];
   KeyField &k = fields[key - FIRST];
-  v.held = true; v.vel = std::clamp(velocity, 0.0, 1.0); v.order = ++order;
+  v.held = true; v.vel = std::clamp(velocity, 0.0, 1.0); v.order = ++order; v.liftK = 1;
+  press.reset(key);
   if (v.active) { v.closing = false; return; } // the magnet charges again from where it is
   // past kMaxVoices (fewer at Medium and Low Quality), the let-go voice with the least field (or
   // else the oldest) fades out
@@ -139,9 +141,9 @@ void AbracadabraEngine::noteOn(int key, double velocity) {
   }
   if (live >= pick(kMaxVoices, 16, 10) && victim) { victim->closing = true; victim->relT = STEAL_T; } // Quality: fewer keys at once
   v = Voice{};
-  v.active = true; v.held = true; v.key = key; v.vel = std::clamp(velocity, 0.0, 1.0); v.order = order;
+  v.active = true; v.held = true; v.key = key; v.vel = std::clamp(velocity, 0.0, 1.0); v.order = order; v.liftK = 1;
   v.halo = pick(MAX_WAVES, 32, 16); v.stream = pick(STREAM_WAVES, 8, 4); // Quality: fewer waves in the field
-  v.rel = 1; v.relT = REL_T;
+  v.rel = 1; v.relT = REL_T; v.bent = expr.bendOf(key);
   std::tie(v.gl, v.gr) = keyPan(key);
   // the field, carried on from when the key was last heard to now, and its first control step
   const FieldShape s = shapeOf(v);
@@ -171,9 +173,11 @@ void AbracadabraEngine::noteOn(int key, double velocity) {
   if (focus != key) { focus = key; baseN = 0; baseK = 0; baseR = baseI = 0; }
 }
 
-void AbracadabraEngine::noteOff(int key, double) {
+void AbracadabraEngine::noteOff(int key, double velocity) {
   if (key < FIRST || key >= FIRST + KEYS) return;
-  voices[key - FIRST].held = false;
+  // Lift: how fast the magnet ramps down: a slow lift over up to four times the ramp, a fast one in a quarter of it
+  const double s = liftScale(velocity);
+  voices[key - FIRST].held = false; voices[key - FIRST].liftK = s * s;
 }
 
 void AbracadabraEngine::setSustain(bool on) { sustain = on; }
@@ -190,14 +194,19 @@ void AbracadabraEngine::play(Voice &v, float *L, float *R, int n) {
   v.gain = v.gain == 0 ? want : glideTo(v.gain, want, n / fs, GAIN_T);
   // the magnet: charging toward the key's velocity, or discharging once the key (and the pedal) let go
   const double target = (v.held || sustain) && !v.closing ? v.vel : 0;
-  const double rate = 1 / (std::max(P[p::ramp], 1e-4) * fs);
+  const double rate = 1 / (std::max(P[p::ramp], 1e-4) * (v.held || sustain ? 1 : v.liftK) * fs);
   // the channel: a band-pass around the note, Q 8 (RBJ, 0 dB at its centre), fed white noise of
   // one-sided density noise² per Hz
   const double w0 = TAU * std::min(f, 0.45 * fs) / fs, al = fdlibm::sin(w0) / (2 * CHANNEL_Q), a0 = 1 + al;
   const double b0 = al / a0, na1 = -2 * fdlibm::cos(w0) / a0, na2 = (1 - al) / a0, sigma = noise * std::sqrt(fs / 2);
-  const double w = TAU * f / fs, cw = fdlibm::cos(w), sw = fdlibm::sin(w);
+  // the carrier, Doppler-shifted by the Earth's speed through the halo (a note's own bend)
+  v.bent = glideTo(v.bent, expr.bendOf(v.key), n / fs, BEND_T);
+  const double w = TAU * f * v.bent / fs, cw = fdlibm::cos(w), sw = fdlibm::sin(w);
   const double relK = 1 - fdlibm::exp(-1 / (v.relT * fs));
-  const double amp = std::sqrt(2.0) * sig;
+  // Press: the key's own magnet charged further, up to twice the field: the axion's flux with it
+  // (the readout's gain stays the knob's, so the signal stands further above the SQUID's noise)
+  v.boost = glideTo(v.boost, 1 + press.of(v.key), n / fs, PRESS_GLIDE);
+  const double amp = std::sqrt(2.0) * sig * v.boost;
   const bool focused = v.key == focus;
   for (int i = 0; i < n; i++) {
     if (v.pos >= v.b) { step(v, k, s, fa); v.pos = 0; }

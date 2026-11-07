@@ -296,10 +296,11 @@ void buildString(PluckedString &st, int m, int choir, const Params &P, const Str
   st.feltK = ACTION::feltK; st.feltR = ACTION::feltR * P.damper * std::sqrt(S.T * S.mu); st.feltPre = ACTION::felt;
   st.tongueK = ACTION::tongueK; st.thick = ACTION::thick;
   st.setPoint(PT::DAMPER, std::min(0.5 * S.L, pluckPoint(m, choir, P) + DAMPER_OFFSET)); // the choir's own row: the same index
+  // the buff: a leather pad by the nut, lightly sprung and lossy (×√(Tμ)); the stop's on the back 8′,
+  // a hand-held one (Press) on any choir
+  st.buffK = 400; st.buffR = BUFF_R * std::sqrt(S.T * S.mu);
+  st.setPoint(PT::BUFF, BUFF_X);
   if (choir == BACK) {
-    // the buff: a leather pad by the nut, lightly sprung and lossy (×√(Tμ))
-    st.buffK = 400; st.buffR = BUFF_R * std::sqrt(S.T * S.mu);
-    st.setPoint(PT::BUFF, BUFF_X);
     // the arpichordium's hook, on a virginal's bass strings (it takes the buff's place while it is on)
     st.hookK = 0;
     if (isVirginal(P.build) && m <= HOOK_TOP) { st.hookK = HOOK_K; st.hookR = HOOK_R * std::sqrt(S.T * S.mu); st.hookGap = HOOK_GAP; }

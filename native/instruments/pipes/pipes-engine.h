@@ -94,6 +94,7 @@ class PipeEngine : public Engine {
   void allNotesOff() override;
   void bend(double value) override; // the organ's air warms or cools: every pipe's sound and jets ×r
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the air in one key's pipes alone
+  void slide(double value, int key) override; // how far one key's pallet opens: its own wind
   void pressure(double value, int key) override; // aftertouch: a hand leans on the bellows (up to double the wind)
   int voiceCount() const override;
   // whether key's pipes are built for the parameters as they are (the tests wait for it)
@@ -120,6 +121,7 @@ class PipeEngine : public Engine {
     std::array<Pipe, RANKS> pipes{};
     std::array<double, RANKS> slider{}, open{}; // slider travel, and the foot's opening
     double kPal = 0, a = 0, aTarget = 0, aRate = 0, fade = 1, env = 0, age = 0, pg = 0, gl = 0, gr = 0;
+    double wind = 1; // the share of the chest's wind its held pallet lets through to the feet (1: wide open)
     double nb = 1; // its key's own bend (MPE), where the glide is
     bool down = false, fading = false, dead = false, inUse = false;
     std::array<Pipe *, RANKS> list{};
@@ -134,6 +136,7 @@ class PipeEngine : public Engine {
   std::array<Voice *, POOL> voices{};
   int nVoices = 0;
   std::array<Voice *, 128> byKey{};
+  double palletOf(int key) const;
   std::array<double, NOISE_N> noise{};
   double Pset = 0, Pr = 0, Qt = 0, Pc = 0, Qdraw = 0, Qtrem = 0;
   Voice *focus = nullptr;
@@ -173,7 +176,7 @@ class PipeEngine : public Engine {
   WindSystem wsys;
   double stiff = -1, trem = 0, tremPh = 0, nz = 0;
   double bendTo = 1, bendNow = 1; // pitch bend: the ratio, and where the glide is
-  NoteExpression expr{MPE_BEND};  // each key's own bend
+  NoteExpression expr{MPE_BEND};  // each key's own bend, and its slide (its pallet's opening)
   // aftertouch: every key's (MPE, poly) and the channel's; the bellows feel the hardest
   std::array<double, 128> press{};
   double after = 0;

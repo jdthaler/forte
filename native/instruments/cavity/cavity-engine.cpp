@@ -82,7 +82,7 @@ void CavityBellsEngine::aim(Voice &v, double offset) {
 
 void CavityBellsEngine::setSustain(bool on) {
   sustain = on;
-  if (!on) for (Voice &v : voices) if (v.released) v.damped = true;
+  if (!on) for (Voice &v : voices) if (v.released && !v.damped) { v.damped = true; v.liftK = 1; }
 }
 
 void CavityBellsEngine::bend(double value) {
@@ -113,7 +113,7 @@ void CavityBellsEngine::noteOn(int key, double velocity) {
   if (const double off = ex.slideOr(key, P[p::offset]); off != v->off) aim(*v, off);
   // a second bunch adds to what still rings, in or out of phase with it
   v->charge = velocity;
-  v->held = true; v->released = false; v->damped = false; v->stolen = false;
+  v->held = true; v->released = false; v->damped = false; v->stolen = false; v->liftK = 1;
   v->kick(velocity, 0);
   v->toNext = (P[p::spacing] * fs) / (v->cav.fpi * (bendNow * v->nb));
   focus = key;
@@ -135,8 +135,11 @@ void CavityBellsEngine::noteOn(int key, double velocity) {
   }
 }
 
-void CavityBellsEngine::noteOff(int key, double) {
-  for (Voice &v : voices) if (v.key == key && !v.released) { v.held = false; v.released = true; if (!sustain) v.damped = true; }
+// Lift: how fast the RF is ramped down: a slow lift over up to four times the usual (the cavity
+// rings on), a fast one in a quarter of it.
+void CavityBellsEngine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
+  for (Voice &v : voices) if (v.key == key && !v.released) { v.held = false; v.released = true; if (!sustain) { v.damped = true; v.liftK = s * s; } }
 }
 
 void CavityBellsEngine::pressure(double value, int key) {
@@ -185,7 +188,7 @@ void CavityBellsEngine::process(float *L, float *R, int n) {
     for (int j = 0; j < c.count; j++) {
       if (!v.use[j] && !v.on[j]) continue; // left out by Quality: never rung
       if (v.w[j] > 0.45 * TAU) { v.ar[j] = v.ai[j] = 0; v.on[j] = false; continue; } // past Nyquist
-      const double sig = decayRate(c.modes[j], Qin, Qhom, v.damped ? Qrel : 0, v.quenched) * (v.w[j] / (TAU * c.modes[j].f / fs))
+      const double sig = decayRate(c.modes[j], Qin, Qhom, v.damped ? Qrel * v.liftK : 0, v.quenched) * (v.w[j] / (TAU * c.modes[j].f / fs))
                          + (v.stolen ? 1 / STEAL_T : 0);
       const double g = std::exp(-sig / fs);
       v.rr[j] = g * std::cos(v.w[j]);
@@ -201,7 +204,6 @@ void CavityBellsEngine::process(float *L, float *R, int n) {
     // with the cavity's tuner, and a key's own bend with its own; the Lorentz detuning moves the
     // cavity alone)
     const double q = TRAIN * v.charge * current, Tb = (P[p::spacing] * fs) / (c.fpi * (bendNow * v.nb));
-    if (!train) v.toNext = Tb;
     // the block in pieces between the bunches' arrivals
     int i0 = 0;
     while (i0 < n) {
@@ -224,6 +226,10 @@ void CavityBellsEngine::process(float *L, float *R, int n) {
       v.toNext -= i1 - i0;
       i0 = i1;
     }
+    // with no train the oscillator's buckets still pass, every Tb from the strike on, so pressure
+    // (or the beam current) starts a train in step with the field the strike left, as a train
+    // from the strike would be; the next bucket, within Tb (a train never starts a bunch overdue)
+    if (!train && v.toNext < 0) v.toNext = std::max(0.0, Tb + std::fmod(v.toNext, Tb));
     if (!train && energy < (v.damped || v.stolen ? std::max(SILENT_DAMPED, v.silent) : v.silent)) v.charge = 0; // finished
   }
   if (focus >= 0 && (sinceReport += n) >= fs / REPORT_HZ) {

@@ -280,6 +280,18 @@ test('slide(NaN) leaves the sound bit for bit as it was, before the note and whi
   const a = Math.round(1.2 * FS), b = Math.round(1.6 * FS);
   assert.ok(rms(B.map((v, i) => v - U[i]), a, b) < 1e-3 * rms(U, a, b), 'back at the knob\'s');
 });
+// A note's bend is its own ring's betatron tune, × the ratio (the ring's pitch, f_rev, can't bend)
+const bend = (key, value) => (e) => e.handle({ type: 'noteBend', key, value });
+test('a ring struck bent has its tune × the ratio: its sidebands at (n ± Q·r)·f_rev, its harmonics where they were; a bend of 1 changes nothing', () => {
+  const k = 60, f = keyFreq(k), q = DEFAULTS.tune, a = 480, b = 480 + 4096, Pp = P({ ...QUIET, pickup: 'single', chroma: 0 });
+  for (const st of [5, -5]) {
+    const r = 2 ** (st / 12), qb = q * r, [x] = render(Pp, 0.2, [[0, bend(k, r)], [0, on(k)]]), [u] = render(Pp, 0.2, [[0, on(k)]]);
+    for (const s of [1 - qb, 1 + qb, 2 + qb]) assert.ok(tone(x, s * f, a, b) > 10 * tone(u, s * f, a, b), `bent ${st}: sideband ${s.toFixed(3)}`);
+    assert.ok(tone(u, (1 + q) * f, a, b) > 10 * tone(x, (1 + q) * f, a, b), `bent ${st}: not at ${(1 + q).toFixed(3)}`);
+    assert.ok(Math.abs(db(tone(x, 2 * f, a, b) / tone(u, 2 * f, a, b))) < 0.5, `bent ${st}: the harmonic stays`);
+  }
+  assert.ok(same(render(Pp, 0.3, [[0, bend(k, 1)], [0, on(k)], [0.1, bend(k, 1)]])[0], render(Pp, 0.3, [[0, on(k)]])[0]));
+});
 test('slide sweeps on a chord, sent every block across the whole range, stay finite and bounded at 44.1, 48 and 96 kHz', () => {
   for (const fs of [44100, 48000, 96000]) for (const pickup of ['pair', 'delta']) {
     const e = new StorageRingEngine(fs); e.setParams(P({ pickup }));

@@ -79,7 +79,8 @@ void Project8Engine::start(Voice &v, int key, double velocity) {
   v.Kref = referenceEnergy(P.data());
   const double K = (int)P[p::source] == source_::tritium ? drawTritium(rng) : v.Kref;
   v.trap.B = P[p::field];
-  v.trap.delta = P[p::depth] * 1e-3 / P[p::field];
+  v.trap.delta = v.delta0 = P[p::depth] * 1e-3 / P[p::field];
+  v.deep = 1;
   v.trap.L = P[p::length] * 0.01;
   const double cosMax = std::sqrt(v.trap.cos2Max()), cos0 = cosMax * rng.uniform();
   v.e = Electron::of(K, cos0);
@@ -138,15 +139,21 @@ void Project8Engine::noteOn(int key, double velocity) {
   if ((int)voices.size() >= 2 * kMaxVoices) {
     for (auto it = voices.begin(); it != voices.end(); ++it) if (it->stolen) { voices.erase(it); break; }
   }
+  press.reset(key);
   voices.emplace_back();
   start(voices.back(), key, velocity);
 }
 
-void Project8Engine::noteOff(int key, double) {
+// Lift: how the trap opens: a slow lift lowers its walls gently, the electron's signal fading over
+// up to 0.3 s as it drifts out; a fast one throws it open, the electron lost at once.
+void Project8Engine::noteOff(int key, double velocity) {
+  const double s = liftScale(velocity);
   for (Voice &v : voices) {
     if (v.key != key || !v.held || v.stolen) continue;
     v.held = false;
-    if (!sustain) end(v, kReleased); // the trap opens
+    if (sustain) continue;
+    if (s != 1) v.escT = s > 1 ? ESC_T + 0.3 * (s - 1) : ESC_T * s * s;
+    end(v, kReleased); // the trap opens
   }
 }
 
@@ -161,6 +168,9 @@ void Project8Engine::play(Voice &v, float *L, float *R, int n) {
   // the field: the knob, the pitch wheel and the note's own bend
   v.bendNow = glideTo(v.bendNow, wheel * expr.bendOf(v.key), dt, BEND_T);
   const double B = v.trap.B * v.bendNow, tau = coolingTime(B);
+  // Press: the key's press deepens its trap, up to four times, so the electron stays longer
+  v.deep = glideTo(v.deep, 1 + 3 * press.of(v.key), dt, PRESS_GLIDE);
+  v.trap.delta = v.delta0 * v.deep;
   // the electron: radiation, then the gas, then whether the trap still holds it
   v.age += dt; // (to the end of this step, where its collisions and escape are counted)
   if (v.trapped) {
@@ -203,7 +213,7 @@ void Project8Engine::play(Voice &v, float *L, float *R, int n) {
   std::array<double, MAX_HARMONICS> a1{};
   int nh = 1;
   if (v.trapped || v.env > SILENT) amplitudes(v, a1, nh, std::fabs(w));
-  if (!v.trapped) v.env *= std::exp(-dt / ESC_T);
+  if (!v.trapped) v.env *= std::exp(-dt / (v.escT ? v.escT : ESC_T));
   if (v.stolen) v.rel *= std::exp(-dt / STEAL_T);
   else if (!v.held && !sustain) v.rel *= std::exp(-dt / REL_T);
   const double g0 = OUT * v.vel;

@@ -17,7 +17,7 @@
 namespace forte::cimbalom {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { build, detune, bridge, loss, head, mass, stick, strike, roll, dampers, sympathy, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { build, detune, bridge, loss, head, mass, stick, strike, roll, dampers, sympathy, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -91,32 +91,38 @@ inline const ParamInfo kParams[p::count] = {
   {"cents9", "Major 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
+  {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::roll, 12}};
-inline const PresetValue kPreset2[] = {{p::dampers, 1}};
-inline const PresetValue kPreset3[] = {{p::build, 1}, {p::head, 2}, {p::dampers, 2}, {p::strike, 0.1}, {p::detune, 1.5}};
-inline const PresetValue kPreset4[] = {{p::build, 1}, {p::head, 1}, {p::dampers, 2}};
-inline const PresetValue kPreset5[] = {{p::stick, 40}, {p::head, 1}};
-inline const PresetValue kPreset6[] = {{p::strike, 0.04}, {p::head, 1}};
-inline const PresetValue kPreset7[] = {{p::strike, 0.5}};
-inline const PresetValue kPreset8[] = {{p::mass, 12}};
-inline const PresetValue kPreset9[] = {{p::detune, 0}};
-inline const PresetValue kPreset10[] = {{p::detune, 6}, {p::bridge, 1.5}};
-inline const PresetValue kPreset11[] = {{p::build, 1}, {p::head, 2}, {p::dampers, 2}, {p::sympathy, 1}, {p::bridge, 1.6}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::roll, 12}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::dampers, 1}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::build, 1}, {p::head, 2}, {p::dampers, 2}, {p::strike, 0.1}, {p::detune, 1.5}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::build, 1}, {p::head, 1}, {p::dampers, 2}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::stick, 40}, {p::head, 1}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::strike, 0.04}, {p::head, 1}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::strike, 0.5}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::mass, 12}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::detune, 0}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::detune, 6}, {p::bridge, 1.5}};
+inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::build, 1}, {p::head, 2}, {p::dampers, 2}, {p::sympathy, 1}, {p::bridge, 1.6}};
 inline const Preset kPresets[] = {
-  {"Concert cimbalom, cotton hammers", nullptr, 0},
-  {"Cimbalom tremolo", kPreset1, 1},
-  {"Cimbalom as built: the pedal lifts the dampers", kPreset2, 1},
-  {"Hammered dulcimer, bare wood", kPreset3, 5},
-  {"Dulcimer with leather hammers", kPreset4, 3},
-  {"Whippy bamboo sticks", kPreset5, 2},
-  {"Struck near the bridge", kPreset6, 2},
-  {"Struck at the middle: hollow", kPreset7, 1},
-  {"Heavy hammers", kPreset8, 1},
-  {"Unisons in perfect tune", kPreset9, 1},
-  {"Out-of-tune tavern cimbalom", kPreset10, 2},
-  {"Dulcimer drone cloud", kPreset11, 5},
+  {"Concert cimbalom, cotton hammers", kPreset0, 1},
+  {"Cimbalom tremolo", kPreset1, 2},
+  {"Cimbalom as built: the pedal lifts the dampers", kPreset2, 2},
+  {"Hammered dulcimer, bare wood", kPreset3, 6},
+  {"Dulcimer with leather hammers", kPreset4, 4},
+  {"Whippy bamboo sticks", kPreset5, 3},
+  {"Struck near the bridge", kPreset6, 3},
+  {"Struck at the middle: hollow", kPreset7, 2},
+  {"Heavy hammers", kPreset8, 2},
+  {"Unisons in perfect tune", kPreset9, 2},
+  {"Out-of-tune tavern cimbalom", kPreset10, 3},
+  {"Dulcimer drone cloud", kPreset11, 6},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::mass}, {109, p::sympathy}, {111, p::detune}, {113, p::roll}, {114, p::strike}};
@@ -139,6 +145,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::strike, .modWheelMax = 0.5,
+    .slide = p::strike, .slideMax = 0.5,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = 7},
     .midiVelocity = midiVelocity, .create = create,

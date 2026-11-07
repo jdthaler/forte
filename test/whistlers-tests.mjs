@@ -183,6 +183,16 @@ test('every key starts on its note: the sound\'s first moments (its rise and as 
     assert.ok(Math.abs(cents(f, f0)) < 10, `key ${k}: ${f.toFixed(2)} Hz vs ${f0.toFixed(2)}`);
   }
 });
+test('a note struck bent (MPE: a field line farther in or out) centres on its nose bent as far, ±2 semitones within 10 cents; a bend of 1 changes nothing', () => {
+  for (const k of [48, 69, 96]) for (const st of [2, -2]) {
+    const p = P(), tr = M.track(M.lineFor(keyF(k, p), p), p), r = 2 ** (st / 12), f0 = keyF(k, p) * r;
+    const n = 4.5 * tr.ta * FS, [x] = render(p, n / FS + 0.05, [[0, (e) => e.handle({ type: 'noteBend', key: k, value: r })], [0, (e) => e.noteOn(k, 0.8)]]);
+    const f = centroid(x, f0, 0, n);
+    assert.ok(Math.abs(cents(f, f0)) < 10, `key ${k} bent ${st}: ${f.toFixed(2)} Hz vs ${f0.toFixed(2)}`);
+  }
+  const [a] = note(60, P(), 0.5), [b] = render(P(), 0.5, [[0, (e) => e.handle({ type: 'noteBend', key: 60, value: 1 })], [0, (e) => e.noteOn(60, 0.8)]]);
+  assert.ok(a.every((v, i) => v === b[i]));
+});
 test('then it falls as the model says: the frequency arriving at each moment is the one whose delay is that moment', () => {
   for (const k of [57, 81, 100]) {
     const p = P(), L = M.lineFor(keyF(k), p), ln = M.line(L, p), tr = M.track(L, p), start = ln.nose.tau - 1.5 * tr.ta;
@@ -282,6 +292,19 @@ test('every preset plays, finite and under the limiter\'s reach', () => {
     let pk = 0; for (const v of L) { assert.ok(Number.isFinite(v), pr.name); pk = Math.max(pk, Math.abs(v)); }
     assert.ok(pk < 1.5, `${pr.name}: ${pk}`);
   }
+});
+test('Slide: a note\'s slide before its stroke is its own line\'s plasma density, sample for sample as the knob there; a key beside it keeps the knob\'s', () => {
+  const run = (o, slides = []) => {
+    const e = new Engine(FS); e.setParams(P(o));
+    for (const [key, value] of slides) e.handle({ type: 'slide', key, value });
+    e.noteOn(60, 0.8);
+    const n = 2 * FS, L = new Float32Array(n), b = new Float32Array(128), c = new Float32Array(128);
+    for (let s = 0; s < n; s += 128) { e.process(b, c, 128); L.set(b.subarray(0, Math.min(128, n - s)), s); }
+    return L;
+  };
+  assert.deepEqual(run({}, [[60, 4]]), run({ density: 4 }), 'slid to 4 as the knob at 4');
+  assert.notDeepEqual(run({}, [[60, 4]]), run({}), 'and not as at the knob\'s');
+  assert.deepEqual(run({}, [[61, 4]]), run({}), 'another key\'s slide');
 });
 test('Quality: Medium and Low hear 16 and 10 strokes at once (High 24), fewer ducts and echoes; one plain note is the same at every quality', () => {
   const one = (q) => render(P(), 0.5, [[0, (x) => { x.setQuality(q); x.noteOn(84, 0.8); }]])[0];

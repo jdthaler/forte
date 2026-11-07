@@ -13,6 +13,7 @@ using std::numbers::pi;
 
 constexpr double OUT = 0.6;         // output units per pascal at the microphones (3 m away; the level is kept at other distances)
 constexpr double DIST_REF = 3;      // m
+constexpr double BEND_T = 0.02;     // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr int MAX_VOICES = 24;      // tubes sounding at once; the quietest older one fades out beyond this
 constexpr double FADE = 0.03;       // s: a stolen voice fades out over this
 constexpr double YOUNG = 0.05;      // s: a voice this young is never stolen
@@ -53,6 +54,7 @@ void TubularEngine::Voice::start(TubularEngine &eng, Data::Ref r, uint64_t ver) 
       (side ? r0 : l0)[i] = c0; (side ? r1 : l1)[i] = c1;
     }
   }
+  bent = eng.expr.bendOf(key); // bent before it was struck
   coefs(eng);
 }
 
@@ -61,7 +63,7 @@ void TubularEngine::Voice::coefs(const TubularEngine &eng) {
   const double k = 1 / eng.fs, sd = (6.91 / eng.P[p::damp]) * damp;
   for (int i = 0; i < N; i++) {
     const Mode &m = d->m[i];
-    const double f = m.f, om = TAU * f, s = m.sigRad + pi * f * eng.P[p::eta] + sd * m.dampW;
+    const double f = m.f * bent, om = TAU * f, s = m.sigRad + pi * f * eng.P[p::eta] + sd * m.dampW;
     sig[i] = s;
     cut[i] = f >= top;
     if (cut[i]) { a1[i] = a2[i] = bc[i] = 0; continue; } // above what the sample rate holds (or Quality's top): silent, never struck
@@ -92,7 +94,7 @@ void TubularEngine::Voice::strike(const TubularEngine &eng, double velocity) {
   eta = uc - 1.5 * v * h; etaPrev = eta - v * h;
   dPrev = -1; dPrev2 = -1; malletOn = true; contact = false; inFlight = 0;
   contactSamples = 0; Fmax = 0;
-  released = false; fading = false; fade = 1; age = 0;
+  released = false; fading = false; fade = 1; age = 0; liftK = 1;
 }
 
 // The face's force for a compression D at the next step: the discrete gradient of
@@ -280,13 +282,15 @@ void TubularEngine::strikeKey(int key, double velocity, Data::Ref r) {
   }
 }
 
-void TubularEngine::noteOff(int key, double) {
+void TubularEngine::noteOff(int key, double velocity) {
   if (key < 0 || key > 127) return;
   for (int i = 0; i < nPending; i++) if (pending[i].key == key) pending[i].off = true;
-  if (Voice *v = byKey[key]) v->released = true;
+  // how fast its damper falls: a slow lift leaves a longer tail (with the pedal down, the pedal's lets it fall later)
+  if (Voice *v = byKey[key]) { v->released = true; v->liftK = sustain || P[p::pedalLock] != 0 ? 1 : liftScale(velocity); }
 }
 
 void TubularEngine::allNotesOff() {
+  presses.clear();
   nPending = 0;
   for (int i = 0; i < nVoices; i++) voices[i]->fading = true;
 }
@@ -305,9 +309,12 @@ void TubularEngine::processBlock(float *L, float *R, int n) {
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
     // the damper bar: on every tube not held by a key, unless the pedal is down
-    const double want = v->released && !sustain && !lock ? 1 : 0;
-    if (v->damp != want) v->damp = want > v->damp ? std::min(1.0, v->damp + dStep) : std::max(0.0, v->damp - dStep);
-    if (v->damp != v->dampSet) v->coefs(*this);
+    double want = v->released && !sustain && !lock ? 1 / v->liftK : 0; // a slow lift lowers it gently
+    if (!v->released) want = std::max(want, presses.of(v->key)); // Press: damped as hard as the key is pressed
+    if (v->damp != want) v->damp = want > v->damp ? std::min(want, v->damp + dStep) : std::max(want, v->damp - dStep);
+    const double to = expr.bendOf(v->key), was = v->bent; // Glide: the tube swinging (Doppler)
+    if (was != to) v->bent = glideTo(was, to, n / fs, BEND_T);
+    if (v->damp != v->dampSet || v->bent != was) v->coefs(*this);
     v->render(L, R, n, *this);
   }
   int j = 0;
@@ -339,7 +346,7 @@ void TubularEngine::postFocus() {
     a[i] = (float)(std::sqrt(std::max(0.0, qa * qa - 2 * c * qa * qb + qb * qb)) / std::sin(om * k));
   }
   a[VIEW_MODES] = (float)v->E; a[VIEW_MODES + 1] = (float)v->lastContactMs; a[VIEW_MODES + 2] = (float)v->Fmax;
-  a[VIEW_MODES + 3] = (float)v->damp; a[VIEW_MODES + 4] = (float)(v->malletOn ? 1 : 0);
+  a[VIEW_MODES + 3] = (float)std::min(1.0, v->damp); a[VIEW_MODES + 4] = (float)(v->malletOn ? 1 : 0);
   post(m);
 }
 

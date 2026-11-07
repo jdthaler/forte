@@ -19,7 +19,9 @@
 #include <cstdint>
 
 #include "forte/engine.h"
+#include "forte/lift.h"
 #include "forte/expression.h"
+#include "forte/press.h"
 #include "forte/tuning.h"
 #include "ionchain-model.h"
 #include "ionchain-params.h"
@@ -33,6 +35,8 @@ enum : uint16_t { axial = 1, radial = 2 };
 
 struct Voice {
   bool alive = false, held = false, cooled = false, stolen = false;
+  double push = 0;  // the laser's push now, the share of the resistor's loss it makes up (Press)
+  double coolK = 1; // the cooling laser's strength after this lift, × the usual (forte/lift.h)
   int key = 0, N = 0, M = 0;
   int64_t born = 0;
   double f0 = 0;   // the key's note: the trap's axial frequency, heard
@@ -56,6 +60,7 @@ class IonChainEngine : public Engine {
   void allNotesOff() override;
   void bend(double value) override;
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
+  void pressure(double value, int key) override { press.set(value, key); }
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -70,7 +75,7 @@ class IonChainEngine : public Engine {
   void motion(const Voice &v, double *q, double *qd) const;
   void place(Voice &v, const double *q, const double *qd);
   void take(Voice &v); // the current crystal's modes and couplings
-  void cool(Voice &v);
+  void cool(Voice &v, double k = 1);
   double energy(const Voice &v) const;
 
   std::array<double, p::count> P{};
@@ -79,6 +84,7 @@ class IonChainEngine : public Engine {
   double bendNow = 1, bendTo = 1;
   double keyTarget[128] = {};
   forte::NoteExpression expr{12};
+  forte::Pressures press;
   int stateEvery = 0, sinceState = 0;
   Crystal before; // the crystal the voices played before a change (for the projection)
 };

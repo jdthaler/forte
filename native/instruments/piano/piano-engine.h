@@ -33,6 +33,9 @@
 
 #include "forte/background.h"
 #include "forte/engine.h"
+#include "forte/expression.h"
+#include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/longitudinal.h"
 #include "forte/sympathetic.h"
 #include "piano-model.h"
@@ -53,13 +56,19 @@ class PianoEngine : public Engine {
  public:
   static constexpr int POOL = 160;        // voices, sounding or dying
   static constexpr int ARENA = 16384;     // modes across every voice
-  static constexpr int ARRAYS = 21;       // per-mode arrays in a voice's block of the arena
+  static constexpr int ARRAYS = 23;       // per-mode arrays in a voice's block of the arena
   static constexpr int MAXB = 256;        // render in chunks of at most this many samples
   explicit PianoEngine(double fs);
 
   void setParams(const double *P) override;
   void noteOn(int key, double velocity) override; // velocity: the hammer's speed in m/s
   void noteOff(int key, double velocity) override;
+  // a note's own slide: where its hammer strikes (strikePos), from its next strike
+  void slide(double value, int key) override { if (key >= 0 && key < 128) slid[key] = value; }
+  // Glide: a finger pressing a note's strings behind the bridge, tightening them: up to a semitone sharp
+  void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
+  // Press: a palm resting on a held note's strings by the bridge: it shortens and darkens
+  void pressure(double value, int key) override { presses.set(value, key); }
   void setSustain(bool on) override;
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
@@ -83,6 +92,7 @@ class PianoEngine : public Engine {
     double k = 0;
     // per-mode arrays (in the arena); q and q1 swap every sample
     double *q = nullptr, *q1 = nullptr, *a1 = nullptr, *a2 = nullptr, *a1d = nullptr, *a2d = nullptr;
+    double *a1p = nullptr, *a2p = nullptr; // pressed (forte/press.h): a palm on the strings
     double *wN = nullptr, *bwN = nullptr, *wU = nullptr, *bwU = nullptr, *fbv = nullptr, *fbh = nullptr;
     double *cvk = nullptr, *chk = nullptr, *ctk = nullptr, *om = nullptr, *sig = nullptr, *perm = nullptr;
     // tension modulation: each mode's stretch weight g, its a1's change per newton (b·g), its
@@ -103,6 +113,9 @@ class PianoEngine : public Engine {
     bool keyDown = true, damped = false, killing = false, dead = false, hammerOn = false, contact = false;
     int contactSamples = 0, hammerSamples = 0, quiet = 0;
     double Fmax = 0, peak = 0, age = 0, damperSigma = 0;
+    double liftK = 1; // how many times longer than usual its damper takes (forte/lift.h)
+    Press press;      // a palm resting on its strings as hard as the key is pressed
+    void computePressed();
     double panL = 0, panR = 0, tPanL = 0, tPanR = 0;
     bool panMoving = false;
     double eta = 0, etaPrev = 0, dPrev = -1, kOverM = 0, alphaK = 0;
@@ -111,8 +124,13 @@ class PianoEngine : public Engine {
     int bn = 0;
 
     void start(PianoEngine &eng, int key, const VoiceData &d, int at);
+    double aimed = 0; // the strike position its blow is shaped for
+    double bent = 1;  // its frequencies × this (a note's own bend, engine.h noteBend)
+    void retune(double r);
+    void aim(const VoiceData &d, double beta, double beta0);
     void setDamperSigma(double sd) { damperSigma = sd; computeDamped(); }
     void computeDamped();
+    void lifted(double scale) { if (scale != liftK) { liftK = scale; computeDamped(); } }
     void setPan(const PianoEngine &eng, bool snap = false);
     void updateDamping(const PianoEngine &eng);
     void kill();
@@ -160,6 +178,10 @@ class PianoEngine : public Engine {
   void symRun(float *L, float *R, int n, const double *GV, const double *GH);
 
   std::array<double, p::count> P{};
+  std::array<double, 128> slid = nanKeys(); // each key's own strike position (NaN: P's)
+  Presses presses;                          // each key's pressure and the channel's
+  NoteExpression expr{0, 1};                // each key's own bend: up only, a semitone at most
+  static std::array<double, 128> nanKeys() { std::array<double, 128> a; a.fill(NAN); return a; }
   bool hasParams = false;
   bool sustain = false;
   const double k;

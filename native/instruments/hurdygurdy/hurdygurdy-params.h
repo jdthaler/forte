@@ -17,7 +17,7 @@
 namespace forte::hurdygurdy {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { crank, coups, coup, uneven, start, keep, chanterelles, trompette, tromNote, mouche, petit, gros, unison, pressure, wheelPos, tirant, chienMass, bounce, mus, mud, v0, memory, grain, losses, mobility, boardEta, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, count };
+enum : int { crank, coups, coup, uneven, start, keep, chanterelles, trompette, tromNote, mouche, petit, gros, unison, pressure, wheelPos, tirant, chienMass, bounce, mus, mud, v0, memory, grain, losses, mobility, boardEta, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -113,36 +113,42 @@ inline const ParamInfo kParams[p::count] = {
   {"cents9", "Major 6th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents9, 1},
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
+  {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset1[] = {{p::tromNote, 0}, {p::petit, 1}, {p::gros, 0}, {p::tirant, 2.4}};
-inline const PresetValue kPreset2[] = {{p::coups, 2}};
-inline const PresetValue kPreset3[] = {{p::coups, 3}, {p::crank, 1.1}};
-inline const PresetValue kPreset4[] = {{p::crank, 2.2}};
-inline const PresetValue kPreset5[] = {{p::tirant, 3.2}, {p::coup, 1}, {p::coups, 2}};
-inline const PresetValue kPreset6[] = {{p::tirant, 2.1}, {p::crank, 1}, {p::coups, 2}, {p::coup, 0.3}};
-inline const PresetValue kPreset7[] = {{p::chienMass, 0.0005}, {p::bounce, 0.75}, {p::coups, 1}};
-inline const PresetValue kPreset8[] = {{p::trompette, 0}, {p::mouche, 0}, {p::gros, 0}};
-inline const PresetValue kPreset9[] = {{p::chanterelles, 0}, {p::keep, 1}};
-inline const PresetValue kPreset10[] = {{p::crank, 0.35}};
-inline const PresetValue kPreset11[] = {{p::unison, 9}};
-inline const PresetValue kPreset12[] = {{p::coups, 4}};
-inline const PresetValue kPreset13[] = {{p::v0, 0.4}};
+inline const PresetValue kPreset0[] = {{p::liftOn, 0}};
+inline const PresetValue kPreset1[] = {{p::liftOn, 0}, {p::tromNote, 0}, {p::petit, 1}, {p::gros, 0}, {p::tirant, 2.4}};
+inline const PresetValue kPreset2[] = {{p::liftOn, 0}, {p::coups, 2}};
+inline const PresetValue kPreset3[] = {{p::liftOn, 0}, {p::coups, 3}, {p::crank, 1.1}};
+inline const PresetValue kPreset4[] = {{p::liftOn, 0}, {p::crank, 2.2}};
+inline const PresetValue kPreset5[] = {{p::liftOn, 0}, {p::tirant, 3.2}, {p::coup, 1}, {p::coups, 2}};
+inline const PresetValue kPreset6[] = {{p::liftOn, 0}, {p::tirant, 2.1}, {p::crank, 1}, {p::coups, 2}, {p::coup, 0.3}};
+inline const PresetValue kPreset7[] = {{p::liftOn, 0}, {p::chienMass, 0.0005}, {p::bounce, 0.75}, {p::coups, 1}};
+inline const PresetValue kPreset8[] = {{p::liftOn, 0}, {p::trompette, 0}, {p::mouche, 0}, {p::gros, 0}};
+inline const PresetValue kPreset9[] = {{p::liftOn, 0}, {p::chanterelles, 0}, {p::keep, 1}};
+inline const PresetValue kPreset10[] = {{p::liftOn, 0}, {p::crank, 0.35}};
+inline const PresetValue kPreset11[] = {{p::liftOn, 0}, {p::unison, 9}};
+inline const PresetValue kPreset12[] = {{p::liftOn, 0}, {p::coups, 4}};
+inline const PresetValue kPreset13[] = {{p::liftOn, 0}, {p::v0, 0.4}};
 inline const Preset kPresets[] = {
-  {"Vielle à roue, drones in G", nullptr, 0},
-  {"Drones in C: trompette C4, petit bourdon", kPreset1, 4},
-  {"Bourrée: two coups a turn", kPreset2, 1},
-  {"Mazurka: three coups a turn", kPreset3, 2},
-  {"Une traînée: crank fast, a long buzz", kPreset4, 1},
-  {"Sec: a tight tirant, hard coups", kPreset5, 3},
-  {"Gras: a loose tirant buzzes at a touch", kPreset6, 4},
-  {"Rattling chien: light and bouncy", kPreset7, 3},
-  {"Chanterelles alone", kPreset8, 3},
-  {"Drones alone, turning", kPreset9, 2},
-  {"Slow crank: the top notes crunch", kPreset10, 1},
-  {"Wide unison: two chanterelles apart", kPreset11, 1},
-  {"Four coups a turn", kPreset12, 1},
-  {"Cotton on the strings: a soft, wide grip", kPreset13, 1},
+  {"Vielle à roue, drones in G", kPreset0, 1},
+  {"Drones in C: trompette C4, petit bourdon", kPreset1, 5},
+  {"Bourrée: two coups a turn", kPreset2, 2},
+  {"Mazurka: three coups a turn", kPreset3, 3},
+  {"Une traînée: crank fast, a long buzz", kPreset4, 2},
+  {"Sec: a tight tirant, hard coups", kPreset5, 4},
+  {"Gras: a loose tirant buzzes at a touch", kPreset6, 5},
+  {"Rattling chien: light and bouncy", kPreset7, 4},
+  {"Chanterelles alone", kPreset8, 4},
+  {"Drones alone, turning", kPreset9, 3},
+  {"Slow crank: the top notes crunch", kPreset10, 2},
+  {"Wide unison: two chanterelles apart", kPreset11, 2},
+  {"Four coups a turn", kPreset12, 2},
+  {"Cotton on the strings: a soft, wide grip", kPreset13, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::coup}, {109, p::pressure}, {111, p::bounce}, {113, p::tirant}, {114, p::crank}};
@@ -165,6 +171,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .keep = kKeep, .keepCount = 17,
     .keyLo = 67, .keyHi = 91, .space = Space::sustain,
     .modWheel = p::crank, .modWheelMax = 4,
+    .slide = p::pressure, .slideMax = 3,
     .controllers = kControllers, .controllerCount = 5,
     .chain = {.volume = p::volume, .room = p::room, .roomSeconds = 2, .roomGain = 0.6, .venue = p::venue, .tone = -1, .trimDb = -2.5},
     .midiVelocity = midiVelocity, .create = create,
