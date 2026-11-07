@@ -16,6 +16,431 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-11-06 — The Black-Hole Keyboard on the shared page code; Brass compressor; the RF cavity bells no longer crash when a held high key is pressed; celesta boxes; Combinations, a page for playing instruments together; credits for every instrument; CUORE keeps sounding when Doping moves under a held key; Expression switches: Strike, Glide, Slide, Press and Lift on every instrument; Glide on the bars and bells; Glide on the electric organs; Glide on the physics instruments; Glide on the strings; Huygens on the shared page code; Huygens keeps playing under heavy rail sag; Lift on every instrument; limiter ceiling; The Regal's soft pedal works its tremulant on the page too; The Tonewheel Organ on the shared page code; Phones held upright: more room for the views; The Ribbon Piano on the shared page code; a preset changes without a click; Presets turn off what makes little sense; Press on nine physics instruments, and Slide on TESS; Press on the strings, bars, bells and electric pianos; nearly silent presets; the RISE's panel follows presets and the octave buttons; search slips; Slide and Press on the Tonewheel Organ and Telharmonium; Slide on the glass armonica and clavicylinder; Slide on the organs: a key held part way; Slide on the Sticky-Pad Piano; Slide and Press on the Singing Arc and Huygens Keyboard; Slide on CUORE, the Wind Harp, Collider Showers and Whistlers; Press on the Ion Chain; Slide on the strings, bars and bells; Slide on the tine and reed pianos; Strike on the Singing Arc and the Huygens Keyboard; The Tine Piano on the shared page code; velocity readouts
+
+### Forte 0.47.0
+- The shared page code takes an instrument's own velocity mapping for MIDI and the on-screen keys, its computer keys' velocity, and an older page's name for its saved settings, so the five pages that predate it can move onto it.
+- **Combinations, a page of its own for playing several instruments at once:** up to four, each on the keys you give it (the same keys layer them, keys apart split the keyboard, three or four splits and layers at once), with its own octave, preset, level and on/off, and its name linking to its own page. An instrument comes on as you left it on its page, and its Presets menu can take those settings again. Eight combinations to start from (the piano and strings, an organ's bass under an electric grand, a gong below a gamelan, timpani, marimba and glass armonica across three splits, and more), which a MIDI program change picks too. Its views: a lane for each instrument across the whole keyboard with its notes as they sound, and the spectrum and spectrogram of the sum. Songs play on it, its CPU pill adds up every instrument, and everything goes through one more limiter on the sum. On the front page and in every page's menu.
+- **+ Layer is gone from the instrument pages:** the Combinations page does what it did, and more. The Forte app keeps its **+** beside the Instrument menu.
+- The Credits page names the sources of the 16 instruments it had left out: the harpsichord, free-reed organ, vibraphone, carillon, celesta, steel pan, electric grand, tine piano, tangent clavier, sticky-pad piano, magnetic resonator piano, singing arc, bubble organ, spring keyboard, wind harp and quantum keyboard. A test keeps every instrument on it.
+- **Expression switches:** every instrument has a switch for each of the five ways a key is played beyond which key it is, as a Seaboard names them: Strike (how hard it goes down), Glide (a note's own pitch bend, MPE), Slide (its own CC74), Press (aftertouch and MPE pressure) and Lift (how fast it comes up: release velocity). They are in a new Expression group, on the site and in the plugins, saved with presets, songs and links. Off, Strike plays every note as hard as the computer keys (in a plugin, the window's keys), Lift releases every note at the instrument's own speed, and Glide, Slide and Press are ignored; a switch turned off while a note is bent, slid or pressed lets it go. The pitch wheel and the mod wheel are their own controls and stay. A page and a plugin show the switches their instrument answers to (in a plugin, its last parameters): the others follow as instruments learn them.
+- A descriptor's `lift` says what a slow or a fast release does, as `aftertouch` says what pressing does, and `strike: false` marks an instrument that velocity doesn't change (`shared/expression.js`).
+- **Glide that bends one way:** an instrument whose notes bend only up (or down), and only so far, says so (`mpe.way`, `NoteExpression(down, up)`), and what its Glide does on the RISE's panel (`glide`).
+- **Lift on every instrument:** how fast a key comes up (release velocity: a Seaboard's Lift, or a keyboard that sends it) now shapes every instrument's release, and every page and plugin has the Lift switch. A slow lift lets a note go gently, up to twice as long as usual; a fast one ends it as much sooner, and on some sets off what only a quick hand does (a mallet's touch, a grace stroke). A key let go with no release velocity (the computer keys, the pedal, a keyboard that sends none) or a middling one plays exactly as before.
+- `native/core/include/forte/lift.h` gives the engines one scale for it (`liftScale`, `liftPast`, `LiftTouch`); `test/lift-tests.mjs` checks every instrument.
+- **The limiter has a ceiling:** no sample leaves louder than −0.45 dB, on the pages and in the plugins. Without look-ahead, its 2 ms attack let the first milliseconds of a hard chord, or a train of brass shock fronts, out several dB over full scale for the sound card to clip: a five-note chord at full velocity clipped on 27 instruments (Brass, Gong Keyboard, Cimbalom, Grand Piano and Ringing Planets the most). A peak that would pass the ceiling now takes the gain down at once, and the gain comes back over the limiter's release.
+- On a page, a sostenuto (CC66) or soft pedal (CC67) that the instrument gives a parameter of its own works that parameter, as it already did in the plugins.
+- The shared page code keeps an instrument's console (the organ's drawbars and switches) in its settings and shows it to presets, links, the plugin's window and a controller's faders as parameters, so the last of the older pages runs on it.
+- On a phone held upright, when the keyboard bar's buttons would wrap onto a second line, the ◀ ▶ buttons beside the overview step aside (the overview still pans, as it does on a phone held sideways), so the bar takes a line less and the views get about 44 px more.
+- **No click on a preset's change:** choosing a preset (from the menu, a program change, Default settings, your own presets or a link) fades the sound out over 6 ms, changes it, and fades it back in over 12 ms. Before, a preset that changes the sound at once clicked: one without a soundboard or a radiator, another bell or pickup, about 30 instruments in all. Moving a control still changes the sound straight away. The same goes for the plugins and the Forte app, for the Preset parameter and your own presets.
+- `offInPresets` (shared/expression.js): an instrument's presets turn off the Expression switches that make little sense on it, the approved table's "Off in presets" column. The defaults keep every switch on, and anyone can turn them back on.
+- A test plays every factory preset beside its instrument's defaults and fails on one more than 25 LU quieter at its loudest key (`node tools/loudness.mjs presets` lists them all).
+- **A preset moves the RISE's faders:** choosing a preset shows its values on the panel's faders and pad, and, once the panel has read the RISE's settings, sets the RISE's three fader lights to match while it's in MIDI mode (white lights). In its cyan mode the lights show its own sensitivities and are left alone.
+- **The octave buttons move the keywave:** once the panel has read the RISE's settings, it reads them again every two seconds while the page shows, so the keywave's notes follow the RISE's octave buttons (and transpose) without a note being played. A change of sensitivity made on the RISE shows too.
+- The front page's search forgives a slip: a word of four letters or more that finds nothing as typed finds the words one letter away (two from nine letters on), a letter wrong, missing, extra or two swapped, and marks them, so "harpsicord", "vibrophone" and "schroedinger" find their instruments.
+- **A slide can move a control of its own:** a descriptor's `mpe.slide` may name the parameter a note's own slide (MPE CC74, a Seaboard's Slide) moves for that note, as `{ param, max }`, rather than the mod wheel's (`shared/expression.js` `slideOf`); the pages, the plugins (`InstrumentInfo::slide`) and the RISE's panel follow it.
+- A descriptor's `strike` may say what velocity does where it isn't how loud, and the Seaboard panel shows it (`shared/rise.js`).
+- Every computer keys' velocity reads the same way: the velocity (0.05–1), then what it means at the instrument after a dot, e.g. "0.70 · jack 40 cm/s". The Electric Grand showed only its hammer's speed, the others put the meaning in brackets, some without saying what moved. The Ribbon Piano and the Tine Piano, which still set the hammer's speed itself, follow when they move onto the shared controls.
+
+### Ribbon Piano 0.14.0
+- **Expression switches:** Strike can be turned off, in the Expression group.
+- **Glide:** a finger pressing a note's strings behind the bridge: up to a semitone sharp.
+- **Lift:** How fast the damper falls: a slow lift leaves a longer tail, a fast one stops the string sooner. It can be turned off in the Expression group.
+- The page runs on the shared page code, as every newer instrument does: the same keys, MIDI, controls, pedals and Panic. It still offers the engine each key's strings ahead of the notes, so the sympathetic strings ring along. Saved settings carry over.
+- Velocity reads as on the other hammered instruments, the MIDI velocity first, then the hammer's speed ("0.72 · hammer 2.50 m/s"), and its slider moves through MIDI velocity evenly. The on-screen keys map their depth through the same velocity curve as MIDI, as they already did when the Ribbon Piano is the second instrument of a layer or split.
+- Every preset turns off Glide and Press.
+- **Press:** a firm press rests a palm on a held note's strings: it shortens and darkens.
+- **Slide:** a note's own slide moves where its hammer strikes, towards the agraffe, at the strike: brighter and thinner.
+
+### Harpsichord 0.10.0
+- **Expression switches:** Strike and Lift can each be turned off, in the Expression group.
+- **Glide:** a finger pressing a note's strings on their back length: up to a semitone sharp.
+- Every preset turns off Glide and Press.
+- **Press:** a firm press lays the buff on a held note's strings: a lute sound.
+- **Slide:** a note's own slide moves its quills towards the nut, nasal as the lute row, at the pluck.
+
+### Pipe Organ 0.11.0
+- **Expression switches:** Strike, Glide, Press and Lift can each be turned off, in the Expression group.
+- **Slide:** how far a key opens its pallet, its pipes' own wind: part open, a softer, flatter note. A new *Pallet: how far it opens* knob sets it for every key.
+
+### Free-Reed Organ 0.11.0
+- **Expression switches:** Strike, Glide, Press and Lift can each be turned off, in the Expression group.
+- **Slide:** how far a key opens its pallet: part open, a softer, darker, slower-speaking note that sags a little flat. A new *Pallet: how far it opens* knob sets it for every key.
+
+### Vibraphone 0.11.0
+- **Expression switches:** Strike can be turned off, in the Expression group.
+- **Glide:** a hard mallet pressed on the bar and dragged along it: up to a semitone flat.
+- **Lift:** A fast lift lets the mallet rest on the bar a moment, damping it even with the pedal down. It can be turned off in the Expression group.
+- Every preset turns off Glide and Lift.
+- **Press:** a firm press holds the mallet into the bar: the dead stroke.
+- **Slide:** a note's own slide moves its mallet from the bar's centre towards its end, at the stroke.
+
+### Carillon 0.8.0
+- **Expression switches:** Strike can be turned off, in the Expression group.
+- **Glide:** the bell swinging toward you or away: a Doppler shift of up to thirty cents.
+- **Lift:** A fast lift lets go of the wire so sharply that the clapper swings back for a grace stroke. It can be turned off in the Expression group.
+- Every preset turns off Glide and Lift.
+- **Press:** a firm press holds the clapper against the bell, muting it.
+- **Slide:** a note's own slide raises where its clapper strikes, from the soundbow up the waist.
+
+### Celesta 0.6.0
+- The notes give the resonator boxes' real effect: without them a bar is about 45 dB quieter at C4 and 16 dB at C8, not 15–20 dB; a test now holds the model to those figures.
+- **Expression switches:** Strike and Slide can each be turned off, in the Expression group.
+- **Glide:** a finger resting on the bar: a few cents flat, and duller.
+- **Lift:** How fast its felt damper falls: a slow lift leaves a longer tail, a fast one stops the bar sooner. It can be turned off in the Expression group.
+- Every preset turns off Glide.
+- **Press:** a firm press presses the felt damper onto a held note's bar.
+- **No resonators** and **Struck on the node** use hard felt and fast hammers: with soft felt the bars alone, or a bar struck where its fundamental has a node, were 25–40 dB quieter than the celesta and could hardly be heard.
+
+### Kalimba 0.5.0
+- **Expression switches:** Strike can be turned off, in the Expression group.
+- **Glide:** a fingernail pressing the tine on its bridge: up to a semitone sharp.
+- **Lift:** A fast lift brushes the thumb back over the tine; with the tines damped on release, a slow lift lets the fingertip settle gently. It can be turned off in the Expression group.
+- Every preset turns off Glide and Lift.
+- **Press:** a firm press rests a finger on the tine, damping it.
+- **Slide:** a note's own slide moves the thumb from the tine's tip towards the bridge, at the pluck.
+
+### Steel Pan 0.6.0
+- **Expression switches:** Strike and Slide can each be turned off, in the Expression group.
+- **Glide:** a hand pressing the note's rim: up to a quarter tone sharp.
+- **Lift:** The hand muting on release: a slow lift lands gently (a longer tail), a fast one firmly; with the notes let ring, a fast lift rests the stick on the note a moment. It can be turned off in the Expression group.
+- Every preset turns off Glide and Lift.
+- **Press:** a firm press holds the stick into the note, muting it and the notes beside it that only ring along. Pressure still rolls nothing.
+
+### Hydraulis 0.3.0
+- **Expression switches:** Strike, Glide and Press can each be turned off, in the Expression group.
+- **Lift:** How the finger lets the slide go back: a slow lift holds it against its spring, closing the pipe gently; a fast one flicks it home. It can be turned off in the Expression group.
+- **Slide:** how far a key pushes its slide across the pipes' holes: part way, a softer, flatter note. A new *Slide: how far it goes in* knob sets it for every key.
+
+### Regal 0.2.0
+- **Expression switches:** Strike, Glide, Press and Lift can each be turned off, in the Expression group.
+- The soft pedal (CC67, or an FC-300's third switch) turns the tremulant on while it is down on the page, as in the plugins, instead of softening the keys.
+- **Slide:** how far a key opens its pallet: part open, a softer, duller note, and at the end of the slide the tongues barely beat. A new *Pallet: how far it opens* knob sets it for every key.
+
+### Clavichord 0.2.0
+- **Expression switches:** Strike, Slide, Press and Lift can each be turned off, in the Expression group.
+- **Glide:** the finger rocking onto the key, as Press does: a semitone's glide presses as hard as full pressure, and the note goes sharp.
+
+### Brass 0.2.0
+- A gentle compressor rides fortissimo notes and chords, whose shock fronts put their peaks 10 to 17 dB over full scale. The page's limiter used to catch them by ducking the whole sound 8 to 12 dB at once and letting it back up, which pumped; now it has a dB or two left to do. Mezzo-forte and quieter are untouched.
+- **Expression switches:** Strike, Glide, Slide and Press can each be turned off, in the Expression group.
+- **Lift:** How the breath stops: a slow lift tapers the note, a fast one is a tongue stop. It can be turned off in the Expression group.
+
+### Timpani and Tabla 0.3.0
+- **Expression switches:** Strike, Glide, Slide and Press can each be turned off, in the Expression group.
+- **Lift:** The hand damping the head: a slow lift lets it ring on, a fast one stops it (with the heads let ring, only a fast lift brings the hand down). It can be turned off in the Expression group.
+
+### Marimba and Xylophone 0.2.0
+- **Expression switches:** Strike and Slide can each be turned off, in the Expression group.
+- **Glide:** a hard mallet pressed on the bar and dragged along it: up to a semitone flat.
+- **Lift:** A fast lift lets the mallet rest on the bar a moment, damping it. It can be turned off in the Expression group.
+- Every preset turns off Glide and Lift.
+- **Press:** a firm press holds the mallet into the bar: the dead stroke (the tube rings on a moment). Pressure still rolls nothing.
+
+### Gamelan 0.2.0
+- **Expression switches:** Strike and Slide can each be turned off, in the Expression group.
+- **Glide:** a hand pressing the bar's end, or the gong's rim: a few cents flat.
+- **Lift:** The damping hand: on release, a slow lift lets it settle gently (a longer tail) and a fast one stops the bar; damping at the next stroke, a fast lift damps at once. It can be turned off in the Expression group.
+- Every preset turns off Glide.
+- **Press:** a firm press damps the bar with the other hand, as gamelan players do.
+
+### Cimbalom 0.2.0
+- **Expression switches:** Strike, Slide and Press can each be turned off, in the Expression group.
+- **Glide:** a finger pressing a note's course behind the bridge: up to a semitone sharp.
+- **Lift:** With the dampers on the keys, how fast the felt falls back on the course: a slow lift leaves a longer tail, a fast one stops it sooner. It can be turned off in the Expression group.
+- Every preset turns off Glide.
+
+### Musical Saw 0.2.0
+- **Expression switches:** Strike, Glide, Slide and Press can each be turned off, in the Expression group.
+- **Lift:** How the bow leaves the blade: a fast lift springs it clear and the trapped note rings on, a slow one drags it off, damping the blade. It can be turned off in the Expression group.
+
+### Tubular Bells 0.2.0
+- **Expression switches:** Strike and Slide can each be turned off, in the Expression group.
+- **Glide:** the tube swinging on its cord: a Doppler shift of a few cents.
+- **Lift:** How fast the damper bar falls: a slow lift leaves a longer tail, a fast one stops the tube sooner. It can be turned off in the Expression group.
+- Every preset turns off Glide.
+- **Press:** a firm press lays a hand on the tube, muting it.
+
+### Electric Grand 0.12.0
+- **Expression switches:** Strike can be turned off, in the Expression group.
+- **Glide:** a finger pressing a note's strings behind the bridge: up to a semitone sharp.
+- **Lift:** How fast the damper falls: a slow lift leaves a longer tail, a fast one stops the strings sooner. It can be turned off in the Expression group.
+- Every preset turns off Glide and Press.
+- **Press:** a firm press mutes a held note's strings by the bridge with a palm.
+- **Slide:** a note's own slide moves where its hammer strikes, towards the end of the string, at the strike.
+
+### Tonewheel Organ 0.13.0
+- **Expression switches:** Strike can be turned off, in the Expression group.
+- **Glide:** the newest held note's bend turns the motor, and the whole organ with it: two semitones either way.
+- **Lift:** The key's speed coming up: a slow lift opens its nine contacts one by one, each with its click; a fast one nearly together. It can be turned off in the Expression group.
+- The page runs on the shared page code, as every other instrument does: the same keys, MIDI, controls and Panic, with its drawbars, switches, swell pedal, Space for the Leslie and ` for the motor as before. Saved settings carry over. The on-screen keys now play as hard as you press them, as on the other pages.
+- Every preset turns off Glide and Press.
+- **Slide:** a key held part way closes only the first few of its nine contacts (they touch their busbars at different points of the travel), so some of the drawbars' pitches sound and the rest stay silent, a different few on each key. A new *Key travel* knob sets it for every key; a held key follows it.
+- **Press:** the swell pedal, from the newest held note: its press opens the swell the rest of the way from where the pedal is.
+
+### Tine Piano 0.13.0
+- **Expression switches:** Strike and Glide can each be turned off, in the Expression group.
+- **Lift:** How fast the damper falls: a slow lift leaves a longer tail, a fast one stops the tine sooner. It can be turned off in the Expression group.
+- Every preset turns off Press.
+- **Press:** a firm press lays a finger on the tone bar: a darker, shorter note.
+- **Slide:** a note's own slide moves its hammer out along the tine, at the strike: a fuller blow.
+- The page runs on the shared page code, as every newer instrument does: the same keys, MIDI, controls, pedal and Panic. Saved settings carry over.
+- Velocity reads as on the other hammered instruments, the MIDI velocity first, then the hammer's speed ("0.66 · hammer 1.80 m/s"), and its slider moves through MIDI velocity evenly. The on-screen keys map their depth through the same velocity curve as MIDI, as they already did when the Tine Piano is the second instrument of a layer or split.
+
+### Reed Piano 0.12.0
+- **Expression switches:** Strike and Glide can each be turned off, in the Expression group.
+- **Lift:** How fast the damper falls: a slow lift leaves a longer tail, a fast one stops the reed sooner. It can be turned off in the Expression group.
+- Every preset turns off Press.
+- **Press:** a firm press lays a finger on the reed's tip, muting it.
+- **Slide:** a note's own slide moves its hammer towards the reed's tip, at the strike: a bigger swing, more bark.
+
+### Tangent Clavier 0.11.0
+- **Expression switches:** Strike, Glide and Press can each be turned off, in the Expression group.
+- **Lift:** How fast the tangent leaves the string: a fast lift pulls it off sharply, with its thwack; a slow one eases it off. It can be turned off in the Expression group.
+- **Slide:** a note's own slide lays the mute bar's felt on its strings alone, as far as the finger slides.
+
+### Sticky-Pad Piano 0.11.0
+- **Expression switches:** Strike and Glide can each be turned off, in the Expression group.
+- **Lift:** The pad's return: a slow lift lets the reed ring on, a fast one slaps the pad back onto it. It can be turned off in the Expression group.
+- Every preset turns off Press.
+- **Press:** a firm press mutes the reed by the pickup with a hand.
+- New knob, "Where the pad grabs the reed" (Pad and bond group, 50–95 % of the way to the tip, 80 % by default as Hohner set it). Toward the clamp the reed is stiffer under the pad and lets go of a smaller swing, so the note is quieter and thinner, and the landing pad chokes it less. Toward the tip the note is louder. It applies to new notes.
+- Slide: a note's own slide moves its pad toward the clamp, to 55 %. The page and the plugin gain their Slide switch.
+
+### Trautonium 0.3.0
+- **Expression switches:** Strike, Glide, Slide and Press can each be turned off, in the Expression group.
+- **Lift:** How fast the finger leaves the wire: a slow lift eases off as the resistance rises, so the pitch slides up; a fast one lets go at once. It can be turned off in the Expression group.
+
+### Telharmonium 0.2.0
+- **Expression switches:** Strike and Press can each be turned off, in the Expression group.
+- **Glide:** the newest held note's bend sets the motor's rheostat: the shafts follow through the flywheel, two semitones either way.
+- **Lift:** How fast the relay opens: a slow lift parts its contacts gently, a softer click; a fast one sharply. It can be turned off in the Expression group.
+- Every preset turns off Glide.
+- **Slide:** how many of its eight harmonics a key's relay draws, from the ground tone up: a slide all the way leaves the ground tone alone. A new *Relay draws* knob sets it for every key; a held key's relay opens and closes its blades as it changes, each with its click.
+
+### Magnetic Resonator Piano 0.2.0
+- **Expression switches:** Strike, Slide and Press can each be turned off, in the Expression group.
+- **Glide:** a note's own bend moves its loop up (or back down) the string's harmonics, to the one nearest, as the MRP's own pitch bend did.
+- **Lift:** How fast the drive ramps down and the damper falls: a slow lift lets the string sing on, a fast one stops it sooner. It can be turned off in the Expression group.
+
+### Ondes Martenot 0.2.0
+- **Expression switches:** Strike, Glide, Slide and Press can each be turned off, in the Expression group.
+- **Lift:** How the intensity key lets go: a slow lift fades the note, a fast one cuts it. It can be turned off in the Expression group.
+
+### Cellulophone 0.2.0
+- **Expression switches:** Strike, Slide and Press can each be turned off, in the Expression group.
+- **Glide:** the newest held note's bend sets the motor's speed: the discs follow through their inertia, two semitones either way with the wheel.
+- **Lift:** How fast the key's mirror tilts back out of the beam: a slow lift fades the note, a fast one cuts it. It can be turned off in the Expression group.
+- Every preset turns off Glide.
+
+### Viola Organista 0.12.0
+- **Expression switches:** Strike, Glide and Press can each be turned off, in the Expression group.
+- **Lift:** How fast the key lifts the string off the wheel: 60 ms for a slow lift, the tone thinning as it goes, 4 ms for a fast one. It can be turned off in the Expression group.
+- **Slide:** a note's own slide moves where the wheel bows its string, towards the bridge (sul ponticello), as it sounds.
+
+### Glass Armonica 0.11.0
+- **Expression switches:** Strike, Glide and Press can each be turned off, in the Expression group.
+- **Lift:** How fast the finger leaves the glass: a slow lift drags off it, damping the bowl; a fast one leaves it ringing. It can be turned off in the Expression group.
+- **Dry fingers** presses hard (20 × threshold): dry skin gives only a whisper, which at the usual pressure was about 30 dB below the other presets.
+- **Finger below the rim:** a new Finger knob for where the finger rubs, from the rim down the bowl's wall: lower, the higher families fall away, a darker, softer note.
+- **Slide:** a note's own slide moves its finger down the wall, as it sings.
+
+### Clavicylinder 0.4.0
+- **Expression switches:** Strike and Press can each be turned off, in the Expression group.
+- **Glide:** the bar pressed off its centre: a few cents either way.
+- **Lift:** How fast the bar's cloth leaves the glass: a slow lift drags it off, quieting the bar; a fast one leaves it ringing. It can be turned off in the Expression group.
+- Every preset turns off Glide.
+- **Where the glass touches the bar:** a new Bars knob that moves the rub toward the lowest mode's node: a thinner, edgier note, slower to speak, most of all in the bass.
+- **Slide:** a note's own slide moves where the glass touches its bar, at the touch.
+
+### Hurdy-Gurdy 0.3.0
+- **Expression switches:** Strike and Press can each be turned off, in the Expression group.
+- **Glide:** the melody's tangent pushed harder into the chanterelles: up to a semitone sharp, the players' vibrato.
+- **Lift:** A slow lift lets the tangent sag off the string: the pitch slides down to the next stop or the open string. It can be turned off in the Expression group.
+- Every preset turns off Lift.
+- **Slide:** the melody note's own slide presses the chanterelles harder onto the wheel.
+
+### Pyrophone 0.11.0
+- **Expression switches:** Strike, Glide, Slide and Press can each be turned off, in the Expression group.
+- **Lift:** How fast the parted flames close up: a slow lift lets the tone fade as they rejoin, a fast one stops it. It can be turned off in the Expression group.
+
+### Singing Arc 0.10.0
+- **Expression switches:** Glide can be turned off, in the Expression group.
+- **Lift:** How fast the key's contacts part: a slow lift lets the spark die away in a long hiss, a fast one snaps them open. It can be turned off in the Expression group.
+- **Slide:** the electrode gap, from the newest held note (up to 6 mm at full), as the Electrode gap knob moves it.
+- **Press:** the arc current, from the newest held note: up to twice the knob's, a louder arc. Channel pressure is every key's.
+- Strike: velocity is how hard the key closes its contact. A soft key closes it slowly, and the note swells in later (half its level in about 180 ms at the softest). A hard one closes it with a jolt that knocks the capacitor's charge off the arc's voltage, and the note sounds at once (in 30–65 ms). The computer keys' 0.75 plays as before. The Expression group gains its Strike switch, and the plugin gains its parameter.
+
+### Singing Voice 0.2.0
+- **Expression switches:** Strike, Glide, Slide and Press can each be turned off, in the Expression group.
+- **Lift:** How fast the breath falls: a slow lift is a sighing release, a fast one a clean stop. It can be turned off in the Expression group.
+
+### Cristal Baschet 0.2.0
+- **Expression switches:** Strike, Slide and Press can each be turned off, in the Expression group.
+- **Glide:** a finger loading the rod's tip: a few cents flat.
+- **Lift:** How fast the wet fingers leave the rods: a slow lift drags them off, the rods singing on a moment; a fast one leaves them ringing free. It can be turned off in the Expression group.
+- Every preset turns off Glide.
+
+### Huygens Keyboard 0.12.0
+- **Expression switches:** Glide can be turned off, in the Expression group.
+- The page runs on the shared page code, as every newer instrument does: the same keys, MIDI, controls, Hold and Panic. The ↑/↓ readout under the keys shows the pulse coupling as its slider does. Saved settings carry over.
+- **Rail-sag coupling no longer goes silent under a big chord:** with the sag on, a chord with many high keys, or keys bent far up by MPE (a Seaboard RISE's ±48 semitones), drew more current than the rail's explicit step could follow, and the rail overshot further each sample until the output was NaN and the keyboard fell silent. The rail is now solved each sample with its load (every key's resistor), so it settles where source and keys balance however heavy the load.
+- **The regulator follows the load:** it raises the source by the sag the averaged load would cause, so the rail averages the supply's setpoint at any load. Before, under a heavy load it caught up over seconds and the pitch hold swung the pitch by an octave or more meanwhile. The pitch hold is now bounded to an octave either way.
+- The Rail sag only preset's release is about 1 dB different; the other presets are unchanged.
+- **Lift:** How fast the key's supply falls: a slow lift lets the lamp flash on more and more slowly as it fades, a fast one cuts it. It can be turned off in the Expression group.
+- **Slide:** a note's own coupling: how hard the other lamps' firings kick its lamp, from the Pulse coupling knob's up to 15 %. Slid fully, a tritone that locks to 7:5 is pulled into a fifth.
+- **Press:** opens the key's keyer further, up to twice as loud: a stronger flash, its firings untouched.
+- Strike: velocity is how fast the key brings its lamp's supply on and opens its keyer. The softest key takes eight times the Key attack, so the note eases in. The hardest takes an eighth of it, switching the note on at once. The computer keys' 0.75 plays as before. The Expression group gains its Strike switch, and the plugin gains its parameter.
+
+### Gong Keyboard 0.12.0
+- **Expression switches:** Strike and Slide can each be turned off, in the Expression group.
+- **Glide:** a hand pressing the rim, stiffening the plate: a few cents sharp.
+- **Lift:** The hand damping the plate on release: a slow lift lands gently (a longer tail), a fast one firmly. It can be turned off in the Expression group.
+- Every preset turns off Glide.
+- **Press:** a firm press holds the mallet against the plate, muting it.
+- **Thick bronze** is struck with a harder mallet head (20 MPa, not 4): the soft head barely stirred so heavy a plate, and the preset was about 35 dB below the others. It still stays linear.
+
+### Black-Hole Keyboard 0.11.0
+- The page runs on the shared page code, as every newer instrument does: the same keys, MIDI, controls and Panic (which now lets go of the on-screen keys too). The on-screen keys map their depth through the same velocity curve as MIDI, as they already did when the Black-Hole Keyboard is the second instrument of a layer or split. Saved settings carry over.
+- **Expression switches:** Strike and Slide can each be turned off, in the Expression group.
+- **Glide:** the remnant's recoil toward us or away: the whole wave Doppler-shifted, pitch and time together, up to thirty cents.
+- **Lift:** A fast lift sets off a second, smaller merger: a black hole of half the mass rings down an octave up. It can be turned off in the Expression group.
+- Every preset turns off Lift.
+- **Press:** matter falling in. A firm press drops a clump into the held key's black hole at once and every 0.15 s, each ringing it again, up to a third as hard as its merger; a hole whose ringing has died away rings anew.
+
+### Quantum Keyboard 0.11.0
+- **Expression switches:** Strike and Slide can each be turned off, in the Expression group.
+- **Glide:** squeezing the well: every level, and the pitch, up to an octave higher.
+- **Lift:** The measurement that ends the note: a fast lift collapses the state at once, a slow one lets it decohere slowly. It can be turned off in the Expression group.
+
+### Bubble Organ 0.10.0
+- **Expression switches:** Strike, Glide, Slide and Press can each be turned off, in the Expression group.
+- **Lift:** How fast the nozzle shuts: a slow lift still lets bubbles go as it closes, a fast one snaps it shut on a last small bubble. It can be turned off in the Expression group.
+
+### Spring Keyboard 0.8.0
+- **Expression switches:** Strike, Slide and Lift can each be turned off, in the Expression group.
+- **Glide:** a hand stretching the coil: its waves and echoes faster or slower, up to two semitones.
+- **Press:** a firm press holds the hammer into the coil, muting it.
+
+### Star Keyboard 0.8.0
+- **Expression switches:** Strike, Slide and Press can each be turned off, in the Expression group.
+- **Glide:** the star's orbit in a binary: a Doppler shift of up to ten cents.
+- **Lift:** A slow lift lets the convection's driving die away rather than stop at once. It can be turned off in the Expression group.
+
+### Wind Harp 0.9.0
+- **Expression switches:** Strike, Glide, Press and Lift can each be turned off, in the Expression group.
+- **Slide:** a key's own gustiness: the same gusts, felt at its strings as strongly as its slide says, as the Gustiness knob would there.
+
+### Storage Ring 0.7.0
+- **Expression switches:** Strike, Slide and Press can each be turned off, in the Expression group.
+- **Glide:** the beam's energy ramped: its betatron tune, and the sidebands with it, move; the ring's own pitch stays.
+- **Lift:** How the beam is dumped: a slow lift scrapes it away gently, a fast one fires the abort kicker. It can be turned off in the Expression group.
+
+### RF Cavity Bells 0.6.0
+- **No more "memory access out of bounds":** pressing into a held key (aftertouch, a Seaboard's Press), or turning up the Beam current while one is held, started its train of bunches with the first one long overdue. On keys whose bunches come less than a block apart (G6 and up at the default spacing) the engine then wrote before its output, and the page stopped with that error. A train now starts on the next of the accelerator's buckets, every bunch spacing from the strike on, so it builds the field in step with the strike's whatever moment the pressure comes.
+- **Expression switches:** Strike, Glide, Slide and Press can each be turned off, in the Expression group.
+- **Lift:** How fast the RF is ramped down: a slow lift lets the cavity ring on, a fast one stops it. It can be turned off in the Expression group.
+
+### Collider Showers 0.5.0
+- **Expression switches:** Strike and Press can each be turned off, in the Expression group.
+- **Glide:** the crystal's temperature: its speed of sound, and every mode, a few per cent.
+- **Lift:** A fast lift is a pile-up: a second, smaller shower lands in the crystal. It can be turned off in the Expression group.
+- Every preset turns off Lift.
+- **Slide:** a note's slide before its strike is where its particle lands off the crystal's axis, as the Impact point knob would set it there; its neighbours take their shares from there.
+
+### Whistlers 0.5.0
+- **Expression switches:** Strike and Press can each be turned off, in the Expression group.
+- **Glide:** the field line's L-shell: the whistler's nose higher or lower, two semitones either way.
+- **Lift:** A slow lift lets the whistler fade slowly; a fast one sends an echo hopping back from the other hemisphere. It can be turned off in the Expression group.
+- Every preset turns off Lift.
+- **Slide:** a note's slide before its stroke is its own field line's plasma density (up to ten times the default), as the Plasma density knob would set it there.
+
+### Early Universe 0.4.0
+- **Expression switches:** Strike can be turned off, in the Expression group.
+- **Glide:** the plasma's sound speed: every acoustic wave faster or slower, two semitones either way.
+- **Lift:** When recombination comes: a fast lift freezes the sound at once, a slow one lets it stream away. It can be turned off in the Expression group.
+- **Press:** a held note's primordial amplitude grows with its key's press, up to twice: every wave larger.
+
+### Hydrogen Lamp 0.5.0
+- **Expression switches:** Strike, Glide and Slide can each be turned off, in the Expression group.
+- **Lift:** The afterglow when the discharge stops: a slow lift draws it out, a fast one cuts it short. It can be turned off in the Expression group.
+- **Press:** a held lamp's discharge current rises with its key's press, up to four times: lines twice as strong and broader.
+
+### Project 8 0.5.0
+- **Expression switches:** Strike, Glide and Slide can each be turned off, in the Expression group.
+- **Lift:** How the trap opens: a slow lift lets the electron drift out, its signal fading; a fast one loses it at once. It can be turned off in the Expression group.
+- Every preset turns off Lift.
+- **Press:** a firm press deepens the key's trap up to four times, so its electron stays longer before it radiates itself out.
+
+### ABRACADABRA 0.6.0
+- **Expression switches:** Strike and Slide can each be turned off, in the Expression group.
+- **Glide:** the Earth's speed through the halo: a tiny Doppler shift, up to ten cents.
+- **Lift:** How fast the magnet ramps down: a slow lift over up to four times the ramp, a fast one in a quarter of it. It can be turned off in the Expression group.
+- Every preset turns off Glide and Lift.
+- **Press:** a held key's magnet field strengthens with its press, up to twice: a signal twice as strong above the same noise.
+
+### TESS 0.4.0
+- **Expression switches:** Strike can be turned off, in the Expression group.
+- **Glide:** a second planet's tug: the transits come early or late, up to ten cents.
+- **Lift:** A slow lift fades the light curve out through its dips; a fast one cuts it at once. It can be turned off in the Expression group.
+- Every preset turns off Glide and Lift.
+- **Slide:** a note's own impact parameter, its planet's path across the star, from the knob's to a grazing transit at full.
+- **Press:** a held key's planet grows with its press, its transit up to twice as deep.
+
+### CUORE 0.4.0
+- **A held key no longer goes silent when Doping moves a long way** (3.4 to 4.9 K, or back): the
+  thermistor's resistance jumps 45 times under it, its electrons run away electrothermally, and the
+  step took that growth as decay, ran the wrong way and reached NaN. The step now caps the growth
+  it takes (ROS2 stays second order with any Jacobian) and follows the runaway; the note settles
+  to sound as a key struck at the new Doping.
+- **A step that still leaves the physical range after every halving is kept in it**, instead of
+  starting the next from millikelvins and volts no thermistor reaches: big pulses in a small
+  crystal at a long heater period (a sample is seconds of the crystal's time) went to NaN too.
+- The defaults and every preset sound exactly as before.
+- **Expression switches:** Strike, Glide and Press can each be turned off, in the Expression group.
+- **Lift:** A slow lift fades the pulses out, the heater firing ever weaker; a fast one cuts the crystal's cooling tail short. It can be turned off in the Expression group.
+- Every preset turns off Lift.
+- **Slide:** a note's slide before its strike is its own thermistor's bias (up to 15 V), as the Bias voltage knob would set it there: a faster pulse, its gain moving. The heat sink stays shared.
+
+### Ion Chain 0.2.0
+- **Expression switches:** Strike and Glide can each be turned off, in the Expression group.
+- **Lift:** The cooling laser: a fast lift cools the ions at once, a slow one gently, letting them ring on. It can be turned off in the Expression group.
+- **Press:** a held key's laser pushes its ions in step with their motion, making up the share of the electrodes' loss that the key is pressed: pressed fully, they ring on undiminished while it is held.
+
+### Chladni Plate 0.2.0
+- **Expression switches:** Strike, Slide and Press can each be turned off, in the Expression group.
+- **Glide:** the clamp tightened, stiffening the plate: up to a semitone sharp.
+- **Lift:** How the bow leaves the plate: a fast lift springs it clear and the plate rings on, a slow one drags it off, damping it. It can be turned off in the Expression group.
+- Every preset turns off Glide.
+
+### Birdsong 0.2.0
+- **Expression switches:** Strike, Glide, Slide and Press can each be turned off, in the Expression group.
+- **Lift:** How fast the air sacs empty: a slow lift lets the song fall away, a fast one clips it. It can be turned off in the Expression group.
+
+### Ringing Planets 0.2.0
+- **Expression switches:** Strike, Glide and Slide can each be turned off, in the Expression group.
+- **Lift:** How the recording stops: a slow lift fades the ringing, a fast one cuts it. It can be turned off in the Expression group.
+- Every preset turns off Lift.
+- **Press:** aftershocks. A firm press rings the planet again at once and every 0.4 s while it stays pressed, the harder the larger (from 1.2 magnitudes below the main shock, Båth's law, to 0.3 below).
+
+### Pulsars 0.2.0
+- **Expression switches:** Strike and Slide can each be turned off, in the Expression group.
+- **Glide:** the pulsar's binary orbit, toward us or away: a Doppler shift of up to ten cents.
+- **Lift:** A slow lift fades the pulse train out before the pulsar switches off; a fast one cuts it, the dispersed tail too. It can be turned off in the Expression group.
+- Every preset turns off Lift.
+- **Press:** a held pulsar's beam brightens with its key's press, up to twice as bright.
+
+### Singing Dunes 0.2.0
+- **Expression switches:** Strike, Slide and Press can each be turned off, in the Expression group.
+- **Glide:** the avalanche's shear rate: its boom a few per cent higher or lower.
+- **Lift:** How fast the flow drains when the push stops: a slow lift lets the boom run on, a fast one stops it. It can be turned off in the Expression group.
+
+### NMR Spin Echo 0.2.0
+- **Expression switches:** Strike, Glide and Slide can each be turned off, in the Expression group.
+- **Lift:** How the receiver closes: a slow lift fades the echoes out, a fast one cuts them. It can be turned off in the Expression group.
+- Every preset turns off Lift.
+- **Press:** a firm press runs the key's own echo train: π pulses on its sample alone every echo time, up to four times as often the harder it is pressed.
+
 ## 2026-11-06 — screen readers, keyboard focus and Reduce Motion; Cimbalom; the cristal Baschet; the Gamelan; the gong plays the same from a Seaboard as from the computer keys; a Windows installer and Linux packages; the Marimba and Xylophone; songs from MIDI files; the site works offline; a hung page view fails the page check by name; the Pipe Organ answers a Seaboard's Press; Huygens and the springs in the plugin window's views; the site's views in the plugin window; Morph between two presets; a Seaboard RISE's panel at the left of every page; a Seaboard RISE's own settings, read and set from its panel; the Musical Saw; a Seaboard's resting finger leaves the notes alone; site review fixes; split and layer two instruments in the Forte app; split and layer two instruments on the site; the page check splits its pages and reuses its base's counts; transpose and octave; Tubular Bells; the page check's Songs step waits as long as its other clicks
 
 ### Forte 0.46.0
