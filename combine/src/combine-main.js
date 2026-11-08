@@ -520,7 +520,7 @@ function card(s) {
   octRow.append(el('span', '', 'Octave'), oct);
   // its presets, yours for it from its own page, its default settings and those on its own page:
   // the menu names the one it plays, until a control moves its settings
-  const pre = el('select');
+  const pre = el('select', 'forte-display');
   pre.setAttribute('aria-label', `The ${entry.name}'s preset`);
   pre.append(new Option('Presets…', ''), ...(s.I.presets ?? []).map((p) => new Option(p.name, `f:${p.name}`)));
   const yours = yoursFor(s.id);

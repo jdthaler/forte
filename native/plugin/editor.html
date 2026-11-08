@@ -42,13 +42,33 @@
   }
   :root { color-scheme: dark; }
   button:hover, select:hover { border-color: var(--accent); }
-  /* the same controls in every web view (WebKit on macOS and Linux, Edge on Windows) */
+  /* the same controls in every web view (WebKit on macOS and Linux, Edge on Windows). Dropdowns
+     as hardware, as on the site's pages (shared/layout.css): a moulded button lit from above, its
+     arrows on a cap past a groove; the Presets menu a window lit from behind in the accent */
   select {
-    -webkit-appearance: none; appearance: none; padding-right: 26px; background-repeat: no-repeat;
-    background-position: right 9px center; background-size: 9px 6px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 6'%3E%3Cpath d='M0 0h9L4.5 6z' fill='%239393a0'/%3E%3C/svg%3E");
+    --face: linear-gradient(180deg, #3a3a42, #28282e 55%, #1e1e23);
+    -webkit-appearance: none; appearance: none; padding-right: 30px; text-overflow: ellipsis;
+    border-color: #060608;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12'%3E%3Cpath d='M1.2 4.6 4 1.8l2.8 2.8M1.2 7.4 4 10.2l2.8-2.8' fill='none' stroke='%23c4c4cc' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 9px center / 8px 12px,
+      linear-gradient(90deg, transparent calc(100% - 26px), rgb(0 0 0 / 0.55) 0 calc(100% - 25px), rgb(255 255 255 / 0.08) 0 calc(100% - 24px), transparent 0),
+      var(--face);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.13), inset 0 -1px 0 rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.65);
   }
-  select option { background: #1f1f24; color: var(--text); }
+  select:hover { --face: linear-gradient(180deg, #44444d, #2f2f36 55%, #232328); border-color: #060608; }
+  select:active { --face: linear-gradient(180deg, #1b1b20, #26262c); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.7), 0 1px 0 rgb(255 255 255 / 0.05); }
+  select option, select optgroup { background: #1f1f24; color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; text-shadow: none; }
+  :is(#preset, select.display) {
+    padding-left: 9px; padding-right: 26px; font: 600 12.5px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    color: color-mix(in srgb, var(--accent) 72%, #fff); text-shadow: 0 0 7px color-mix(in srgb, var(--accent) 60%, transparent);
+    border: 1px solid #000; border-radius: 4px;
+    background: linear-gradient(45deg, transparent 50%, var(--accent) 0) no-repeat right 15px center / 5px 5px,
+      linear-gradient(135deg, var(--accent) 50%, transparent 0) no-repeat right 10px center / 5px 5px,
+      linear-gradient(180deg, rgb(255 255 255 / 0.06), transparent 45%),
+      linear-gradient(180deg, color-mix(in srgb, var(--accent) 10%, #0b0b0d), color-mix(in srgb, var(--accent) 4%, #050506));
+    box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.85), inset 0 0 14px color-mix(in srgb, var(--accent) 12%, transparent),
+      0 0 0 3px #0b0b0d, 0 0 0 4px rgb(255 255 255 / 0.09), 0 2px 5px 3px rgb(0 0 0 / 0.5);
+  }
+  :is(#preset, select.display):hover { border-color: color-mix(in srgb, var(--accent) 45%, #000); }
   button[aria-pressed="true"] { background: var(--accent); color: #111; border-color: transparent; }
 
   header {
@@ -69,7 +89,7 @@
   #instrument { align-self: center; min-width: 140px; max-width: 260px; font-weight: 700; font-size: 14px; text-overflow: ellipsis; }
   .suite .brand b { flex: none; }
   /* another instrument: "+", a menu of them all */
-  #add { align-self: center; flex: none; width: 32px; padding: 4px 0; text-align: center; text-align-last: center; background-image: none; font-weight: 700; }
+  #add { align-self: center; flex: none; width: 32px; padding: 4px 0; text-align: center; text-align-last: center; background: var(--face); font-weight: 700; }
   /* your combinations: the instruments together, saved and played again */
   #combination { align-self: center; flex: 0 1 190px; min-width: 0; text-overflow: ellipsis; }
   /* two instruments or more: a card for each, with its keys, octave, level and on/off */
@@ -91,7 +111,7 @@
   .part .tail { display: flex; align-items: center; gap: 8px; flex: 1 0 auto; }
   .part.off .who span { text-decoration: line-through; color: var(--muted); }
   .part label { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-  .part select { padding: 2px 20px 2px 6px; background-position: right 6px center; }
+  .part select { padding: 2px 28px 2px 7px; }
   .part input[type=range] { width: 64px; margin: 0; }
   .part .db { min-width: 48px; color: var(--text); font-variant-numeric: tabular-nums; }
   .part .grow { flex: 1; }
@@ -217,7 +237,7 @@
 </head>
 <body>
 <header>
-  <div class="brand"><b id="name">Forte</b><select id="instrument" title="Instrument" hidden></select><select id="add" title="Add an instrument, up to four: it comes onto every key, layered with the rest; give it its keys to split the keyboard" hidden></select><select id="combination" title="Your combinations: the instruments, each on its keys with its settings, saved together (the site’s Combinations page opens the same files)" hidden></select><span id="version"></span></div>
+  <div class="brand"><b id="name">Forte</b><select id="instrument" title="Instrument" hidden></select><select id="add" title="Add an instrument, up to four: it comes onto every key, layered with the rest; give it its keys to split the keyboard" hidden></select><select id="combination" class="display" title="Your combinations: the instruments, each on its keys with its settings, saved together (the site’s Combinations page opens the same files)" hidden></select><span id="version"></span></div>
   <select id="preset" title="Preset" hidden></select>
   <div class="tools">
     <button id="views-btn" hidden aria-pressed="false" title="Show or hide the instrument's views: what its physics is doing as it plays">Views</button>
@@ -312,6 +332,7 @@ function control(i, compact) {
   box.append(row);
   if (p.kind === 'choice') {
     const el = document.createElement('select');
+    if (p.id === 'morphFrom' || p.id === 'morphTo') el.className = 'display'; // a menu of presets: lit, as #preset
     p.choices.forEach((c, k) => { const o = document.createElement('option'); o.value = k; o.textContent = c; el.appendChild(o); });
     el.addEventListener('change', () => { set(i, +el.value); el.blur(); });
     box.append(el);

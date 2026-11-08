@@ -48,15 +48,22 @@ body[data-instrument] .forte-edge { background-color: var(--panel, #151518); }
 /* the instrument's name is the menu's button: Forte's mark, the <h1>, a caret */
 .forte-switch summary {
   list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; min-width: 0;
-  padding: 3px 10px 3px 8px; border-radius: 8px; border: 1px solid var(--line, #2b2833);
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+  padding: 3px 0 3px 8px; border-radius: 8px; border: 1px solid #060608;
+  background: linear-gradient(180deg, #34343b, #242429 55%, #1c1c20);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), inset 0 -1px 0 rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.65);
   color: var(--text, #ece8e1);
 }
 .forte-switch summary::-webkit-details-marker { display: none; }
 .forte-switch summary h1 { margin: 0; min-width: 0; }
 .forte-mark { font-size: 17px; }
-.forte-caret { color: var(--muted, #9a9284); font-size: 11px; }
-.forte-switch[open] summary, .forte-switch summary:hover { border-color: var(--accent, #f0b35a); }
+/* the caret: the arrows on a cap of their own past a groove, as every dropdown has (shared/layout.css) */
+.forte-caret {
+  flex: none; align-self: stretch; width: 26px; margin: -3px 0; font-size: 0;
+  border-left: 1px solid rgb(0 0 0 / 0.55); box-shadow: inset 1px 0 0 rgb(255 255 255 / 0.08);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12'%3E%3Cpath d='M1.2 4.6 4 1.8l2.8 2.8M1.2 7.4 4 10.2l2.8-2.8' fill='none' stroke='%23c4c4cc' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / 8px 12px;
+}
+.forte-switch summary:hover { background: linear-gradient(180deg, #3e3e46, #2b2b31 55%, #212126); }
+.forte-switch[open] summary { background: linear-gradient(180deg, #1b1b20, #26262c); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.7), 0 1px 0 rgb(255 255 255 / 0.05); }
 .forte-menu {
   position: absolute;
   z-index: 50;
@@ -67,9 +74,9 @@ body[data-instrument] .forte-edge { background-color: var(--panel, #151518); }
   overflow: auto;
   padding: 8px;
   border-radius: 10px;
-  border: 1px solid var(--line, #2b2833);
-  background: var(--panel, #151518);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  border: 1px solid #060608;
+  background: linear-gradient(180deg, #202026, var(--panel, #151518) 120px);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 12px 40px rgba(0, 0, 0, 0.6);
 }
 .forte-menu-home {
   display: grid; gap: 1px; padding: 7px 8px 9px; margin-bottom: 4px; border-radius: 7px;
