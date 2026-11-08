@@ -16,6 +16,30 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-11-08 — your own combinations; buttons and switches as hardware; dropdowns open on a panel; dropdowns as hardware; the views on a rack
+
+### Forte 0.49.0
+- **Save your own combinations:** the Combinations page's Presets menu keeps combinations of yours
+  after the starting ones, as an instrument's keeps your presets: *Save this combination…*, *Copy
+  a link to this combination*, and *Your combinations and files…* (play, link, save to a file,
+  delete, open a file). Each keeps its instruments, their keys, octaves, levels and every setting.
+  A MIDI program change counts yours after the starting ones.
+- **The Forte app saves them too:** a combinations menu beside **+** saves the instruments together
+  as a file in a `Combinations` folder beside the instruments' presets, in the site's format, so
+  the page and the app open each other's, and plays one again.
+- **Each instrument's Presets menu on the Combinations page names the preset it plays,** instead of
+  going back to *Presets…*, until a MIDI controller moves its settings; it also lists your own
+  presets for that instrument from its own page. The page's menu names the combination playing
+  until something changes.
+- **Buttons are moulded keys** lit from above that press in, as the dropdowns are: in the header, the bars, the drawer, above the keys, in the views and in the plugins' window. Start audio is a key in the instrument's colour, and Tour, Songs, How it works and Plugin are round keys with the colour in their legends.
+- **The toggles have lamps:** each view's and group's toggle, Latch, and each instrument's On in Combinations is a latching key with a lamp that lights in the instrument's colour, and stays pressed in while it is on.
+- **Discover | Perform is a slide switch:** a slot cut into the panel, its cap at the mode the page is in.
+- **A dropdown opens on a panel, not the system's list:** picked with a mouse or a trackpad, every dropdown on the pages, in Combinations and in the plugins' window opens a bevelled panel like the instrument menu's, its choices in rows, the chosen one lit by a lamp in the instrument's colour, its groups headed in small engraved capitals; the arrow keys, Enter and Escape work in it. A finger keeps the phone's or tablet's own picker, and the keyboard (Tab, then Space or Alt+Down) the system's list.
+- **The MIDI button is a dropdown's button,** moulded with its arrows on a cap, as every dropdown is.
+- **Dropdowns look like hardware:** every menu on the pages, in Combinations and in the plugins' window is a moulded button lit from above, its arrows on a cap of their own past a groove, that presses in while it opens; the instrument menu in the title is the same button, and its list and the MIDI menu open on a bevelled panel.
+- **Presets show in a lit window:** the Presets menu (in the drawer, beside the keys in Perform and in the plugins' window), the Combinations menu, each instrument's Preset in a combination, and Morph's From and To are a display set in a dark bezel, lit from behind in the instrument's colour, as a PhuzzBox pedal's presets are.
+- **The views are instruments on a rack:** in Discover, each view is a panel held by four screws, and each picture a screen recessed in a dark bezel, on every page and in Combinations. Perform shows the views bare, as before.
+
 ## 2026-11-08 — the drawer alike for every instrument
 
 ### Ribbon Piano 0.14.1
