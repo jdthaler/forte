@@ -16,6 +16,11 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-11-08 — the plugins build on Windows again
+
+### Forte 0.49.1
+- The plugin tests' combination file is checked out with `\n` line endings on Windows too, as the preset files are, so the Windows build compares it byte for byte with what the window saves and passes again (0.49.0's Windows plugins were held back by it).
+
 ## 2026-11-08 — your own combinations; buttons and switches as hardware; dropdowns open on a panel; dropdowns as hardware; the views on a rack
 
 ### Forte 0.49.0
