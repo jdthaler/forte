@@ -33,7 +33,7 @@
 //   - SWITCHES: its general-purpose switches CC80, 81 and 82 are the sustain, sostenuto and soft
 //     pedals (CC64, 66, 67), so they do whatever those do on each instrument;
 //   - a device's volume pedal (CC7) moves the page's Volume control (volumePedal, pedalVolume:
-//     its default toe down, silent heel down); the expression pedal (CC11), and CC7 on a page
+//     its top toe down, silent heel down); the expression pedal (CC11), and CC7 on a page
 //     without a Volume control or from a song, turn the page's output down (pedalGain, which
 //     shared/chain.js applies after the limiter): full until a pedal moves, silent heel down;
 //     an instrument that maps CC11 itself (an organ's swell) keeps it;
@@ -197,14 +197,22 @@ export const presetIndex = () => { const sel = typeof document !== 'undefined' &
  */
 let volumeTo = null;
 export function volumePedal(fn) { volumeTo = fn; }
-/** The Volume control p at a volume pedal's v (0..127): its default with the toe down, silent heel
- *  down, (v/127)² between (General MIDI's 40·log10, as setLevel); in dB for a control in dB. */
+/** The Volume control p at a volume pedal's v (0..127): its top with the toe down, silent heel down,
+ *  (v/127)² between (General MIDI's 40·log10, as setLevel), so the pedal sweeps the control's whole
+ *  range as its slider does; in dB for a control in dB. */
 export function pedalVolume(p, v) {
   const u = Math.min(1, Math.max(0, v / 127));
-  let x = p.min < 0 ? (u <= 0 ? p.min : p.def + 40 * Math.log10(u)) : p.def * u * u;
+  let x = p.min < 0 ? (u <= 0 ? p.min : p.max + 40 * Math.log10(u)) : p.max * u * u;
   if (p.step) x = Math.round(x / p.step) * p.step;
   return Math.min(p.max, Math.max(p.min, x));
 }
+
+// The page's Morph slider (shared/morph.js gives it: morphControl(fn), fn(v) for v 0..127), which an
+// FC-300's EXP 2 moves, as it comes (its CC1) and driven alike; a keyboard's mod wheel stays the mod wheel
+let morphTo = null;
+export function morphControl(fn) { morphTo = fn; }
+/** An FC-300's EXP 2 at v (0..127) on the page's Morph: false when the page has none. */
+export function footMorph(v) { if (!morphTo) return false; morphTo(v); return true; }
 
 // A Roland FC-300's section of the drawer (shared/fc300.js), loaded the first time one is seen:
 // an input that sends its switches (CC80–83), or one with the name the last one came by
@@ -266,6 +274,7 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
           }
           if ((d[0] & 0xf0) === 0xb0 && d[1] >= 80 && d[1] <= 83) footed(inp); // an FC-300's switches, as it comes
           if (feet.has(inp.id)) foot((f) => f.midi(inp.id, d));
+          if (feet.has(inp.id) && (d[0] & 0xf0) === 0xb0 && d[1] === 1 && footMorph(d[2])) return; // its EXP 2: Morph
           input(inp.id).take(d);
         };
         // A Seaboard sends MPE (notes on channels 2–16, each bending ±48 semitones, ROLI
