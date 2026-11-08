@@ -445,6 +445,20 @@ TEST("parts: an octave moves a part's keys by 12, MIDI's and the window's, and a
   CHECK(!app.describe()["parts"][1]["on"].getBool());
 }
 
+TEST("parts: a key past a part's own keys (its octave can move it there) is counted for that part, for the window to say so") {
+  App app;
+  app.call("[\"choose\", \"grand\"]");
+  app.call("[\"add\", \"tines\"]");
+  app.call("[\"zone\", 1, 0, 127, 1, 0, true]");
+  app.run(512);
+  app.play({{100, true}}); // E7: the Electric Grand plays it, the tine piano's E8 is past C8
+  const auto r = choc::json::parse(app.call("[\"poll\"]"));
+  CHECK(r.hasObjectMember("misses") && r["misses"].size() == 2);
+  CHECK(r["misses"][0][0].get<int>() == 0);
+  CHECK(r["misses"][1][0].get<int>() == 1 && r["misses"][1][1].get<int>() == 112 && r["misses"][1][3].get<int>() == 108);
+  CHECK(holds(app.part(0), 100));
+  app.play({{100, false}});
+}
 TEST("parts: a part's level, in dB, is how loud it joins the rest") {
   // the same note, the Electric Grand at 0 dB and at −20 dB, with the tine piano off
   auto peak = [](double level) {

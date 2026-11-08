@@ -170,6 +170,35 @@ TEST("plugin: keys past a historical compass play once Full range opens it, in t
   CHECK(d.find("\"keyLo\": 21") != std::string::npos && d.find("\"keyHi\": 108") != std::string::npos);
   CHECK(d.find("\"compass\": [36, 96, 2]") != std::string::npos); // the window's keys follow the toggle
 }
+TEST("plugin: a note past the keys that play is counted for the window, which says so: the last, the keys, what opens them, how MIDI moved it") {
+  Instance in(48000);
+  auto bridge = (const forte::EditorBridge *)in.p->get_extension(in.p, forte::kEditorBridge);
+  auto miss = [&] { // poll()'s "miss", as it reads
+    const std::string r = bridge->call(in.p, "[\"poll\"]");
+    const size_t at = r.find('[', r.find("\"miss\":"));
+    return at == std::string::npos ? std::string() : r.substr(at, r.find(']', at) + 1 - at);
+  };
+  CHECK(miss() == "[0, -1, 36, 96, false, 0, 0]");        // none yet
+  Events ev;
+  ev.note(10, true, 60, 0.8);                             // in the compass: no miss
+  ev.midi(20, 0x90, 100, 100);                            // past it: still in keyLo…keyHi, so Full range would play it
+  in.run(128, 128, ev);
+  CHECK(miss() == "[1, 100, 36, 96, true, 0, 0]");
+  Events moved;
+  moved.param(0, in.id("Octave"), 5);                     // +1
+  moved.midi(10, 0x90, 108, 100);                         // C8 an octave up: past every key
+  in.run(128, 128, moved);
+  CHECK(miss() == "[2, 120, 36, 96, false, 1, 0]");
+  bridge->call(in.p, "[\"note\", 30, 0.8]");             // the window's own key: Octave doesn't move it
+  Events none;
+  in.run(128, 128, none);
+  CHECK(miss() == "[3, 30, 36, 96, true, 0, 0]");
+  Events open;
+  open.param(0, in.id("Full range"), 1);
+  open.note(10, true, 30, 0.8);                           // plays now
+  in.run(128, 128, open);
+  CHECK(miss() == "[3, 30, 21, 108, false, 0, 0]");
+}
 TEST("plugin: the velocity curve bends MIDI velocity; the soft pedal strikes softer") {
   auto level = [](int curve, bool softPedal) {
     Instance in(48000);

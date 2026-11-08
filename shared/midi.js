@@ -91,12 +91,26 @@ export function setShift({ octave = shift.octave, transpose = shift.transpose } 
 }
 // "+2", "0", "−1" (a minus sign, not a hyphen)
 export const signed = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
-const shiftText = () => {
-  const { octave: o, transpose: t } = shift, parts = [];
+const shiftText = ({ octave: o, transpose: t } = shift) => {
+  const parts = [];
   if (o) parts.push(`${Math.abs(o)} octave${Math.abs(o) > 1 ? 's' : ''} ${o > 0 ? 'up' : 'down'}`);
   if (t) parts.push(`${Math.abs(t)} semitone${Math.abs(t) > 1 ? 's' : ''} ${t > 0 ? 'up' : 'down'}`);
   return parts.join(' and ');
 };
+
+// A note the instrument doesn't play: what the page says when one is struck (shared/shell.js, the
+// Combinations page, and the plugins' window, native/plugin/editor.html). lo…hi: the keys that
+// play; name: the instrument's, where there is more than one; open: the label of the checkbox that
+// would play it (a historical compass's Full range); octave and transpose: how far Octave and
+// Transpose moved it, a MIDI key's (shiftOf())
+const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+const keyName = (m) => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+export function rangeWarning(key, lo, hi, { name = '', open = '', octave = 0, transpose = 0 } = {}) {
+  const moved = shiftText({ octave, transpose });
+  return `${name ? `${name}: ` : ''}${keyName(key)} is out of range (${keyName(lo)}–${keyName(hi)}).`
+    + (open ? ` Tick ${open} to play it.` : '')
+    + (moved ? ` MIDI keys play ${moved}: Octave and Transpose are in the MIDI settings.` : '');
+}
 
 // Without the User Activation API (older browsers), let the notes through as before.
 const mayPlay = () => !navigator.userActivation || navigator.userActivation.hasBeenActive;

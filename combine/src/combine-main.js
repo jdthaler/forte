@@ -16,7 +16,7 @@
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION, byId, trimGain, paramsStore } from '../../shared/registry.js';
 import { createChain, createLimiter, SUM_LIMITER } from '../../shared/chain.js';
 import { createKeyboard } from '../../shared/keyboard.js';
-import { startMIDI, resumeMIDI, pageMIDI, touched, SOFT_PEDAL, wheelValue, pageMpe, controllersOf, controlled } from '../../shared/midi.js';
+import { startMIDI, resumeMIDI, pageMIDI, touched, SOFT_PEDAL, wheelValue, pageMpe, controllersOf, controlled, rangeWarning, shiftOf } from '../../shared/midi.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
 import { complete, pick, presetParams } from '../../shared/presets.js';
 import { withExpression, slideOf } from '../../shared/expression.js';
@@ -260,8 +260,13 @@ function noteOn(src, key, from, value, decoded = null) {
   if (!ctx) start();
   const list = [];
   for (const s of live()) {
-    const k = routed(s, key, rangeOf(s));
-    if (k === null) continue;
+    const r = rangeOf(s), k = routed(s, key, r);
+    if (k === null) {
+      // its keys, but past the instrument's own (its octave can move them there): it says so
+      const moved = routed(s, key, null);
+      if (moved !== null) toast(rangeWarning(moved, r[0], r[1], { name: nameOf(s.id), ...(from === 'midi' && shiftOf()) }));
+      continue;
+    }
     down(s, k, velocityOf(s, from, value), decoded?.get(s)?.with);
     list.push([s, k]);
   }

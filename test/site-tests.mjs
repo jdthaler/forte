@@ -12,7 +12,7 @@ import { ASSETS, notes } from '../tools/plugin-release.mjs';
 import { withTags, pictureOf } from '../tools/make-previews.mjs';
 import { readNotes, parseNote, plan, bump, frontPage } from '../tools/release.mjs';
 import { compare, stateOf, contractPath, STATES } from '../tools/contract.mjs';
-import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue, FADERS, controllersOf, controlled, ccValue, SWITCHES, levelGain, pedalGain, onPedalGain, startMIDI, keyShift, setShift, shiftOf, signed, OCTAVES, SEMITONES } from '../shared/midi.js';
+import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue, FADERS, controllersOf, controlled, ccValue, SWITCHES, levelGain, pedalGain, onPedalGain, startMIDI, keyShift, setShift, shiftOf, signed, OCTAVES, SEMITONES, rangeWarning } from '../shared/midi.js';
 import { LATEST, SYSTEMS, archive, downloads, downloadLinks, withPlugins, parseRelease, releaseLine } from '../shared/plugins.js';
 import { script as installerScript, SETUP, APP_ID } from '../tools/windows-installer.mjs';
 import { TUNING_GROUP } from '../shared/tuning.js';
@@ -235,6 +235,15 @@ await test('Octave and Transpose move the MIDI keys: a note-off and poly pressur
     Object.defineProperty(globalThis, 'document', { value: was.document, configurable: true, writable: true });
     Object.defineProperty(globalThis, 'navigator', { value: was.navigator, configurable: true, writable: true });
   }
+});
+
+await test('a note out of range says so: the keys that play, the checkbox that opens them, what Octave and Transpose did', () => {
+  assert.equal(rangeWarning(96, 29, 89), 'C7 is out of range (F1–F6).');
+  assert.equal(rangeWarning(20, 21, 108, { name: 'Viola Organista' }), 'Viola Organista: A♭0 is out of range (A0–C8).');
+  assert.equal(rangeWarning(96, 29, 89, { open: 'Full range (A0–C8)' }), 'C7 is out of range (F1–F6). Tick Full range (A0–C8) to play it.');
+  assert.equal(rangeWarning(110, 21, 108, { ...shiftOf() }), 'D8 is out of range (A0–C8).', 'nothing moved: nothing said of it');
+  assert.equal(rangeWarning(10, 21, 108, { octave: -1, transpose: 2 }), 'B♭-1 is out of range (A0–C8). MIDI keys play 1 octave down and 2 semitones up: Octave and Transpose are in the MIDI settings.');
+  assert.equal(rangeWarning(120, 21, 108, { octave: 2 }), 'C9 is out of range (A0–C8). MIDI keys play 2 octaves up: Octave and Transpose are in the MIDI settings.');
 });
 
 console.log('registry');
@@ -547,6 +556,7 @@ for (const { id, dir } of described) {
       const [a, b] = I.compass.keys, p = params.get(I.compass.param);
       assert.ok(lo <= a && a < b && b <= hi && (a > lo || b < hi), `compass ${I.compass.keys} inside ${I.range}`);
       assert.ok(p?.type === 'checkbox' && p.def === false, `compass.param ${I.compass.param}: a checkbox, off`);
+      assert.match(p.label, /^Full range \(.+–.+\)$/, 'its label names what it opens (a note past the compass says to tick it)');
     }
     assert.ok(['sustain', 'hold', null].includes(I.space), `space ${I.space}`);
     const mw = typeof I.modWheel === 'string' ? I.modWheel : I.modWheel?.param;
