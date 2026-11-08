@@ -1,4 +1,4 @@
-forte piano 0.14.0
+forte piano 0.14.1
 material 0
 shape 0
 aspect 12
@@ -19,6 +19,7 @@ feltExp 0
 hammerMass 1
 hammerWidth 1
 hysteresis 0.000050000000000000002
+voicing 2.5
 unaCorda 1
 bridge 1
 bridgeH 0.29999999999999999
@@ -31,12 +32,11 @@ gainV 1
 gainH 0.34999999999999998
 gainT 0.59999999999999998
 soundboard 0.59999999999999998
+width 0.59999999999999998
+maxFreq 12000
 room 0.25
 venue 1
-width 0.59999999999999998
-voicing 2.5
 volume 0.80000000000000004
-maxFreq 12000
 pitch 0
 temperament 0
 tuningRoot 0
