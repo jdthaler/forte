@@ -860,6 +860,11 @@ struct Plugin : Instance, MpeDecoder::Sink {
   }
   const Site *page() const override { return site; }
   void closed() override { viewsOn = false; }
+  // every instrument parameter at once, as a preset of yours plays (loadPreset; a combination of yours in the Forte app)
+  void play(const std::vector<double> &v) {
+    toAudio({UiEvent::swap, 0, 0});
+    for (int i = 0; i < I.paramCount && i < (int)v.size(); i++) { shown[i] = v[i]; sent[i] = NAN; toAudio({UiEvent::param, (int16_t)i, v[i]}); }
+  }
   // the keys sounding, as poll() gives them
   choc::value::Value keysValue() const {
     choc::value::Value keys = choc::value::createEmptyArray();
@@ -921,7 +926,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
       std::vector<double> v;
       std::string error;
       const bool ok = readPreset(I, text(1), (int)num(2), v, error);
-      if (ok) { toAudio({UiEvent::swap, 0, 0}); for (int i = 0; i < I.paramCount; i++) { shown[i] = v[i]; sent[i] = NAN; toAudio({UiEvent::param, (int16_t)i, v[i]}); } }
+      if (ok) play(v);
       Value r = createObject("");
       r.addMember("ok", ok);
       r.addMember("error", error);
@@ -1350,6 +1355,7 @@ struct Suite : Instance {
   std::unique_ptr<Plugin> part[kParts];   // the parts in order, the first always there (main thread)
   Zone zone[kParts];                      // each one's keys
   int focus = 0;                          // the part whose controls the window shows
+  std::string combination;                // the combination of yours playing, by name, until something changes (main thread)
   std::atomic<int> focused{0};            // the same, for the audio thread: a program change plays its preset
   // the hand-off: every change publishes a Rig and the audio thread takes the latest (audio());
   // a part let go of is deleted on the main thread once the audio thread has taken a Rig without it
@@ -1508,6 +1514,48 @@ struct Suite : Instance {
     publish();
     return true;
   }
+  // ---- your combinations (presets.h): files in the site's format, in the Combinations folder ------------
+  // a combination's keys as a Zone: the site's A0 and C8 are every key below and above
+  static Zone zoneOf(const CombinationPart &c) {
+    Zone z;
+    z.lo = c.lo <= 21 ? 0 : c.lo; z.hi = c.hi >= 108 ? 127 : c.hi; z.oct = c.oct; z.level = c.level; z.on = c.on;
+    return whole(z);
+  }
+  static const InstrumentInfo *instrumentOf(const std::string &slug, const void *ctx) {
+    const Suite *s = (const Suite *)ctx;
+    const int k = s->find(slug);
+    return k < 0 ? nullptr : &s->list[k].info();
+  }
+  // the parts become the combination's, each with its keys and settings; the window shows the first
+  bool playCombination(const std::vector<CombinationPart> &c) {
+    if (c.empty()) return false;
+    collect();
+    alone();
+    choose(find(c[0].I->slug));
+    part[0]->play(c[0].values);
+    zone[0] = zoneOf(c[0]);
+    for (size_t j = 1; j < c.size() && j < (size_t)kParts; j++) {
+      part[j] = make(find(c[j].I->slug));
+      zone[j] = zoneOf(c[j]);
+      part[j]->play(c[j].values);
+    }
+    publish();
+    rescanHost();
+    return true;
+  }
+  // the parts as a combination: each one's keys, and its parameters as the window shows them
+  std::vector<CombinationPart> parted() const {
+    std::vector<CombinationPart> out;
+    for (int j = 0; j < kParts && part[j]; j++) {
+      const Plugin &p = *part[j];
+      CombinationPart c;
+      c.I = &p.I; c.lo = zone[j].lo; c.hi = zone[j].hi; c.oct = zone[j].oct; c.level = zone[j].level; c.on = zone[j].on;
+      for (int i = 0; i < p.I.paramCount; i++) c.values.push_back(p.shown[i].load());
+      out.push_back(std::move(c));
+    }
+    return out;
+  }
+
   // back to one part, the first, on every key (main thread; publish() after)
   void alone() {
     for (int j = 1; j < kParts; j++) retire(std::move(part[j]));
@@ -1614,7 +1662,12 @@ struct Suite : Instance {
   //   focus(k)                             the part whose controls, presets and views the window shows
   //   zone(k, lo, hi, octave, level, on)   part k's keys (MIDI's numbers), octave (±2), level (dB) and on/off
   //   lead(k)                              part k becomes the first: the host sees and automates its controls
-  // The window starts again after each but zone. describe() adds "instruments" (every one, {slug,
+  //   combinations()                       your combinations: { folder, list: [[name, file, index]…] }
+  //   loadCombination(file, index)         one of them in place of the parts: { ok, error, skipped }
+  //   saveCombination(name)                the parts as one of yours: { ok, file, error }
+  //   showCombinations()                   their folder, in the Finder, Explorer or the file manager
+  // The window starts again after each but zone, and after loadCombination. describe() also adds
+  // "combination", the name of yours playing until something changes since ("" none). describe() adds "instruments" (every one, {slug,
   // name} by name), "parts" ({slug, name, accent, keyLo, keyHi, lo, hi, oct, level, on} each),
   // "focus" and "most" (four); with two parts or more, poll() adds "parts", the keys each part
   // sounds, where they are pressed. The window's keys go to the parts their key strikes, moved by
@@ -1628,6 +1681,45 @@ struct Suite : Instance {
     auto num = [&](uint32_t k) { return args.size() > k && (args[k].isFloat() || args[k].isInt()) ? args[k].get<double>() : 0.0; };
     auto flag = [&](uint32_t k) { return args.size() > k && args[k].isBool() ? args[k].getBool() : num(k) > 0; };
     const int n = parts();
+    if (m == "combinations") {
+      Value list = createEmptyArray();
+      for (const UserCombination &u : listCombinations()) {
+        Value e = createEmptyArray();
+        e.addArrayElement(u.name); e.addArrayElement(u.file); e.addArrayElement(u.index);
+        list.addArrayElement(e);
+      }
+      Value r = createObject("");
+      r.addMember("folder", combinationsFolder());
+      r.addMember("list", list);
+      return r;
+    }
+    if (m == "loadCombination") {
+      std::vector<CombinationPart> c;
+      std::string name, skipped, error;
+      const bool ok = readCombination(text(1), (int)num(2), instrumentOf, this, name, c, skipped, error) && playCombination(c);
+      if (ok) combination = name;
+      Value r = createObject("");
+      r.addMember("ok", ok);
+      r.addMember("name", name);
+      r.addMember("skipped", skipped);
+      r.addMember("error", error);
+      return r;
+    }
+    if (m == "saveCombination") {
+      std::string error;
+      const std::string name = text(1);
+      const std::string file = writeCombination(name, parted(), clap.desc && clap.desc->version ? clap.desc->version : "", error);
+      if (!file.empty()) combination = name;
+      Value r = createObject("");
+      r.addMember("ok", !file.empty());
+      r.addMember("file", file);
+      r.addMember("error", error);
+      return r;
+    }
+    if (m == "showCombinations") return createBool(showFolder(combinationsFolder()));
+    // anything but the window's looking, the keys and the controller's settings changes the combination
+    if (m == "choose" || m == "add" || m == "drop" || m == "lead" || m == "zone" || m == "loadPreset" || m == "loadScala") combination.clear();
+    if (m == "set") { const Plugin *f = part[focus].get(); const int i = (int)num(1); if (i != f->qualityAt && i != f->mpeAt && i != f->transposeAt && i != f->octaveAt && i != f->touchAt) combination.clear(); }
     if (m == "choose") return createBool(choose(find(text(1))));
     if (m == "add") return createBool(add(find(text(1))));
     if (m == "drop") return createBool(drop((int)num(1)));
@@ -1717,6 +1809,7 @@ struct Suite : Instance {
       r.addMember("parts", ps);
       r.addMember("focus", focus);
       r.addMember("most", kParts);
+      r.addMember("combination", combination);
     }
     return r;
   }
@@ -1803,6 +1896,7 @@ struct Suite : Instance {
     } else return false;
     const int first = find(slug);
     if (first < 0) return false;
+    combination.clear();
     alone();
     choose(first);
     bool ok = loadText(*part[0], t);

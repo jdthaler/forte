@@ -1,13 +1,17 @@
 // Combinations checks (combine/): which keys reach which instrument (layered, split, moved by an
 // octave, inside each instrument's own keys), the saved state read back safely, and every starting
-// combination against the registry and the instruments' own presets and keys. The page itself is
-// opened by tools/check-pages.mjs and tools/check-offline.mjs.
+// combination against the registry and the instruments' own presets and keys, and your own
+// combinations as files (the same file the Forte app writes, native/tests/presets/combinations/)
+// and links. The page itself is opened by tools/check-pages.mjs and tools/check-offline.mjs.
 // Run: node test/combine-tests.mjs
 
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { INSTRUMENTS, byId } from '../shared/registry.js';
-import { MAX_PARTS, KEYS, OCTAVES, LEVEL, VOLUME, COMBINATIONS, part, routed, overlap, describe, restore, noteName } from '../combine/src/combine-params.js';
+import { MAX_PARTS, KEYS, OCTAVES, LEVEL, VOLUME, COMBINATIONS, part, routed, overlap, describe, restore, noteName,
+  label, combination, combinationsFile, readCombinationsFile, combinationHash, readCombinationHash } from '../combine/src/combine-params.js';
+import { presetParams, complete, pick } from '../shared/presets.js';
+import { loadInstrument, withPreset, defaultsOf } from '../tools/headless.mjs';
 
 let failures = 0;
 async function test(name, fn) {
@@ -66,6 +70,79 @@ await test('read back: unknown or unready instruments dropped, at most four, bro
   assert.deepEqual(s.parts[1].P, { volume: 0.5 });
   assert.equal(s.volume, VOLUME.max);
   assert.deepEqual(restore('junk', ready), { parts: [], volume: VOLUME.def, combination: null });
+});
+await test('read back: what each part\'s Presets menu named, a label, or none', async () => {
+  const s = restore({ parts: [{ id: 'piano', preset: 'f:Concert' }, { id: 'organ', preset: 'own' }, { id: 'grand', preset: 7 }, { id: 'tines', preset: 'u:Mine' }] }, ready);
+  assert.deepEqual(s.parts.map((p) => p.preset), ['f:Concert', 'own', null, 'u:Mine']);
+  assert.equal(label('Timpani, felt mallets'), 'f:Timpani, felt mallets', 'a bare name is a preset of the instrument\'s');
+  assert.equal(label('default'), 'default');
+  assert.equal(label(''), null);
+  assert.equal(label('f:'), 'f:f:', 'an empty name is a name');
+});
+
+console.log('your combinations');
+const vals = (I, P) => pick(presetParams(I), I.console ? { ...P, ...I.console.get(P) } : P);
+const organ = await loadInstrument('organ'), grand = await loadInstrument('grand');
+const ballad = organ.presets.findIndex((p) => p.name.startsWith('Ballad'));
+const mine = {
+  name: 'Organ bass, electric grand above', parts: [
+    { id: 'organ', lo: 21, hi: 47, oct: 0, level: 0, on: true, preset: `f:${organ.presets[ballad].name}`, values: vals(organ, withPreset(organ, ballad)) },
+    { id: 'grand', lo: 48, hi: 108, oct: -1, level: -4.5, on: false, preset: null, values: vals(grand, defaultsOf(grand)) },
+  ],
+};
+await test('made whole: unknown instruments left out, at most four, a name, each part in bounds with its values', async () => {
+  const c = combination({ name: '  A\n name ', parts: [{ id: 'nope' }, { id: 'piano', lo: 200, values: [1] }, { id: 'organ' }, { id: 'grand' }, { id: 'tines' }, { id: 'bowed' }] }, ready);
+  assert.equal(c.name, 'A name');
+  assert.deepEqual(c.parts.map((p) => p.id), ['piano', 'organ', 'grand', 'tines']);
+  assert.equal(c.parts[0].hi, KEYS[1]);
+  assert.deepEqual(c.parts[0].values, {});
+  assert.equal(combination({ name: 'x', parts: [{ id: 'nope' }] }, ready), null, 'nothing playable: none');
+  assert.equal(combination({ parts: [{ id: 'piano' }] }, ready, 2).name, 'Combination 3');
+});
+await test('a file: written and read back the same, and the one the Forte app\'s tests read is as the site writes it', async () => {
+  const text = combinationsFile([mine], { forte: '0.49.0', organ: '0.9.0' });
+  const { combinations, warning } = readCombinationsFile(text, ready);
+  assert.equal(warning, undefined);
+  assert.deepEqual(combinations, [combination(mine, ready)]);
+  const d = JSON.parse(text);
+  assert.equal(d.forte, 'combinations');
+  assert.equal(d.forteVersion, '0.49.0');
+  assert.deepEqual(d.combinations[0].parts.map((p) => [p.instrument, p.instrumentVersion]), [['organ', '0.9.0'], ['grand', '']]);
+  // the golden file, without the menus' labels (the app writes none)
+  const golden = read('native/tests/presets/combinations/organ-and-grand.json');
+  const plain = { ...mine, parts: mine.parts.map((p) => ({ ...p, preset: null, on: true })) };
+  assert.equal(golden, combinationsFile([plain]), 'native/tests/presets/combinations/organ-and-grand.json is as the site writes it');
+  const [g] = readCombinationsFile(golden, ready).combinations;
+  assert.deepEqual(complete(presetParams(organ), g.parts[0].values), complete(presetParams(organ), vals(organ, withPreset(organ, ballad))), 'the organ at its Ballad preset');
+});
+await test('a file that is not combinations says so; an instrument this site hasn\'t got is left out, and named; a newer format warns', async () => {
+  assert.throws(() => readCombinationsFile('nonsense', ready), /not a Forte combinations file/);
+  assert.throws(() => readCombinationsFile('{"a":1}', ready), /not a Forte combinations file/);
+  assert.throws(() => readCombinationsFile(read('native/tests/presets/gongs.json'), ready), /preset file/);
+  assert.throws(() => readCombinationsFile('{"forte":"combinations","format":1,"combinations":[]}', ready), /no combinations/);
+  assert.throws(() => readCombinationsFile('{"forte":"combinations","format":1,"combinations":[{"name":"x","parts":[{"instrument":"theremin"}]}]}', ready, (id) => id.toUpperCase()), /THEREMIN/);
+  const r = readCombinationsFile('{"forte":"combinations","format":2,"combinations":[{"name":"x","parts":[{"instrument":"theremin"},{"instrument":"piano","lo":30}]}]}', ready);
+  assert.deepEqual(r.combinations[0].parts.map((p) => [p.id, p.lo]), [['piano', 30]]);
+  assert.match(r.warning, /Left out: theremin/);
+  assert.match(r.warning, /newer Forte/);
+});
+await test('a link: only what differs from the defaults, and back to the same combination', async () => {
+  const paramsOf = (id) => presetParams({ organ, grand }[id]);
+  const hash = combinationHash(mine, paramsOf);
+  assert.ok(hash.length < 600, `${hash.length} characters`);
+  assert.doesNotMatch(hash, /p2\./, 'the grand at its defaults adds nothing');
+  const back = readCombinationHash(hash, ready);
+  assert.equal(back.name, mine.name);
+  assert.deepEqual(back.parts.map(({ values, ...p }) => p), mine.parts.map(({ values, ...p }) => p));
+  for (const [i, p] of mine.parts.entries()) {
+    const ps = paramsOf(p.id);
+    assert.deepEqual(complete(ps, back.parts[i].values), complete(ps, p.values), p.id);
+  }
+  // without the parameters, every value goes in, and comes back the same
+  const all = readCombinationHash(combinationHash(mine), ready);
+  for (const [i, p] of mine.parts.entries()) assert.deepEqual(complete(paramsOf(p.id), all.parts[i].values), complete(paramsOf(p.id), p.values));
+  assert.equal(readCombinationHash('#_v=1&x=2', ready), null, 'an instrument\'s link is not a combination');
+  assert.equal(readCombinationHash('#_c=1&p1=theremin,21,108,0,0,1', ready), null);
 });
 
 console.log('combinations');

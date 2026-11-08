@@ -222,8 +222,7 @@ async function remembered(tab) {
 }
 
 // The drawer (shared/layout.js): it opens, from its rail or (on a phone) the header, with
-// the Presets menu in sight; a preset picked from it plays and stays named by it (on the
-// Combinations page, which empties its menu once it has played one, neither); it folds
+// the Presets menu in sight; a preset picked from it plays and stays named by it; it folds
 // away again, and is left as it was. Then the keys fold away, leaving their bar, and come back.
 const DRAWER = () => ({
   open: document.body.classList.contains('drawer-open'),
@@ -231,7 +230,7 @@ const DRAWER = () => ({
   presets: document.querySelector('#forte-drawer #preset')?.checkVisibility() ? 1 : 0,
   menu: document.querySelector('#preset')?.checkVisibility() ? 1 : 0, // (in Perform, above the keys)
 });
-async function drawerAndKeys(tab, combine) {
+async function drawerAndKeys(tab) {
   const out = [];
   const opener = (await tab.locator('.forte-drawer-open').isVisible().catch(() => false)) ? '.forte-drawer-open' : '.forte-drawer-fold';
   const was = await tab.evaluate(DRAWER);
@@ -244,8 +243,7 @@ async function drawerAndKeys(tab, combine) {
     await tab.locator('#preset').selectOption(v).catch(() => {});
     await tab.waitForTimeout(200);
     const menu = await tab.evaluate(() => document.querySelector('#preset')?.value);
-    // (the Combinations page empties its menu once it has combined the instruments)
-    if (combine ? menu !== '' : menu !== v) out.push(`a preset from the drawer doesn't play (the menu says "${menu}")`);
+    if (menu !== v) out.push(`a preset from the drawer doesn't play (the menu says "${menu}")`);
   }
   await tab.locator('.forte-drawer-fold').click(CLICK).catch(() => {});
   await tab.waitForTimeout(350);
@@ -436,7 +434,7 @@ async function viewPage(browser, url, page, size, at) {
     step('reloading, folding and Perform');
     if (name === 'desktop' && counts.views) broken.push(...await remembered(tab));
     step('opening the drawer and folding the keys');
-    if (counts.drawerPresets) broken.push(...await drawerAndKeys(tab, page === 'combine/'));
+    if (counts.drawerPresets) broken.push(...await drawerAndKeys(tab));
     step('starting audio');
     if (await click('#start')) {
       await tab.waitForTimeout(500); await sideways('audio started');
