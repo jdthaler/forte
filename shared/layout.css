@@ -54,12 +54,20 @@ body[data-instrument] #start:not(.running) ~ :is(#cpu, #voices),
 body[data-instrument] #start:not(.running) ~ .forte-load > :is(#cpu, #voices) { display: none; }
 .pill[hidden] { display: none; }
 /* the MIDI status opens the MIDI settings once MIDI is on (shared/midi.js midiMenu): the velocity
-   curve, MPE, Octave and Transpose; it says how far the keys are moved, in the accent, while they are */
+   curve, MPE, Octave and Transpose; it says how far the keys are moved, in the accent, while they are.
+   It is a dropdown's button, as every one is (below) */
 .forte-midi-pill { cursor: pointer; white-space: nowrap; }
-.forte-midi-pill::after { content: ' ▾'; }
-.forte-midi-pill[data-shift] { color: var(--accent); border-color: var(--accent); }
-.forte-midi-pill[data-shift]::after { content: ' · ' attr(data-shift) ' ▾'; }
-.forte-midi-pill:hover, .forte-midi-pill[aria-expanded="true"] { color: var(--text); border-color: var(--accent); }
+body[data-instrument] .forte-midi-pill {
+  --face: linear-gradient(180deg, #3a3a42, #28282e 55%, #1e1e23);
+  padding-right: 34px; color: var(--text); border: 1px solid #060608; border-radius: 8px;
+  background: var(--forte-arrows) no-repeat right 9px center / 8px 12px,
+    linear-gradient(90deg, transparent calc(100% - 26px), rgb(0 0 0 / 0.55) 0 calc(100% - 25px), rgb(255 255 255 / 0.08) 0 calc(100% - 24px), transparent 0),
+    var(--face);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.13), inset 0 -1px 0 rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.65);
+}
+body[data-instrument] .forte-midi-pill:hover { --face: linear-gradient(180deg, #44444d, #2f2f36 55%, #232328); }
+body[data-instrument] .forte-midi-pill[aria-expanded="true"] { --face: linear-gradient(180deg, #1b1b20, #26262c); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.7), 0 1px 0 rgb(255 255 255 / 0.05); }
+.forte-midi-pill[data-shift]::after { content: ' · ' attr(data-shift); color: var(--accent); }
 .forte-midi-menu {
   position: fixed; z-index: 60; display: grid; grid-template-columns: auto auto; gap: 8px 12px; align-items: center;
   padding: 12px 14px; background: linear-gradient(180deg, #202026, var(--card, #161b22) 120px); border: 1px solid #060608; border-radius: 10px;
@@ -101,7 +109,8 @@ body[data-instrument] select {
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.13), inset 0 -1px 0 rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.65);
 }
 body[data-instrument] select:hover { --face: linear-gradient(180deg, #44444d, #2f2f36 55%, #232328); border-color: #060608; }
-body[data-instrument] select:active { --face: linear-gradient(180deg, #1b1b20, #26262c); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.7), 0 1px 0 rgb(255 255 255 / 0.05); }
+body[data-instrument] select.forte-open:focus-visible { outline: none; } /* opened with the pointer (shared/dropdown.js) */
+body[data-instrument] select:is(:active, .forte-open) { --face: linear-gradient(180deg, #1b1b20, #26262c); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.7), 0 1px 0 rgb(255 255 255 / 0.05); }
 body[data-instrument] select:disabled { opacity: 0.55; cursor: default; }
 body[data-instrument] select :is(option, optgroup) { background: #1d1d22; color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; text-shadow: none; }
 /* the presets' window: glass over a lit display, set in a dark bezel */
@@ -118,7 +127,7 @@ body[data-instrument] :is(.forte-presets select, select.forte-display) {
     0 0 0 3px #0b0b0d, 0 0 0 4px rgb(255 255 255 / 0.09), 0 2px 5px 3px rgb(0 0 0 / 0.5);
 }
 body[data-instrument] :is(.forte-presets select, select.forte-display):hover { border-color: color-mix(in srgb, var(--accent) 45%, #000); }
-body[data-instrument] :is(.forte-presets select, select.forte-display):active { box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.85), inset 0 0 18px color-mix(in srgb, var(--accent) 20%, transparent), 0 0 0 3px #0b0b0d, 0 0 0 4px rgb(255 255 255 / 0.09); }
+body[data-instrument] :is(.forte-presets select, select.forte-display):is(:active, .forte-open) { box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.85), inset 0 0 18px color-mix(in srgb, var(--accent) 20%, transparent), 0 0 0 3px #0b0b0d, 0 0 0 4px rgb(255 255 255 / 0.09); }
 
 /* ---- the page: the views above the Controls panel, each headed by its bar, sharing the
    height (--split-rows); a panel folded away leaves its bar ---------------------------------- */
