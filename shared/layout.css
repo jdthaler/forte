@@ -622,7 +622,8 @@ body.perform #views .card:not([data-keep-text]) canvas { flex: 1 1 0; height: au
 body.no-midi :is(#midi-btn, #midi, #midi-menu) { display: none; }
 
 /* toasts: announced, never in the way of the keys */
-body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h, calc(var(--kb-h, 115px) + 52px)) + 12px); max-width: min(90vw, 560px); }
+/* over the sticky bars, the controls' and the keys' (a phone's controls' bar sits right where it shows), and the drawer */
+body[data-instrument] #toast { z-index: 45; pointer-events: none; bottom: calc(var(--footer-h, calc(var(--kb-h, 115px) + 52px)) + 12px); max-width: min(90vw, 560px); }
 
 /* ---- phones (portrait, or landscape under 500px tall): no room to share, so the page
    scrolls (and Safari can tuck its toolbars away) under the header, which sticks to the top:
