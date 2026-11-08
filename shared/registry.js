@@ -55,7 +55,7 @@ export const FILTERS = [
 
 export const INSTRUMENTS = [
   {
-    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.14.0', trim: 3,
+    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.14.1', trim: 3,
     plugin: { code: 'Ribn', ready: true },
     after: 'the concert grand',
     tagline: 'Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.',
@@ -279,7 +279,7 @@ export const INSTRUMENTS = [
     accent: '#ffcf70',
   },
   {
-    id: 'trautonium', name: 'Trautonium', section: 'electric', ready: true, version: '0.3.0', trim: -4,
+    id: 'trautonium', name: 'Trautonium', section: 'electric', ready: true, version: '0.3.1', trim: -4,
     plugin: { code: 'Trau', ready: true },
     after: 'Friedrich Trautwein’s Trautonium (1930) and Oskar Sala’s Mixtur-Trautonium',
     tagline: 'A neon lamp flashing as its capacitor charges through a wire pressed onto a rail: the finger slides the pitch, lamps that fire on every n-th flash add the subharmonics, and every flash rings fixed resonant circuits like a voice’s formants.',
@@ -288,7 +288,7 @@ export const INSTRUMENTS = [
     accent: '#7ee0ff',
   },
   {
-    id: 'telharmonium', name: 'Telharmonium', section: 'electric', ready: true, version: '0.2.0', trim: -4.5,
+    id: 'telharmonium', name: 'Telharmonium', section: 'electric', ready: true, version: '0.2.1', trim: -4.5,
     plugin: { code: 'Telh', ready: true },
     after: 'Thaddeus Cahill’s Telharmonium (1906), the electric music plant on Broadway',
     tagline: 'Alternators on twelve geared shafts make every note and its harmonics, stops mix them on shared buses that rob one another, and telephone lines carry the music to receivers with paper horns.',
@@ -428,7 +428,7 @@ export const INSTRUMENTS = [
     accent: '#73e2b8',
   },
   {
-    id: 'bubbles', name: 'Bubble Organ', section: 'phenomena', ready: true, version: '0.10.0', trim: 1.5,
+    id: 'bubbles', name: 'Bubble Organ', section: 'phenomena', ready: true, version: '0.10.1', trim: 1.5,
     plugin: { code: 'Bubl', ready: true },
     tagline: 'Every note a bubble ringing at its Minnaert frequency; depth, gas and pressure retune it.',
     physics: 'Bubble acoustics · Minnaert resonance',
