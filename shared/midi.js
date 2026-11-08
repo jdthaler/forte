@@ -38,7 +38,8 @@
 //     shared/chain.js applies after the limiter): full until a pedal moves, silent heel down;
 //     an instrument that maps CC11 itself (an organ's swell) keeps it;
 //   - a program change n plays the menu's preset n + 1 (pedal 1 the first preset, then your own
-//     after the instrument's): choosePreset;
+//     after the instrument's): choosePreset; a Seaboard's, from its preset arrows, steps from
+//     the preset playing instead (riseProgram), so it keeps in step with the pedals and the menu;
 //   - it gets a section of the page's drawer (shared/fc300.js) once its switches (CC80–83) are
 //     heard, or its interface's name is the one it came by before, which can drive it over SysEx.
 //   The plugins do the same, but for CC7, which stays a gain after the limiter there (the host has a
@@ -160,6 +161,26 @@ export function choosePreset(n) {
   sel.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+/**
+ * A Seaboard RISE's preset arrows send program change n, a number they count up and down by
+ * themselves (0–127) and that nothing here can set, so it soon disagrees with the preset playing
+ * (a foot controller, the menu or a preset link moved it). So a Seaboard's program change steps from
+ * the preset playing: up from its last number, the next preset; down, the one before (the list's
+ * ends hold; at its own ends, 0 and 127, should the RISE send its number again, that goes on the
+ * same way). Its last number is kept across pages and visits (the RISE keeps counting while it is
+ * on). Without one, or with one more than a step away (it counted elsewhere, or was turned off):
+ * in step, the RISE's number is the playing preset's own, so a number past it is a step forward,
+ * one below a step back, and the same one leaves it; after that one press it goes by its steps.
+ * With no preset playing (a control moved), the number's own preset, as any device's.
+ *   riseProgram(last, n, index, count) → the preset to play (0-based, as choosePreset), or index
+ */
+export function riseProgram(last, n, index, count) {
+  if (index < 0 || index >= count) return n;
+  const dir = typeof last !== 'number' || Math.abs(n - last) > 1 ? Math.sign(n - index)
+    : n > last ? 1 : n < last ? -1 : n === 0 ? -1 : n === 127 ? 1 : 0;
+  return Math.max(0, Math.min(count - 1, index + dir));
+}
+
 /** The presets a program change counts (the menu's options, the instrument's then your own), and
  *  which of them is chosen now (−1: none, as after a control is moved). */
 export function presetChoices() {
@@ -226,6 +247,8 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
     // a device's keys follow Octave and Transpose (shift)
     const input = (id) => { let i = inputs.get(id); if (!i) inputs.set(id, (i = createInput(send, controllers, { shift: true }))); return i; };
     const seaboards = new Set(), feet = new Set();
+    const PROGRAM_KEY = 'forte/rise-program/v1'; // a Seaboard's last program change (riseProgram)
+    let program; try { program = JSON.parse(localStorage.getItem(PROGRAM_KEY)); } catch { /* none, or storage blocked */ }
     const footed = (inp) => { if (feet.has(inp.id)) return; feet.add(inp.id); foot((f) => f.input(inp.id, inp.name, true)); };
     const bind = () => {
       const names = [];
@@ -242,6 +265,13 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
         inp.onmidimessage = (ev) => {
           const d = ev.data;
           if (board) rise((r) => r.midi(inp.id, d));
+          if (board && (d[0] & 0xf0) === 0xc0) { // its preset arrows: a step from the preset playing
+            const i = presetIndex(), to = riseProgram(program, d[1], i, presetChoices().length);
+            program = d[1];
+            try { localStorage.setItem(PROGRAM_KEY, String(program)); } catch { /* storage blocked */ }
+            if (to !== i) choosePreset(to);
+            return;
+          }
           if ((d[0] & 0xf0) === 0xb0 && d[1] >= 80 && d[1] <= 83) footed(inp); // an FC-300's switches, as it comes
           if (feet.has(inp.id)) foot((f) => f.midi(inp.id, d));
           if (feet.has(inp.id) && (d[0] & 0xf0) === 0xb0 && d[1] === 1 && footMorph(d[2])) return; // its EXP 2: Morph

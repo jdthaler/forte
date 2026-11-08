@@ -10,9 +10,10 @@
 //
 // The RISE as ROLI ships it (and as ROLI Dashboard sets it for MPE): notes on channels 2–16, one a
 // note, each bending ±48 semitones, sliding on CC74 and pressing with channel pressure; the faders
-// send CC 107, 109 and 111 and the pad 113 (X) and 114 (Y), in its MIDI mode only (white lights).
-// In its expression mode (cyan lights) the faders set the RISE's own Glide, Slide and Press
-// sensitivity and send nothing, so the panel can only say which mode it was last seen in.
+// send CC 107, 109 and 111 in its MIDI mode (white lights), and the pad 113 (X) and 114 (Y). In its
+// expression mode (cyan lights) the faders set the RISE's own Glide, Slide and Press sensitivity and
+// send nothing. Its mode button sends nothing either, so the panel tells the mode by what follows: a
+// fader's CC is white; one of those sensitivities moving by itself in its SysEx reads (below) is cyan.
 //
 // Below them, "On the RISE": its own settings, read over SysEx (shared/rise-sysex.js) once the
 // browser allows it, with a button that sets it up as Forte expects and its five sensitivities.
@@ -21,7 +22,7 @@
 import { createMpe, MEMBER_BEND, slideFrom } from './mpe.js';
 import { FADERS, controllersOf, ccValue, mpeMode, signed } from './midi.js';
 import { IDENTIFY, parse, differences, forForte, faderLights, set as setting, PARAMS } from './rise-sysex.js';
-import { slideOf } from './expression.js';
+import { slideOf, EXPRESSION } from './expression.js';
 
 export const KEYS = 25;                 // a RISE 25's keywave: two octaves, C to C
 export const DIMENSIONS = [
@@ -42,7 +43,10 @@ export function riseModel({ now = () => performance.now() / 1000 } = {}) {
   const cc = {};             // the faders' and the pad's last values (0..127), by CC
   const last = { strike: NaN, glide: NaN, slide: NaN, press: NaN, lift: NaN };
   const when = { strike: -Infinity, glide: -Infinity, slide: -Infinity, press: -Infinity, lift: -Infinity };
-  let channels = new Set(), single = false, faderMode = null; // 'midi' once a fader or the pad sends
+  // The faders' mode, which the RISE's mode button sets and says nothing of over MIDI: null (not known
+  // yet), 'midi' (white lights) once a fader sends, 'expression' (cyan) when the panel's SysEx reads
+  // see its Glide, Slide or Press sensitivity move by itself (settingsSection). The pad tells nothing.
+  let channels = new Set(), single = false, faderMode = null;
   let master = { glide: 0, press: 0 };                       // channel 1's, every note's
   const set = (d, v) => { last[d] = v; when[d] = now(); };
   // where the finger is on the key, and how far it has slid from where it landed (what the instrument hears, shared/mpe.js)
@@ -60,6 +64,8 @@ export function riseModel({ now = () => performance.now() / 1000 } = {}) {
     fingers, cc, last, when,
     get single() { return single; },        // its notes come on channel 1: not MPE
     get faderMode() { return faderMode; },
+    /** the faders are in their cyan mode: the RISE's sensitivities moved and no fader sent */
+    cyan() { faderMode = 'expression'; },
     get channels() { return channels.size; },
     master: () => master,
     /** whether dimension d is coming in now: a finger holds it, or (Strike, Lift) it just came */
@@ -90,7 +96,7 @@ export function riseModel({ now = () => performance.now() / 1000 } = {}) {
         mpe.midi(data);
         return;
       }
-      if (cmd === 0xb0 && FADERS.some(([n]) => n === d1)) { cc[d1] = d2; faderMode = 'midi'; return; }
+      if (cmd === 0xb0 && FADERS.some(([n]) => n === d1)) { cc[d1] = d2; if (d1 < 113) faderMode = 'midi'; return; }
       if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) { fingers.clear(); mpe.midi(data); return; }
       if (ch === 0) { // the master channel (or a RISE sending on channel 1 alone): every note's
         if (cmd === 0xe0) { master = { ...master, glide: (((d2 << 7) | d1) - 8192) / 8192 * (single ? MEMBER_BEND : 2) }; set('glide', master.glide); return; }
@@ -186,15 +192,23 @@ export function risePanel() {
   // the five dimensions: lit while they come in, the newest finger's value, what they do here
   const dims = el('div', 'forte-rise-dims');
   dims.setAttribute('role', 'list');
+  // Each with its Expression switch (shared/expression.js), where the instrument answers to it: the
+  // page's own, which the shell keeps in step (shared/shell.js: 'forte-switches', 'forte-switch')
   const rows = DIMENSIONS.map(([id, name, hint]) => {
     const r = el('div', 'forte-rise-dim'); r.setAttribute('role', 'listitem'); r.dataset.dim = id;
     r.title = `${name}: ${hint}`;
     const meter = el('span', `forte-rise-meter${id === 'glide' ? ' signed' : ''}`); meter.append(el('i'));
     const val = el('span', 'forte-rise-val'), what = el('span', 'forte-rise-what');
-    r.append(el('span', 'forte-rise-dot'), el('b', '', name), meter, val, what);
-    return { id, r, meter, val, what };
+    const p = EXPRESSION.params.find((q) => q.id === `${id}On`);
+    const sw = el('input', 'forte-rise-switch'); sw.type = 'checkbox'; sw.hidden = true;
+    sw.setAttribute('aria-label', p.label);
+    sw.addEventListener('change', () => { document.dispatchEvent(new CustomEvent('forte-switch', { detail: { id: p.id, on: sw.checked } })); sw.blur(); });
+    r.append(el('span', 'forte-rise-dot'), el('b', '', name), meter, val, sw, what);
+    return { id, r, meter, val, what, sw, p };
   });
   dims.append(...rows.map((x) => x.r));
+  let switches = {}; // the page's Expression switches, as the shell last told them (none: no switch here)
+  const offText = (p) => p.hint.slice(p.hint.indexOf('Off:')); // 'Off: …', what the switch off does
   const note = el('p', 'forte-rise-note');
   // its octave and transpose, once read (and every couple of seconds after): the keywave's notes move
   // with its octave buttons, by as much as they move (a note played puts them right, as before)
@@ -203,7 +217,7 @@ export function risePanel() {
     const b = 48 + 12 * s.octave + s.transpose;
     if (shifted === null) { if (!model.fingers.size) base = b; } else base += b - shifted;
     shifted = b; transpose = s.transpose; request();
-  });
+  }, () => { model.cyan(); request(); });
   body.append(slab, dims, note, own.element);
   aside.append(head, body);
 
@@ -242,9 +256,17 @@ export function risePanel() {
       c.row.title = `${c.name} (CC ${c.n})${p ? `: ${p.label}` : ': moves nothing on this instrument'}`;
       if (c.f) c.f.title = c.row.title;
     }
-    for (const x of rows) x.what.textContent = meaning[x.id] ?? '';
+    for (const x of rows) {
+      const has = x.p.id in switches, on = has ? switches[x.p.id] : true;
+      x.sw.hidden = !has; x.sw.checked = on;
+      x.sw.title = has ? `${x.p.label}: ${on ? 'on (uncheck to turn it off)' : 'off'}` : '';
+      x.r.classList.toggle('off', !on);
+      x.what.textContent = on ? meaning[x.id] ?? '' : offText(x.p);
+    }
   }
   labels();
+  document.addEventListener('forte-switches', (e) => { switches = e.detail ?? {}; labels(); });
+  document.dispatchEvent(new Event('forte-switches?')); // the page's switches as they are now
 
   // A preset puts the faders' and the pad's controls somewhere new (shared/shell.js, 'forte-preset'):
   // the panel shows them there, and so do the RISE's fader lights, in its MIDI mode (white), where
@@ -288,10 +310,12 @@ export function risePanel() {
     const X = model.cc[113], Y = model.cc[114];
     pad.style.setProperty('--x', X === undefined ? 0.5 : X / 127); pad.style.setProperty('--y', Y === undefined ? 0.5 : Y / 127);
     pad.classList.toggle('known', X !== undefined || Y !== undefined);
-    const white = model.faderMode === 'midi';
-    modeLed.classList.toggle('white', white);
-    modeText.textContent = white ? 'MIDI mode: the faders and the pad move these controls'
-      : 'No fader or pad yet. Cyan lights: they set the RISE\'s own Glide, Slide and Press; press the mode button for white';
+    const fm = model.faderMode;
+    modeLed.classList.toggle('white', fm === 'midi');
+    modeLed.classList.toggle('unknown', !fm);
+    modeText.textContent = fm === 'midi' ? 'White lights: the faders move these controls'
+      : fm === 'expression' ? 'Cyan lights: the faders set the RISE\'s own Glide, Slide and Press'
+      : 'Move a fader to show its mode (the mode button sends nothing): white lights move these controls, cyan the RISE\'s own Glide, Slide and Press';
     // the keywave: two octaves from the C below the lowest finger (a RISE 25 shifted by its octave buttons)
     const keysDown = [...model.fingers.values()].map((f) => f.key);
     if (keysDown.length) {
@@ -404,7 +428,7 @@ const granted = async () => {
 };
 
 const SENS = [['strike', 'Strike'], ['glide', 'Glide'], ['slide', 'Slide'], ['pressSens', 'Press', 'press'], ['lift', 'Lift']];
-function settingsSection(nameOf, onSettings = () => {}) {
+function settingsSection(nameOf, onSettings = () => {}, onCyan = () => {}) {
   const box = el('section', 'forte-rise-own');
   box.setAttribute('aria-label', 'The RISE\'s own settings');
   const h = el('h3', '', 'On the RISE');
@@ -480,6 +504,9 @@ function settingsSection(nameOf, onSettings = () => {}) {
       try {
         const s = await identify(nameOf());
         missed = 0;
+        // a sensitivity the faders set moved and nothing here wrote it (a slider here sets state as it
+        // writes): a fader moved it, so they are in their cyan mode
+        if (['glide', 'slide', 'pressSens'].some((k) => s[k] !== state[k])) onCyan();
         const held = sliders.some((x) => x.input.matches(':active, :focus-visible'));
         if (JSON.stringify(s) !== JSON.stringify(state) && !held && !armed) show(s);
       } catch { if (++missed >= 3) stop(); } finally { busy = false; }
