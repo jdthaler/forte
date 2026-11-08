@@ -61,7 +61,7 @@ import { createChain } from './chain.js';
 import { createKeyboard } from './keyboard.js';
 import { trimGain, paramsStore } from './registry.js';
 import { controlOwns, unfocus } from './focus.js';
-import { startMIDI, resumeMIDI, pageMIDI, volumePedal, pedalVolume, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from './midi.js';
+import { startMIDI, resumeMIDI, pageMIDI, volumePedal, pedalVolume, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader, rangeWarning, shiftOf } from './midi.js';
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
 import { dress, faceOf } from './faces.js';
@@ -200,10 +200,16 @@ export function createShell(cfg) {
   // an instrument that speaks only while held says so the first time a key is let go too soon
   const pressedAt = new Map();
   let holdHinted = false;
+  // a key outside the keys that play (a MIDI key, or a computer key past the end) says so; a
+  // historical compass says what opens it
+  function outside(key, midi) {
+    const closed = cfg.compass && !shell.P[cfg.compass.param] && key >= RANGE[0] && key <= RANGE[1];
+    toast(rangeWarning(key, LO, HI, { ...(midi && shiftOf()), open: closed ? ALL.find((p) => p.id === cfg.compass.param)?.label : '' }));
+  }
   // own: the note's own expression (MPE), posted just before it; without, a key that had some
-  // starts plain again
-  async function down(key, vel, own) {
-    if (key < LO || key > HI) return;
+  // starts plain again; midi: from a MIDI key
+  async function down(key, vel, own, midi = false) {
+    if (key < LO || key > HI) { outside(key, midi); return; }
     if (cfg.holdHint) pressedAt.set(key, performance.now());
     latched.delete(key); sost.strike(key);
     sounding.set(key, (sounding.get(key) || 0) + 1);
@@ -322,7 +328,7 @@ export function createShell(cfg) {
     const [st, d1, d2] = ev.data, cmd = st & 0xf0;
     const { own: its, with: own } = notes.midi(ev.data);
     if (its) return;
-    if (cmd === 0x90 && d2 > 0) down(d1, engineVelocity(touched(d2 / 127) * (soft ? SOFT_PEDAL : 1)), own); // the velocity curve, the soft pedal
+    if (cmd === 0x90 && d2 > 0) down(d1, engineVelocity(touched(d2 / 127) * (soft ? SOFT_PEDAL : 1)), own, true); // the velocity curve, the soft pedal
     else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) up(d1, cmd === 0x80 ? d2 / 127 : undefined);
     else if (cmd === 0xb0) {
       if (d1 === 64 && cfg.space) setSustain(d2 >= 64);

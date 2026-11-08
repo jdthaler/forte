@@ -87,6 +87,7 @@ FORTE_EXPORT double nmr_key_larmor(int key, const double *P) { return keyLarmor(
 FORTE_EXPORT double nmr_dephasing(int profile, double S) { return dephasing(profile, S); }
 // the tests' hooks into an engine (forte_engine(handle))
 FORTE_EXPORT int nmr_engine_pulses(forte::Engine *e) { return static_cast<NmrEngine *>(e)->pulses; }
+FORTE_EXPORT double nmr_engine_pulsed_at(forte::Engine *e) { return static_cast<NmrEngine *>(e)->pulsedAt; }
 FORTE_EXPORT double nmr_engine_mz(forte::Engine *e, int key) { return static_cast<NmrEngine *>(e)->mzOf(key); }
 FORTE_EXPORT int nmr_engine_lines(forte::Engine *e, int key) { return static_cast<NmrEngine *>(e)->linesOf(key); }
 }

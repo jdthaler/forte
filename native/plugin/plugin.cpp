@@ -181,6 +181,11 @@ struct Plugin : Instance, MpeDecoder::Sink {
   std::atomic<uint64_t> keysDown[2]{};
   std::atomic<bool> pedalDown{false};
   std::atomic<float> struck[128]{}; // each key's last velocity, as the engine got it (the descriptor's midiVelocity's units)
+  // the notes struck outside the keys that play (past keyLo…keyHi, or a closed compass), the last
+  // one, and whether it came from MIDI (Octave and Transpose moved it): the window says so
+  std::atomic<uint32_t> misses{0};
+  std::atomic<int> missed{-1};
+  std::atomic<bool> missedMidi{false};
   // the views (the instrument's page in the window, editor.html): while they show, the engine's
   // messages (Engine::post), each with the data its views read from the engine (site.h, Views),
   // and its sound before the chain, as the page's analyser hears it. The engine posts into fresh
@@ -318,8 +323,12 @@ struct Plugin : Instance, MpeDecoder::Sink {
   // vel: MIDI velocity / 127; fromMidi: through the velocity curve and the soft pedal (the
   // window's keys are not, as the pages' computer and screen keys are not)
   void noteOn(int ch, int key, double vel, bool fromMidi = true) {
-    if (key < I.keyLo || key > I.keyHi || ch < 0 || ch > 15) return;
-    if (I.compass >= 0 && P[I.compass] < 0.5 && (key < I.compassLo || key > I.compassHi)) return; // outside the compass
+    if (ch < 0 || ch > 15) return;
+    if (key < I.keyLo || key > I.keyHi || (I.compass >= 0 && P[I.compass] < 0.5 && (key < I.compassLo || key > I.compassHi))) { // outside the keys that play
+      missed.store(key, std::memory_order_relaxed); missedMidi.store(fromMidi, std::memory_order_relaxed);
+      misses.fetch_add(1, std::memory_order_release);
+      return;
+    }
     if (fromMidi) vel = std::pow(vel, kTouchGamma[(int)P[touchAt]]) * (soft ? kSoftPedal : 1);
     if (!on(kStrike)) vel = kKeysVelocity; // Strike off: every note as hard as the window's keys
     if (held[ch][key]) noteOff(ch, key, -1); // struck again before its note-off: let it go first
@@ -825,6 +834,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
     r.addMember("keys", keysValue());
     r.addMember("vel", vel);
     r.addMember("pedal", pedalDown.load(std::memory_order_relaxed));
+    r.addMember("miss", missValue());
     if (viewsOn.load()) {
       Value ms = createEmptyArray(), md = createEmptyArray();
       std::vector<double> data;
@@ -864,6 +874,21 @@ struct Plugin : Instance, MpeDecoder::Sink {
   void play(const std::vector<double> &v) {
     toAudio({UiEvent::swap, 0, 0});
     for (int i = 0; i < I.paramCount && i < (int)v.size(); i++) { shown[i] = v[i]; sent[i] = NAN; toAudio({UiEvent::param, (int16_t)i, v[i]}); }
+  }
+  // the notes struck outside the keys that play, as poll() gives them: [how many so far, the last
+  // one, the lowest and highest keys that play, whether the compass's toggle would play it, and
+  // the Octave and Transpose that moved it (0 and 0 for the window's own keys)]
+  choc::value::Value missValue() const {
+    const uint32_t n = misses.load(std::memory_order_acquire);
+    const int key = missed.load(std::memory_order_relaxed);
+    const bool closed = I.compass >= 0 && shown[I.compass].load() < 0.5, fromMidi = missedMidi.load(std::memory_order_relaxed);
+    choc::value::Value a = choc::value::createEmptyArray();
+    a.addArrayElement((int64_t)n); a.addArrayElement(key);
+    a.addArrayElement(closed ? I.compassLo : I.keyLo); a.addArrayElement(closed ? I.compassHi : I.keyHi);
+    a.addArrayElement(closed && key >= I.keyLo && key <= I.keyHi);
+    a.addArrayElement(fromMidi ? (int)shown[octaveAt].load() - kOctaves : 0);
+    a.addArrayElement(fromMidi ? (int)shown[transposeAt].load() - kSemitones : 0);
+    return a;
   }
   // the keys sounding, as poll() gives them
   choc::value::Value keysValue() const {
@@ -1769,7 +1794,7 @@ struct Suite : Instance {
       }
     }
     if (m == "poll" && n > 1 && r.isObject()) {
-      Value all = createEmptyArray();
+      Value all = createEmptyArray(), misses = createEmptyArray(); // and each part's notes it doesn't play
       for (int j = 0; j < n; j++) {
         Value keys = createEmptyArray();
         const Value sounding = part[j]->keysValue();
@@ -1778,8 +1803,10 @@ struct Suite : Instance {
           if (k >= 0 && k <= 127) keys.addArrayElement(k);
         }
         all.addArrayElement(keys);
+        misses.addArrayElement(part[j]->missValue());
       }
       r.addMember("parts", all);
+      r.addMember("misses", misses);
     }
     if (m == "describe") {
       Value all = createEmptyArray();
