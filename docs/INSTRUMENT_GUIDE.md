@@ -169,8 +169,11 @@ compass are made by carrying its design on (the same scale of strings, bars or b
 formulas that design the keys drawn on the compass, so the keys inside it sound as they did. An
 instrument with a historical compass (the harpsichord's FF–f³) names it in `compass`, with a
 checkbox parameter (`fullRange`, off) that opens the whole range: the page's keys, the computer
-keys and MIDI follow it, and so do the plugins' note filter and window. The engine plays every
-key in `range` and never reads the checkbox.
+keys and MIDI follow it, and so do the plugins' note filter and window. Its label is
+`Full range (<lo>–<hi>)`. The engine plays every key in `range` and never reads the checkbox. A
+note struck past the keys that play (from MIDI, a computer key or a song) shows a toast saying
+which keys do play, and to tick the checkbox when that would play it (`rangeWarning` in
+`shared/midi.js`; the plugins' window says the same).
 
 A `console` holds controls the page draws itself rather than as sliders: its `groups` are
 parameters as `GROUPS` are, `defaults` the page's state and `get(P)` maps the plugin's

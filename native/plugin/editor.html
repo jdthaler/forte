@@ -296,6 +296,9 @@ const forte = window.forte || mockForte();
 // what a dropdown opens: the site's panel (shared/dropdown.js), served with the views; opened as a
 // file, the system's list
 import('/shared/dropdown.js').then((m) => m.installDropdowns()).catch(() => {});
+// what the pages say of a note out of range (shared/midi.js); opened as a file, the gist of it
+let rangeWarning = (key, lo, hi, { name = '' } = {}) => `${name ? `${name}: ` : ''}${noteName(key)} is out of range (${noteName(lo)}–${noteName(hi)}).`;
+import('/shared/midi.js').then((m) => { rangeWarning = m.rangeWarning; }).catch(() => {});
 
 const $ = (s) => document.querySelector(s);
 const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -851,7 +854,11 @@ const local = new Map(); // key → how many hands (pointer fingers, computer ke
 let remote = new Set(), pedal = false, pedalHere = false;
 function down(key, vel) {
   if (learning) { learn(key); return; }
-  if (key < LO || key > HI) return;
+  if (key < LO || key > HI) { // a computer key past the keys that play (every part's)
+    const closed = !many() && D.compass && !(values[D.compass[2]] > 0.5) && key >= D.keyLo && key <= D.keyHi;
+    toast(rangeWarning(key, LO, HI, { open: closed ? D.params[D.compass[2]]?.label ?? '' : '' }));
+    return;
+  }
   const n = (local.get(key) || 0) + 1;
   local.set(key, n);
   if (n === 1) forte('note', key, vel);
@@ -1057,10 +1064,27 @@ async function poll() {
       if (learning) { const k = [...next].find((m) => !remote.has(m) && !local.has(m)); if (k !== undefined) learn(k); }
       remote = next; partKeys = nextParts;
       for (const k of changed) paintKey(k);
+      missed(r);
       if (D.space && D.space !== 'switch' && r.pedal !== pedal) { pedal = r.pedal; $('#pedal').setAttribute('aria-pressed', String(pedal)); }
     }
   } catch { /* the plugin went away */ }
   setTimeout(poll, 40);
+}
+
+// a note the plugin was given outside the keys that play (each part's, with more than one): the
+// window says so, as the pages do. miss: [how many so far, the last, the lowest and highest keys that
+// play, whether the compass's toggle would play it, the Octave and Transpose that moved it]
+let missesSeen = null;
+function missed(r) {
+  const list = r.misses ?? (r.miss ? [r.miss] : []), counts = list.map((m) => m[0]);
+  if (missesSeen?.length === counts.length) {
+    list.forEach(([n, key, lo, hi, opens, octave, transpose], j) => {
+      if (n <= missesSeen[j]) return;
+      const open = opens && j === (many() ? focus : 0) && D.compass ? D.params[D.compass[2]]?.label ?? '' : '';
+      toast(rangeWarning(key, lo, hi, { name: many() ? parts[j]?.name ?? '' : '', open, octave, transpose }));
+    });
+  }
+  missesSeen = counts;
 }
 
 // ---- the views: the instrument's page (served by the plugin) in a frame, showing only its views
@@ -1171,7 +1195,7 @@ function mockForte() {
   ];
   const v = params.map((p) => p.def), keys = new Set(), P = params.findIndex((p) => p.id === 'preset');
   let mine = [{ name: 'Soft glass', file: 'Soft glass.json', v: params.map((p) => p.def) }];
-  let pedal = false;
+  let pedal = false, miss = [0, -1, 0, 127, false, 0, 0];
   const text = (i) => (params[i].kind === 'choice' ? params[i].choices[v[i]] : params[i].kind === 'toggle' ? (v[i] ? 'on' : 'off') : `${(100 * v[i]).toFixed(1)} %`);
   const sent = v.map(() => NaN);
   // ?suite: as the Forte app shows it, with its Instrument menus; its parts outlast a reload
@@ -1229,7 +1253,13 @@ function mockForte() {
       keep(); return true;
     }
     if (m === 'set') { v[a[0]] = a[1]; sent[a[0]] = a[1]; return { x: a[1], text: text(a[0]) }; }
-    if (m === 'note') { if (a[1] > 0) keys.add(a[0]); else keys.delete(a[0]); }
+    if (m === 'note') {
+      // the part shown's keys, as the plugin's noteOn has them: past them, a miss (missValue)
+      const shown = INSTRUMENTS.find((x) => x.slug === suite.parts[suite.focus].slug), closed = shown.slug === 'mock' && !v[4];
+      const [lo, hi] = closed ? [53, 89] : [shown.keyLo, shown.keyHi];
+      if (a[1] > 0 && (a[0] < lo || a[0] > hi)) miss = [miss[0] + 1, a[0], lo, hi, closed && a[0] >= shown.keyLo && a[0] <= shown.keyHi, 0, 0];
+      else if (a[1] > 0) keys.add(a[0]); else keys.delete(a[0]);
+    }
     // your own presets: in memory
     if (m === 'presets') return { folder: '~/Library/Audio/Presets/Forte/mock', list: mine.map((u) => [u.name, u.file, 0]).sort((x, y) => x[0].localeCompare(y[0])) };
     if (m === 'savePreset') {
@@ -1251,10 +1281,10 @@ function mockForte() {
     if (m === 'poll') {
       const p = [];
       v.forEach((x, i) => { if (x !== sent[i]) { sent[i] = x; p.push([i, x, text(i)]); } });
-      if (suite.parts.length < 2) return { p, keys: [...keys], pedal };
+      if (suite.parts.length < 2) return { p, keys: [...keys], pedal, miss };
       const of = (q) => [...keys].filter((k) => q.on && k >= q.lo && k <= q.hi); // where they were pressed
       const shown = suite.parts[suite.focus];
-      return { p, keys: of(shown).map((k) => k + 12 * shown.oct), parts: suite.parts.map(of), pedal };
+      return { p, keys: of(shown).map((k) => k + 12 * shown.oct), parts: suite.parts.map(of), pedal, misses: suite.parts.map((q) => (q === shown ? miss : [0, -1, 0, 127, false, 0, 0])) };
     }
     return null;
   };
