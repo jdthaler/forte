@@ -612,7 +612,7 @@ const FILES = {
   "shared/plugins.js": '7b0c504a56f1',
   "shared/presets.js": '0c93fe267539',
   "shared/quality.js": 'aa1be3681bfa',
-  "shared/registry.js": '2bc7a54f3732',
+  "shared/registry.js": 'ac36d2e02d81',
   "shared/rise-sysex.js": 'ca5a2707a2dd',
   "shared/rise.js": 'f85886df1f2a',
   "shared/search.js": '7c441d9e7a1e',
