@@ -59,9 +59,14 @@ export const GROUPS = [
     ],
   },
   {
-    title: 'Output',
+    title: 'Pedal',
     params: [
       { id: 'swell', label: 'Volume pedal', perform: true, strip: true, min: 0, max: 1, def: 1, step: 0.01, fmt: pct, hint: 'The foot pedal that set the 1930 Trautonium\'s loudness (MIDI CC11, expression).' },
+    ],
+  },
+  {
+    title: 'Output',
+    params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.3, step: 0.01, fmt: pct },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },

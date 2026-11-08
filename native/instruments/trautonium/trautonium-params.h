@@ -107,7 +107,7 @@ inline const ParamInfo kParams[p::count] = {
   {"f4", "Circuit 4 tuning", "Formants", ParamKind::continuous, 80, 6000, 3600, 0, true, false, nullptr, 0, kFormat_f4, 2},
   {"q4", "Circuit 4 resonance (Q)", "Formants", ParamKind::continuous, 1, 40, 12, 0, true, false, nullptr, 0, kFormat_q4, 1},
   {"g4", "Circuit 4 level", "Formants", ParamKind::continuous, 0, 1, 0, 0.01, false, false, nullptr, 0, kFormat_g4, 1},
-  {"swell", "Volume pedal", "Output", ParamKind::continuous, 0, 1, 1, 0.01, false, true, nullptr, 0, kFormat_swell, 1},
+  {"swell", "Volume pedal", "Pedal", ParamKind::continuous, 0, 1, 1, 0.01, false, true, nullptr, 0, kFormat_swell, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},

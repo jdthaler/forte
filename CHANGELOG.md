@@ -16,6 +16,20 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-11-08 — the drawer alike for every instrument
+
+### Ribbon Piano 0.14.1
+- **The drawer's Output is the room, the venue and the volume, as on every instrument:** the bridge forces, the torsion pickup, the soundboard body, the stereo spread and the highest partial move to a Listening group of their own in the Controls panel, and the treble voicing (the felt's tilt across the keyboard) to the Hammer. The plugins list the parameters in that order.
+
+### Trautonium 0.3.1
+- **The volume pedal leaves the drawer's Output** for a Pedal group of its own in the Controls panel; it stays above the keys.
+
+### Telharmonium 0.2.1
+- **The swell pedal leaves the drawer's Output** for a Pedal group of its own in the Controls panel; it stays above the keys.
+
+### Bubble Organ 0.10.1
+- **The surface echo leaves the drawer's Output** for a Hydrophones group of its own in the Controls panel.
+
 ## 2026-11-07 — The Forte app combines instruments as the Combinations page does; the FC-300 in the drawer, and the volume pedal on the Volume control; a drawer on every instrument page, and keys that fold away; no more backward compatibility before 1.0
 
 ### Forte 0.48.0

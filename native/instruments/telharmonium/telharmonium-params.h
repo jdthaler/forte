@@ -123,7 +123,7 @@ inline const ParamInfo kParams[p::count] = {
   {"receiver", "Receiver", "Receivers", ParamKind::choice, 0, 1, 0, 1, false, false, kChoices_receiver, 2, nullptr, 0, kKeys_receiver},
   {"magnet", "Receiver magnet", "Receivers", ParamKind::continuous, 10, 2000, 200, 0, true, false, nullptr, 0, kFormat_magnet, 1},
   {"horn", "Horn length", "Receivers", ParamKind::continuous, 0, 3, 1.8, 0.01, false, false, nullptr, 0, kFormat_horn, 2},
-  {"swell", "Swell pedal", "Output", ParamKind::continuous, 0, 1, 0.6, 0.01, false, true, nullptr, 0, kFormat_swell, 1},
+  {"swell", "Swell pedal", "Pedal", ParamKind::continuous, 0, 1, 0.6, 0.01, false, true, nullptr, 0, kFormat_swell, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.3, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
