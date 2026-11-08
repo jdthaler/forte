@@ -165,6 +165,12 @@ the key is held, like a key on an organ; *Until the signal has gone* keeps it op
 up, so notes ring out and still answer the pedal. The probe's coil and preamplifier add thermal
 noise while it listens, through a filter just above the highest line.
 
+The receiver is blanked for every π pulse too, as a spectrometer's is: a pulse of hundreds of watts
+would swamp a receiver tuned to hear microvolts. It closes over 1 ms, the pulse fires once it is shut
+(so a pulse comes about a millisecond after the pedal), and it opens again over 2 ms as the probe
+rings down. Heard open, a pulse would click: in the microseconds it lasts it turns the
+magnetisation over about y, so the real channel jumps from M_x to −M_x.
+
 ## What to listen for
 
 * **The chord.** Each molecule is its own chord: ethanol, ethyl acetate (a triplet, a singlet and a
@@ -213,6 +219,8 @@ tools/render-nmr.mjs                  the demos
 * **Each restrike spoils** the coherence left from the key's last pulse (as a spectrometer's
   spoiler gradient would), and the pedal pulses only the samples still sounding.
 * **The receiver** has no dead-time distortion, no phase errors, no digital filter beyond the noise's.
+  Its blanking and ring-down take milliseconds, where a modern probe's take microseconds, so that
+  closing and opening are smooth and make no clicks of their own.
 * **High-temperature equilibrium**: the polarisation is linear in the field, as it is at any
   temperature a liquid can have. Loudness does not grow with the field (each key is turned up to
   match), though a real stronger magnet gives more signal.
