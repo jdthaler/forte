@@ -7,20 +7,23 @@
 // through its own output chain (shared/chain.js), then its level, into the page's Volume and one
 // more limiter on the sum (chain.js SUM_LIMITER). It comes onto the page as it was left on its own
 // page (its settings in this browser), and keeps its settings here from then on; its Presets menu
-// can take them from its page again. Notes from the screen, the computer keys, MIDI and Songs
+// names the preset it plays (until a control moves its settings), and can take its settings from
+// its page again, or one of your own presets for it from there. The page's own Presets menu has
+// the starting combinations, then your own (combine-mine.js). Notes from the screen, the computer keys, MIDI and Songs
 // reach each instrument whose keys they fall on (combine-params.js routed); the pedals, the
 // wheels, aftertouch, bend, MPE and Panic reach every one.
 
-import { INSTRUMENTS, SECTIONS, byId, trimGain, paramsStore } from '../../shared/registry.js';
+import { INSTRUMENTS, SECTIONS, FORTE_VERSION, byId, trimGain, paramsStore } from '../../shared/registry.js';
 import { createChain, createLimiter, SUM_LIMITER } from '../../shared/chain.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI, pageMIDI, touched, SOFT_PEDAL, wheelValue, pageMpe, controllersOf, controlled } from '../../shared/midi.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
-import { complete } from '../../shared/presets.js';
+import { complete, pick, presetParams } from '../../shared/presets.js';
 import { withExpression, slideOf } from '../../shared/expression.js';
 import { controlOwns, unfocus } from '../../shared/focus.js';
 import { SpectrumView, SpectrogramView, animate, fit, css } from '../../shared/views.js';
-import { MAX_PARTS, KEYS, OCTAVES, LEVEL, VOLUME, STORE, COMBINATIONS, noteName, part, routed, describe, restore } from './combine-params.js';
+import { MAX_PARTS, KEYS, OCTAVES, LEVEL, VOLUME, STORE, COMBINATIONS, noteName, part, label, routed, describe, restore } from './combine-params.js';
+import { attachMine } from './combine-mine.js';
 
 const $ = (s) => document.querySelector(s);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
@@ -44,10 +47,10 @@ function toast(msg) {
 let saved = null;
 try { saved = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch { /* none, or corrupt */ }
 const state = restore(saved, ready);
-let parts = []; // { uid, id, lo, hi, oct, level, on, P, I, params, node, chain, gain, queue, sounding, latched, … }
+let parts = []; // { uid, id, lo, hi, oct, level, on, preset, P, I, params, node, chain, gain, queue, sounding, latched, … }
 let uids = 0;
 function save() {
-  const all = { volume: state.volume, combination: state.combination, parts: parts.map(({ id, lo, hi, oct, level, on, P }) => ({ id, lo, hi, oct, level, on, P })) };
+  const all = { volume: state.volume, combination: state.combination, parts: parts.map(({ id, lo, hi, oct, level, on, preset, P }) => ({ id, lo, hi, oct, level, on, preset, P })) };
   try { localStorage.setItem(STORE, JSON.stringify(all)); } catch { /* storage blocked: for this visit */ }
 }
 
@@ -60,10 +63,18 @@ function ownSettings(s) {
   try { stored = JSON.parse(localStorage.getItem(paramsStore(s.id)) || 'null'); } catch { /* none */ }
   return settings(s, stored);
 }
-// values made whole against the instrument's parameters, a console's state (the organ's drawbars) as kept
+// values made whole against the instrument's parameters, with a console's state (the organ's
+// drawbars): as a page keeps it, or from its parameters' values where they are a preset's
 function settings(s, values) {
   const P = { ...consoleDefaults(s.I), ...complete(s.params, values ?? {}) };
-  if (values && s.I.console) for (const k of Object.keys(s.I.console.defaults ?? {})) if (Object.hasOwn(values, k)) P[k] = values[k];
+  const C = s.I.console;
+  if (values && C) {
+    // a page's P has the console's own state (the drawbars as one array), a preset only its parameters
+    const ids = new Set(C.groups.flatMap((g) => g.params.map((p) => p.id)));
+    const page = Object.keys(C.defaults ?? {}).some((k) => !ids.has(k) && Object.hasOwn(values, k));
+    if (page) { for (const k of Object.keys(C.defaults ?? {})) if (Object.hasOwn(values, k)) P[k] = values[k]; }
+    else Object.assign(P, C.put(P, P));
+  }
   return P;
 }
 // a preset, as its page plays one: the defaults, what the instrument keeps across presets, the preset
@@ -71,21 +82,40 @@ function presetOf(s, i) {
   const keep = Object.fromEntries((s.I.keep ?? []).map((k) => [k, s.P[k]]));
   return { ...defaultsOf(s), ...keep, ...s.I.presets[i].p };
 }
+// your own presets for it, saved on its own page (shared/user-presets.js): [{ name, values }]
+function yoursFor(id) {
+  let s = [];
+  try { s = JSON.parse(localStorage.getItem(`forte/${id}/presets/v1`) || '[]'); } catch { /* none, or corrupt */ }
+  return (Array.isArray(s) ? s : []).filter((pr) => pr && typeof pr.name === 'string' && pr.values && typeof pr.values === 'object');
+}
+// the settings a part's Presets menu names (combine-params.js label), or null when there is no such preset
+function settingsOf(s, what) {
+  if (what === 'own') return ownSettings(s);
+  if (what === 'default') return defaultsOf(s);
+  const name = what?.slice(2);
+  if (what?.startsWith('f:')) { const i = (s.I.presets ?? []).findIndex((p) => p.name === name); return i >= 0 ? presetOf(s, i) : null; }
+  if (what?.startsWith('u:')) { const pr = yoursFor(s.id).find((p) => p.name === name); return pr ? settings(s, pr.values) : null; }
+  return null;
+}
+// its settings by its contract's parameter ids, as a preset has them (shared/presets.js)
+const valuesOf = (s) => (s.I ? pick(presetParams(s.I), s.I.console ? { ...s.P, ...s.I.console.get(s.P) } : s.P) : { ...(s.P ?? {}) });
 // the keys its engine plays: its compass, or its whole range once that is opened
 function rangeOf(s) {
   const c = s.I.compass;
   return c && !s.P[c.param] ? c.keys : s.I.range ?? [36, 96];
 }
 
-async function load(s, preset) {
+// its descriptor, and its settings: those it was given, or else those its Presets menu names
+async function load(s) {
   const { INSTRUMENT: I } = await import(new URL(`../../${s.id}/src/${s.id}-instrument.js`, import.meta.url).href);
   await I.load?.();
   s.I = I;
   s.params = [...withExpression(I.groups), ...(I.console?.groups ?? [])].flatMap((g) => g.params); // with its Expression switches (shared/expression.js)
-  s.P = s.P ? settings(s, s.P) : ownSettings(s);
-  if (preset) {
-    const i = (I.presets ?? []).findIndex((p) => p.name === preset);
-    if (i >= 0) s.P = presetOf(s, i);
+  const given = !!s.P;
+  s.P = given ? settings(s, s.P) : ownSettings(s);
+  if (!given && s.preset !== 'own') {
+    const P = settingsOf(s, s.preset);
+    if (P) s.P = P; else s.preset = 'own';
   }
   s.mpe = pageMpe({ post: (m) => post(s, m), params: () => s.P, slide: slideOf(I), groups: I.groups });
   s.ccs = controllersOf(I);
@@ -140,16 +170,23 @@ function setParams(s, P, swap = false) {
   if (s.chain) s.chain.apply(P, trimGain(s.id));
   save();
 }
+// a control (a MIDI controller's) moved a part's settings: its menu and the page's name no preset now
+function moved(s) {
+  if (s.preset !== null) { s.preset = null; if (s.menu) s.menu.value = ''; }
+  edited();
+}
 
 // ---- the parts --------------------------------------------------------------------------------------
+// a part: spec { id, lo, hi, oct, level, on, preset } (preset: what its menu names, combine-params.js
+// label), with its settings P, or else those of the preset named (as on its own page without one)
 function add(spec, P = null) {
   if (parts.length >= MAX_PARTS || !ready(spec.id)) return null;
   const s = {
-    uid: ++uids, ...part(spec), P, I: null, params: [], node: null, chain: null, gain: null, queue: [],
-    sounding: new Map(), latched: new Set(), sustain: pedalDown, soft: false, ccLast: {}, load: 0, peak: 0,
+    uid: ++uids, ...part(spec), preset: label(spec.preset) ?? (P ? null : 'own'), P, I: null, params: [], node: null, chain: null, gain: null, queue: [],
+    sounding: new Map(), latched: new Set(), sustain: pedalDown, soft: false, ccLast: {}, load: 0, peak: 0, menu: null,
   };
   parts.push(s);
-  load(s, spec.preset).then(() => { save(); draw(); }, (err) => {
+  load(s).then(() => { save(); draw(); }, (err) => {
     toast(`${nameOf(spec.id)} couldn't load: ${err.message}`);
     remove(s);
   });
@@ -163,12 +200,14 @@ function remove(s) {
   dispose(s);
   refreshControllers(); showLoad(); save(); draw();
 }
-function combine(c) {
+// a combination in place of the instruments here: a starting one, or one of yours (each part with its values)
+function combine(c, mine = false) {
   panic();
   for (const s of [...parts]) { parts.splice(parts.indexOf(s), 1); dispose(s); }
-  state.combination = c.name;
-  for (const spec of c.parts) add(spec);
-  save(); draw();
+  state.combination = mine ? `u:${c.name}` : c.name;
+  basis = c.name;
+  for (const spec of c.parts) add(spec, spec.values ?? null);
+  save(); draw(); showCombination();
 }
 const live = () => parts.filter((s) => s.I);
 // what the parts' instruments take as their own controllers (an organ's CC11): theirs, not the page's
@@ -275,10 +314,10 @@ function onMIDI(ev) {
       else if (d1 === 1 && s.I.modWheel) {
         const mw = typeof s.I.modWheel === 'string' ? { param: s.I.modWheel } : s.I.modWheel;
         const p = s.params.find((q) => q.id === mw.param);
-        if (p) setParams(s, { ...s.P, [p.id]: wheelValue(p, d2, mw.max ?? p.max) });
+        if (p) { setParams(s, { ...s.P, [p.id]: wheelValue(p, d2, mw.max ?? p.max) }); moved(s); }
       } else {
         const set = controlled(s.ccs, s.params, s.P, d1, d2, s.ccLast);
-        if (set) setParams(s, { ...s.P, [set[0]]: set[1] });
+        if (set) { setParams(s, { ...s.P, [set[0]]: set[1] }); moved(s); }
       }
     } else if (cmd === 0xd0) post(s, { type: 'pressure', value: d1 / 127, key: null });
     else if (cmd === 0xa0) for (const [p, k] of held.get(`midi:${ch}:${d1}`) ?? []) { if (p === s) post(s, { type: 'pressure', value: d2 / 127, key: k }); }
@@ -424,7 +463,9 @@ function learnt(key) {
   toast(`${nameOf(s.id)}: ${end === 'lo' ? 'from' : 'up to'} ${noteName(key)}`);
   changed();
 }
-const changed = () => { state.combination = null; save(); draw(); };
+// the combination's name stays on the page's menu only while nothing has changed since it was chosen
+function edited() { if (state.combination !== null) { state.combination = null; showCombination(); } save(); }
+const changed = () => { edited(); draw(); };
 
 function card(s) {
   const entry = byId(s.id), li = el('li', `combine-part${s.on ? '' : ' off'}`);
@@ -477,17 +518,27 @@ function card(s) {
   oct.addEventListener('change', () => { unfocus(oct); s.oct = +oct.value; changed(); });
   const octRow = el('div', 'combine-row');
   octRow.append(el('span', '', 'Octave'), oct);
-  // its presets, and its settings from its own page
+  // its presets, yours for it from its own page, its default settings and those on its own page:
+  // the menu names the one it plays, until a control moves its settings
   const pre = el('select');
   pre.setAttribute('aria-label', `The ${entry.name}'s preset`);
-  pre.append(new Option('Presets…', ''), ...(s.I.presets ?? []).map((p, i) => new Option(p.name, i)), new Option('Default settings', 'default'), new Option('As on its own page', 'own'));
+  pre.append(new Option('Presets…', ''), ...(s.I.presets ?? []).map((p) => new Option(p.name, `f:${p.name}`)));
+  const yours = yoursFor(s.id);
+  if (yours.length) { const g = el('optgroup'); g.label = 'Your presets'; g.append(...yours.map((p) => new Option(p.name, `u:${p.name}`))); pre.append(g); }
+  pre.append(new Option('Default settings', 'default'), new Option('As on its own page', 'own'));
+  pre.value = s.preset ?? '';
+  if (pre.selectedIndex < 0) pre.value = '';
+  pre.title = 'Its preset: one of its own, one of yours saved on its own page, or its settings as on its own page';
+  s.menu = pre;
   pre.addEventListener('change', () => {
     const v = pre.value;
-    pre.value = '';
     unfocus(pre);
-    if (v === '') return;
-    setParams(s, v === 'own' ? ownSettings(s) : v === 'default' ? defaultsOf(s) : presetOf(s, +v), true);
-    toast(`${entry.name}: ${v === 'own' ? 'as on its own page' : v === 'default' ? 'default settings' : s.I.presets[+v].name}`);
+    const P = v && settingsOf(s, v);
+    if (!P) { pre.value = s.preset ?? ''; return; }
+    s.preset = v;
+    setParams(s, P, true);
+    edited();
+    toast(`${entry.name}: ${v === 'own' ? 'as on its own page' : v === 'default' ? 'default settings' : v.slice(2)}`);
   });
   const preRow = el('div', 'combine-row');
   preRow.append(el('span', '', 'Preset'), pre);
@@ -499,7 +550,7 @@ function card(s) {
   slider.type = 'range'; slider.min = LEVEL.min; slider.max = LEVEL.max; slider.step = 0.5; slider.value = s.level;
   slider.setAttribute('aria-label', `The ${entry.name}'s level`);
   const show = () => { val.textContent = fmtDb(s.level); slider.setAttribute('aria-valuetext', val.textContent); slider.style.setProperty('--fill', `${(100 * (s.level - LEVEL.min)) / (LEVEL.max - LEVEL.min)}%`); };
-  slider.addEventListener('input', () => { s.level = +slider.value; if (s.gain) s.gain.gain.setTargetAtTime(dB(s.level), ctx.currentTime, 0.02); show(); save(); });
+  slider.addEventListener('input', () => { s.level = +slider.value; if (s.gain) s.gain.gain.setTargetAtTime(dB(s.level), ctx.currentTime, 0.02); show(); edited(); });
   slider.addEventListener('dblclick', () => { slider.value = LEVEL.def; slider.dispatchEvent(new Event('input')); });
   show();
   level.appendChild(slider);
@@ -549,19 +600,36 @@ addSel.addEventListener('change', () => {
 }
 
 // the combinations, in the Presets menu (shared/layout.js adds Default settings, which presses Reset:
-// the first combination); a MIDI program change picks one too (shared/midi.js choosePreset)
+// the first combination), then yours (combine-mine.js); a MIDI program change picks one too
+// (shared/midi.js choosePreset). The menu names the combination playing until something changes.
 const ps = $('#preset');
 ps.add(new Option('Combinations…', ''));
 COMBINATIONS.forEach((c, i) => ps.add(new Option(c.name, i)));
+let basis = state.combination?.replace(/^u:/, '') ?? null; // the name the combination here came from, to save it again
+// the combination playing now, as one of yours would keep it
+const now = () => ({ name: basis ?? '', parts: parts.map((s) => ({ id: s.id, lo: s.lo, hi: s.hi, oct: s.oct, level: s.level, on: s.on, preset: s.preset, values: valuesOf(s) })) });
+const versions = () => ({ forte: FORTE_VERSION, ...Object.fromEntries(parts.map((s) => [s.id, byId(s.id)?.version ?? ''])) });
+const mine = attachMine({
+  menu: ps, now, versions, toast,
+  play: (c) => { combine(c, true); toast(`${c.name}: ${describe(parts, nameOf)}`); },
+  paramsOf: (id) => { const I = parts.find((s) => s.id === id)?.I; return I ? presetParams(I) : null; },
+});
+ps.addEventListener('forte-saved', (e) => { state.combination = `u:${e.detail}`; basis = e.detail; save(); });
+function showCombination() {
+  const c = state.combination;
+  if (c?.startsWith('u:')) { mine.shown(c.slice(2)); return; }
+  mine.shown(null);
+  const i = COMBINATIONS.findIndex((x) => x.name === c);
+  ps.value = i >= 0 ? String(i) : '';
+}
 ps.addEventListener('change', () => {
   const v = ps.value;
   if (v === '' || v.startsWith('__')) return;
-  ps.value = '';
   unfocus(ps);
   combine(COMBINATIONS[+v]);
   toast(`${COMBINATIONS[+v].name}: ${describe(parts, nameOf)}`);
 });
-$('#reset').addEventListener('click', () => { combine(COMBINATIONS[0]); ps.value = ''; });
+$('#reset').addEventListener('click', () => combine(COMBINATIONS[0]));
 
 $('#start').addEventListener('click', (e) => { start(); unfocus(e.currentTarget); });
 $('#midi-btn').addEventListener('click', (e) => { initMIDI(); unfocus(e.currentTarget); });
@@ -571,5 +639,6 @@ qualityControl();
 
 // what was here last time, or the first combination
 if (saved) for (const p of state.parts) add(p, p.P);
-else { const c = COMBINATIONS.find((x) => x.parts.every((p) => ready(p.id))); if (c) { state.combination = c.name; for (const spec of c.parts) add(spec); } }
+else { const c = COMBINATIONS.find((x) => x.parts.every((p) => ready(p.id))); if (c) { state.combination = basis = c.name; for (const spec of c.parts) add(spec); } }
 draw();
+showCombination();

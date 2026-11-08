@@ -248,6 +248,128 @@ std::string writePreset(const InstrumentInfo &I, const std::string &name, const 
   return file;
 }
 
+// ---- your combinations (the Forte app) --------------------------------------------------------------
+namespace {
+constexpr int kCombinationsFormat = 1; // combine/src/combine-params.js, FORMAT
+fs::path combinationsDir() { const fs::path r = root(); return r.empty() ? r : r / "Combinations"; }
+// a file's combinations, when it is a combinations file
+bool combinationsIn(const std::string &text, choc::value::Value &list, std::string &error) {
+  choc::value::Value d;
+  try { d = choc::json::parse(text); } catch (...) { error = "This file is not a Forte combinations file (it is not JSON)."; return false; }
+  if (!d.isObject() || !d.hasObjectMember("forte") || !d["forte"].isString() || d["forte"].getString() != "combinations"
+      || !d.hasObjectMember("combinations") || !d["combinations"].isArray()) {
+    error = "This file is not a Forte combinations file.";
+    return false;
+  }
+  list = choc::value::Value(d["combinations"]);
+  return true;
+}
+double numberIn(const choc::value::ValueView &o, const char *k, double def) {
+  if (!o.hasObjectMember(k)) return def;
+  const choc::value::ValueView v = o[k];
+  return (v.isFloat() || v.isInt()) && std::isfinite(v.get<double>()) ? v.get<double>() : def;
+}
+} // namespace
+
+std::string combinationsFolder() { return utf8Of(combinationsDir()); }
+
+std::vector<UserCombination> listCombinations() {
+  std::vector<UserCombination> out;
+  std::error_code ec;
+  const fs::path dir = combinationsDir();
+  if (dir.empty()) return out;
+  for (fs::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
+    const fs::path f = it->path();
+    std::string ext = utf8Of(f.extension());
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+    std::error_code e2;
+    if (ext != ".json" || !it->is_regular_file(e2)) continue;
+    std::string text, error;
+    choc::value::Value list;
+    if (!readText(f, text) || !combinationsIn(text, list, error)) continue;
+    for (uint32_t k = 0; k < list.size(); k++) {
+      std::string name = nameOf(list[k]);
+      if (name.empty()) name = utf8Of(f.stem()) + (list.size() > 1 ? " " + std::to_string(k + 1) : "");
+      out.push_back({name, utf8Of(f.filename()), (int)k});
+    }
+  }
+  std::sort(out.begin(), out.end(), [](const UserCombination &a, const UserCombination &b) {
+    if (a.name != b.name) return lessName(a.name, b.name) || (!lessName(b.name, a.name) && a.name < b.name);
+    return a.file != b.file ? a.file < b.file : a.index < b.index;
+  });
+  return out;
+}
+
+bool readCombination(const std::string &file, int index, const InstrumentInfo *(*find)(const std::string &, const void *), const void *ctx,
+                     std::string &name, std::vector<CombinationPart> &parts, std::string &skipped, std::string &error) {
+  const fs::path dir = combinationsDir(), f = pathOf(file);
+  if (dir.empty() || file.empty() || f.has_parent_path() || f.filename() != f) { error = "There is no such combination."; return false; }
+  std::string text;
+  choc::value::Value list;
+  if (!readText(dir / f, text)) { error = "The combination's file can't be read."; return false; }
+  if (!combinationsIn(text, list, error)) return false;
+  if (index < 0 || (uint32_t)index >= list.size() || !list[(uint32_t)index].isObject()) { error = "There is no such combination."; return false; }
+  const choc::value::ValueView c = list[(uint32_t)index];
+  name = nameOf(c);
+  if (name.empty()) name = utf8Of(f.stem());
+  parts.clear(); skipped.clear();
+  if (!c.hasObjectMember("parts") || !c["parts"].isArray()) { error = "This combination has no instruments."; return false; }
+  for (uint32_t k = 0; k < c["parts"].size() && parts.size() < 4; k++) {
+    const choc::value::ValueView p = c["parts"][k];
+    if (!p.isObject() || !p.hasObjectMember("instrument") || !p["instrument"].isString()) continue;
+    const std::string slug(p["instrument"].getString());
+    const InstrumentInfo *I = find(slug, ctx);
+    if (!I) { skipped += (skipped.empty() ? "" : ", ") + slug; continue; }
+    CombinationPart part;
+    part.I = I;
+    part.lo = (int)std::lround(numberIn(p, "lo", 21));
+    part.hi = (int)std::lround(numberIn(p, "hi", 108));
+    part.oct = (int)std::lround(numberIn(p, "oct", 0));
+    part.level = numberIn(p, "level", 0);
+    part.on = !(p.hasObjectMember("on") && p["on"].isBool() && !p["on"].getBool());
+    const bool has = p.hasObjectMember("values") && p["values"].isObject();
+    part.values.resize(I->paramCount);
+    for (int i = 0; i < I->paramCount; i++) {
+      const ParamInfo &q = I->params[i];
+      part.values[i] = has && p["values"].hasObjectMember(q.id) ? valueOf(q, p["values"][q.id]) : q.def;
+    }
+    parts.push_back(std::move(part));
+  }
+  if (parts.empty()) { error = skipped.empty() ? "This combination has no instruments." : "This combination's instruments aren't in this app: " + skipped + "."; return false; }
+  return true;
+}
+
+std::string combinationText(const std::string &name, const std::vector<CombinationPart> &parts, const std::string &forteVersion) {
+  std::string t = "{\n  \"forte\": \"combinations\",\n  \"format\": " + std::to_string(kCombinationsFormat) + ",\n  \"forteVersion\": " + jsString(forteVersion)
+                  + ",\n  \"combinations\": [\n    {\n      \"name\": " + jsString(name) + ",\n      \"parts\": [";
+  for (size_t k = 0; k < parts.size(); k++) {
+    const CombinationPart &p = parts[k];
+    const InstrumentInfo &I = *p.I;
+    t += std::string(k ? "," : "") + "\n        {\n          \"instrument\": " + jsString(I.slug) + ",\n          \"instrumentVersion\": " + jsString(I.version)
+         + ",\n          \"lo\": " + std::to_string(std::clamp(p.lo, 21, 108)) + ",\n          \"hi\": " + std::to_string(std::clamp(p.hi, 21, 108))
+         + ",\n          \"oct\": " + std::to_string(p.oct) + ",\n          \"level\": " + jsNumber(p.level) + ",\n          \"on\": " + (p.on ? "true" : "false")
+         + ",\n          \"values\": {";
+    for (int i = 0; i < I.paramCount; i++) t += std::string(i ? "," : "") + "\n            " + jsString(I.params[i].id) + ": " + jsonOf(I.params[i], i < (int)p.values.size() ? p.values[i] : I.params[i].def);
+    t += std::string(I.paramCount ? "\n          }" : "}") + "\n        }";
+  }
+  return t + "\n      ]\n    }\n  ]\n}\n";
+}
+
+std::string writeCombination(const std::string &name, const std::vector<CombinationPart> &parts, const std::string &forteVersion, std::string &error) {
+  const fs::path dir = combinationsDir();
+  if (dir.empty()) { error = "There is no folder for combinations (no home folder)."; return ""; }
+  std::error_code ec;
+  fs::create_directories(dir, ec);
+  std::string file = fileNameOf(name);
+  if (file == "Preset.json") file = "Combination.json";
+  {
+    std::ofstream out(dir / pathOf(file), std::ios::binary | std::ios::trunc);
+    if (out) out << combinationText(name, parts, forteVersion);
+    if (!out) { error = "The combination couldn't be saved in " + utf8Of(dir) + "."; return ""; }
+  }
+  return file;
+}
+
 std::string tuningsFolder() { const fs::path r = root(); return r.empty() ? std::string() : utf8Of(r / "Tunings"); }
 
 std::vector<std::string> listScalas() {
