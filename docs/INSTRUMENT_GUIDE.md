@@ -293,7 +293,11 @@ frequency times `tuningOf(P).ratio(key)` (the generated `<slug>-params.h`; see T
 Keep `volume`
 (0–2, def ≈ 0.8) and `room` (0–1) in an *Output* group, with `VENUE`
 (`shared/chain.js`, the room's space) right after `room`, in `keep` and
-as the chain's `venue`. Keep `velocity`
+as the chain's `venue`. The Output group is those three and nothing else,
+since every page shows it in the drawer, which is alike for every
+instrument: an instrument's own pickups, swell pedal or stereo spread go
+in a group of their own (the Ribbon Piano's Listening, the bubbles'
+Hydrophones). Keep `velocity`
 (the computer keyboard's strike velocity) if the instrument is
 velocity-sensitive. Presets override defaults. Make each preset show one
 physical idea and give it a descriptive name.

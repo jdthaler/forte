@@ -17,7 +17,7 @@
 namespace forte::piano {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, kc, longi, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, sympathy, gainV, gainH, gainT, soundboard, room, venue, width, voicing, volume, maxFreq, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
+enum : int { material, shape, aspect, roll, taper, gauge, lengthScale, winding, unisons, unisonDetune, polDetune, kc, longi, strikePos, offset, hardness, feltExp, hammerMass, hammerWidth, hysteresis, voicing, unaCorda, bridge, bridgeH, lossLow, lossHigh, torsionLoss, damper, sympathy, gainV, gainH, gainT, soundboard, width, maxFreq, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
@@ -43,6 +43,7 @@ inline const FormatSegment kFormat_feltExp[] = {{kNoLimit, "", "", 1, 0, 2, fals
 inline const FormatSegment kFormat_hammerMass[] = {{kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_hammerWidth[] = {{kNoLimit, "×", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_hysteresis[] = {{kNoLimit, "", " µs", 1000000, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_voicing[] = {{kNoLimit, "", " dB/oct", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_bridge[] = {{9.999999999999998, "×", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_bridgeH[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_lossLow[] = {{9.999999999999998, "×", "", 1, 0, 2, false, false, false, false}, {kNoLimit, "×", "", 1, 0, 1, false, false, false, false}};
@@ -54,14 +55,13 @@ inline const FormatSegment kFormat_gainV[] = {{kNoLimit, "", "", 1, 0, 2, false,
 inline const FormatSegment kFormat_gainH[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_gainT[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_soundboard[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
+inline const FormatSegment kFormat_width[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
+inline const FormatSegment kFormat_maxFreq[] = {{kNoLimit, "", " kHz", 0.001, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
 inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
 namespace venue_ { enum : int { studio, room, recital, hall, cathedral }; }
-inline const FormatSegment kFormat_width[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
-inline const FormatSegment kFormat_voicing[] = {{kNoLimit, "", " dB/oct", 1, 0, 1, false, false, false, false}};
 inline const FormatSegment kFormat_volume[] = {{0.0010057730630017385, "", " dB", 0, -60, 1, false, false, false, false}, {kNoLimit, "", " dB", 20, 0, 1, true, false, false, false}};
-inline const FormatSegment kFormat_maxFreq[] = {{kNoLimit, "", " kHz", 0.001, 0, 1, false, false, false, false}};
 inline const char *const kChoices_pitch[] = {"A = 440 Hz (modern)", "A = 415 Hz (baroque pitch)", "A = 392 Hz (French baroque, ton de chambre)", "A = 422.5 Hz (Handel’s tuning fork, 1751)", "A = 430 Hz (classical)", "A = 435 Hz (diapason normal, 1859)", "A = 442 Hz (many orchestras today)", "A = 443 Hz (Berlin, Vienna)", "A = 466 Hz (Chorton, German organs)"};
 inline const char *const kKeys_pitch[] = {"440", "415", "392", "422.5", "430", "435", "442", "443", "466"};
 inline const char *const kChoices_temperament[] = {"Equal temperament", "¼-comma meantone", "Werckmeister III (1691)", "⅙-comma meantone (Silbermann)", "Kirnberger III (1779)", "Vallotti", "Young (1799)", "Pythagorean", "Just intonation (5-limit)", "Custom (or a Scala file)"};
@@ -102,6 +102,7 @@ inline const ParamInfo kParams[p::count] = {
   {"hammerMass", "Hammer mass", "Hammer", ParamKind::continuous, 0.25, 4, 1, 0, true, false, nullptr, 0, kFormat_hammerMass, 1},
   {"hammerWidth", "Contact width", "Hammer", ParamKind::continuous, 0.1, 3, 1, 0, true, false, nullptr, 0, kFormat_hammerWidth, 1},
   {"hysteresis", "Felt hysteresis α", "Hammer", ParamKind::continuous, 0, 0.0004, 0.00005, 0.000001, false, false, nullptr, 0, kFormat_hysteresis, 1},
+  {"voicing", "Treble voicing", "Hammer", ParamKind::continuous, 0, 6, 2.5, 0.1, false, false, nullptr, 0, kFormat_voicing, 1},
   {"unaCorda", "Una corda (soft pedal)", "Hammer", ParamKind::toggle, 0, 1, 0, 1, false, true, nullptr, 0, nullptr, 0},
   {"bridge", "Bridge coupling", "Damping & bridge", ParamKind::continuous, 0.1, 10, 1, 0, true, false, nullptr, 0, kFormat_bridge, 2},
   {"bridgeH", "Horizontal / vertical coupling", "Damping & bridge", ParamKind::continuous, 0, 1, 0.3, 0.01, false, false, nullptr, 0, kFormat_bridgeH, 1},
@@ -110,16 +111,15 @@ inline const ParamInfo kParams[p::count] = {
   {"torsionLoss", "Torsional loss", "Damping & bridge", ParamKind::continuous, 0.2, 10, 3, 0, true, false, nullptr, 0, kFormat_torsionLoss, 2},
   {"damper", "Damper strength", "Damping & bridge", ParamKind::continuous, 2, 80, 25, 0, true, false, nullptr, 0, kFormat_damper, 1},
   {"sympathy", "Sympathetic resonance", "Damping & bridge", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_sympathy, 2},
-  {"gainV", "Vertical bridge force", "Output", ParamKind::continuous, 0, 1.5, 1, 0.01, false, false, nullptr, 0, kFormat_gainV, 1},
-  {"gainH", "Horizontal bridge force", "Output", ParamKind::continuous, 0, 1.5, 0.35, 0.01, false, false, nullptr, 0, kFormat_gainH, 1},
-  {"gainT", "Torsion pickup", "Output", ParamKind::continuous, 0, 2, 0.6, 0.01, false, false, nullptr, 0, kFormat_gainT, 1},
-  {"soundboard", "Soundboard body", "Output", ParamKind::continuous, 0, 1, 0.6, 0.01, false, false, nullptr, 0, kFormat_soundboard, 1},
+  {"gainV", "Vertical bridge force", "Listening", ParamKind::continuous, 0, 1.5, 1, 0.01, false, false, nullptr, 0, kFormat_gainV, 1},
+  {"gainH", "Horizontal bridge force", "Listening", ParamKind::continuous, 0, 1.5, 0.35, 0.01, false, false, nullptr, 0, kFormat_gainH, 1},
+  {"gainT", "Torsion pickup", "Listening", ParamKind::continuous, 0, 2, 0.6, 0.01, false, false, nullptr, 0, kFormat_gainT, 1},
+  {"soundboard", "Soundboard body", "Listening", ParamKind::continuous, 0, 1, 0.6, 0.01, false, false, nullptr, 0, kFormat_soundboard, 1},
+  {"width", "Stereo spread", "Listening", ParamKind::continuous, 0, 1, 0.6, 0.01, false, false, nullptr, 0, kFormat_width, 1},
+  {"maxFreq", "Highest partial", "Listening", ParamKind::continuous, 2000, 20000, 12000, 0, true, false, nullptr, 0, kFormat_maxFreq, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
-  {"width", "Stereo spread", "Output", ParamKind::continuous, 0, 1, 0.6, 0.01, false, false, nullptr, 0, kFormat_width, 1},
-  {"voicing", "Treble voicing", "Output", ParamKind::continuous, 0, 6, 2.5, 0.1, false, false, nullptr, 0, kFormat_voicing, 1},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
-  {"maxFreq", "Highest partial", "Output", ParamKind::continuous, 2000, 20000, 12000, 0, true, false, nullptr, 0, kFormat_maxFreq, 1},
   {"pitch", "Pitch", "Tuning", ParamKind::choice, 0, 8, 0, 1, false, false, kChoices_pitch, 9, nullptr, 0, kKeys_pitch},
   {"temperament", "Temperament", "Tuning", ParamKind::choice, 0, 9, 0, 1, false, false, kChoices_temperament, 10, nullptr, 0, kKeys_temperament},
   {"tuningRoot", "Temperament root", "Tuning", ParamKind::choice, 0, 11, 0, 1, false, false, kChoices_tuningRoot, 12, nullptr, 0, kKeys_tuningRoot},

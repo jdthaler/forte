@@ -83,10 +83,15 @@ export const GROUPS = [
     ],
   },
   {
-    title: 'Output',
+    title: 'Pedal',
     params: [
       { id: 'swell', label: 'Swell pedal', perform: true, strip: true, min: 0, max: 1, def: 0.6, step: 0.01, fmt: pct,
         hint: 'The electrical swell: a brush on a foot pedal that cuts 48 induction coils in or out of the circuit (MIDI CC11; the mod wheel opens it from here).' },
+    ],
+  },
+  {
+    title: 'Output',
+    params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.3, step: 0.01, fmt: pct },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },
