@@ -414,6 +414,7 @@ export function createShell(cfg) {
   function refresh(id, dragging = false) {
     const c = controls.get(id);
     if (!c) return;
+    if (EXPRESSION_IDS.includes(id)) tellSwitches(); // a Seaboard's panel shows it too
     const v = shell.P[id];
     if (c.p.type === 'select') { c.input.value = v; c.face?.show(); }
     else if (c.p.type === 'checkbox') c.input.checked = !!v;
@@ -530,6 +531,26 @@ export function createShell(cfg) {
     }
     pluginKeys(u);
   };
+
+  // ---- the Expression switches on a Seaboard's panel (shared/rise.js) ---------------------------
+  // The panel asks for them ('forte-switches?') once it is up, and the shell answers with
+  // 'forte-switches' ({ id: on } for each switch this instrument answers to), and again whenever
+  // one changes, whatever changed it; the panel turns one with 'forte-switch' ({ id, on }), as its
+  // checkbox here would.
+  function tellSwitches() {
+    if (shell.tellingSwitches) return;
+    shell.tellingSwitches = true;
+    queueMicrotask(() => {
+      shell.tellingSwitches = false;
+      const detail = Object.fromEntries(EXPRESSION_IDS.filter((id) => controls.has(id)).map((id) => [id, !!shell.P[id]]));
+      document.dispatchEvent(new CustomEvent('forte-switches', { detail }));
+    });
+  }
+  document.addEventListener('forte-switches?', tellSwitches);
+  document.addEventListener('forte-switch', (e) => {
+    const { id, on } = e.detail ?? {};
+    if (EXPRESSION_IDS.includes(id) && controls.has(id)) shell.setParam(id, !!on);
+  });
 
   for (const id of controls.keys()) refresh(id);
   refreshVisibility();

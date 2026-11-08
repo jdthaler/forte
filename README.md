@@ -236,7 +236,12 @@ the left: its faders and pad with the controls they move and where they are,
 its keywave with a dot for each finger (across: the key and its Glide; up:
 its Slide; size: its Press), and its five dimensions (Strike, Glide, Slide,
 Press and Lift), each lit as it comes in, with what it does on that
-instrument. Press (the note's own pressure, as any aftertouch) shapes the
+instrument and, at the end of its line, its Expression switch (the same one
+as in Controls: off, the line dims and says what the instrument does
+instead). A light beside the faders says which mode they are in. The RISE's
+mode button sends nothing, so it shows white once a fader sends and cyan once
+a fader moves the RISE's own Glide, Slide or Press sensitivity (seen in the
+settings it reads, below); until then it asks for a fader. Press (the note's own pressure, as any aftertouch) shapes the
 notes of most instruments that hold them; on the struck and plucked ones a
 firm press (past half way, so a finger resting on a key changes nothing) lays
 a palm, a hand, a mallet or a felt on what rings and damps it, as hard as the

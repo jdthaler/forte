@@ -55,9 +55,13 @@ test('on channel 1 alone (not MPE): its bend is every note\'s, ±48; its pressur
   assert.ok(m.lit('glide') && m.lit('press'));
 });
 
-test('the faders and the pad: their values by CC, and MIDI mode once one sends', () => {
+test('the faders and the pad: their values by CC, and MIDI mode once a fader sends', () => {
   const m = riseModel();
   assert.equal(m.faderMode, null);
+  m.midi([0xb0, 113, 64]); m.midi([0xb0, 114, 64]);
+  assert.equal(m.faderMode, null, 'the pad sends in either mode');
+  m.cyan();
+  assert.equal(m.faderMode, 'expression');
   for (const [n] of FADERS) m.midi([0xb0, n, n - 100]);
   assert.equal(m.faderMode, 'midi');
   assert.deepEqual(FADERS.map(([n]) => m.cc[n]), [7, 9, 11, 13, 14]);
