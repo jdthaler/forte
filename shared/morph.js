@@ -29,8 +29,8 @@ export function attachMorph({ instrument: I, params, factory, mine, now, set, ke
   det.className = 'group forte-morph';
   det.open = true;
   det.innerHTML = `<summary>Morph</summary>
-    <div class="param"><label for="forte-morph-from">From</label><select id="forte-morph-from"></select></div>
-    <div class="param"><label for="forte-morph-to">To</label><select id="forte-morph-to"></select></div>
+    <div class="param"><label for="forte-morph-from">From</label><select id="forte-morph-from" class="forte-display"></select></div>
+    <div class="param"><label for="forte-morph-to">To</label><select id="forte-morph-to" class="forte-display"></select></div>
     <div class="param"><div class="row"><label for="forte-morph-t">Morph</label><span class="val"></span></div>
       <input type="range" id="forte-morph-t" min="0" max="1000" step="1">
       <div class="hint">Slide from one preset to another: every setting the two presets give moves part of the way, a number smoothly and a choice or a switch halfway across. Volume, the room and the tuning stay as you have them. Choosing a preset from the Presets menu makes it the one you morph from.</div></div>`;

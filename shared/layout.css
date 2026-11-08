@@ -62,8 +62,8 @@ body[data-instrument] #start:not(.running) ~ .forte-load > :is(#cpu, #voices) { 
 .forte-midi-pill:hover, .forte-midi-pill[aria-expanded="true"] { color: var(--text); border-color: var(--accent); }
 .forte-midi-menu {
   position: fixed; z-index: 60; display: grid; grid-template-columns: auto auto; gap: 8px 12px; align-items: center;
-  padding: 12px 14px; background: var(--card, #161b22); border: 1px solid var(--line); border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  padding: 12px 14px; background: linear-gradient(180deg, #202026, var(--card, #161b22) 120px); border: 1px solid #060608; border-radius: 10px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 10px 30px rgba(0, 0, 0, 0.55);
 }
 .forte-midi-menu[hidden] { display: none; }
 .forte-midi-menu label { display: contents; }
@@ -78,10 +78,47 @@ body[data-instrument] .forte-load {
 body[data-instrument] .forte-load > :is(#cpu, #voices) { display: flex; align-items: center; border: 0; border-right: 1px solid var(--line); border-radius: 0; padding: 0 8px 0 10px; }
 body[data-instrument] .forte-load:has(> .hot) { border-color: var(--warn); }
 body[data-instrument] .forte-quality { display: inline-flex; align-items: center; gap: 2px; min-width: 0; cursor: pointer; color: var(--muted); padding: 0 2px 0 10px; }
-body[data-instrument] .forte-quality select { color: var(--text); background: transparent; border: 0; border-radius: 999px; padding: 2px 6px; min-width: 0; }
+body[data-instrument] .forte-quality select { border-radius: 999px; padding: 1px 26px 1px 9px; margin: 2px 2px 2px 4px; min-width: 0; }
 body[data-instrument] #start.running ~ .forte-load .forte-quality { padding-left: 2px; }
 body[data-instrument] #start.running ~ .forte-load .forte-quality > span { display: none; }
 body:not(.perform) .forte-fullscreen { display: none; }
+
+/* ---- dropdowns, as hardware. Every menu is a moulded button lit from above, its arrows on a cap
+   of their own past a groove, that presses in while it opens. A menu of presets (the page's, a
+   combination's, an instrument's in a combination, Morph's) is a window in the panel instead, lit
+   from behind in the instrument's colour, as a PhuzzBox pedal's presets are. The list that opens
+   is the system's own; its rows keep the page's plain type. -------------------------------------- */
+body[data-instrument] {
+  --forte-arrows: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12'%3E%3Cpath d='M1.2 4.6 4 1.8l2.8 2.8M1.2 7.4 4 10.2l2.8-2.8' fill='none' stroke='%23c4c4cc' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+body[data-instrument] select {
+  --face: linear-gradient(180deg, #3a3a42, #28282e 55%, #1e1e23);
+  -webkit-appearance: none; appearance: none; padding-right: 30px; text-overflow: ellipsis;
+  color: var(--text); border: 1px solid #060608; border-radius: 7px;
+  background: var(--forte-arrows) no-repeat right 9px center / 8px 12px,
+    linear-gradient(90deg, transparent calc(100% - 26px), rgb(0 0 0 / 0.55) 0 calc(100% - 25px), rgb(255 255 255 / 0.08) 0 calc(100% - 24px), transparent 0),
+    var(--face);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.13), inset 0 -1px 0 rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.65);
+}
+body[data-instrument] select:hover { --face: linear-gradient(180deg, #44444d, #2f2f36 55%, #232328); border-color: #060608; }
+body[data-instrument] select:active { --face: linear-gradient(180deg, #1b1b20, #26262c); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.7), 0 1px 0 rgb(255 255 255 / 0.05); }
+body[data-instrument] select:disabled { opacity: 0.55; cursor: default; }
+body[data-instrument] select :is(option, optgroup) { background: #1d1d22; color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; text-shadow: none; }
+/* the presets' window: glass over a lit display, set in a dark bezel */
+body[data-instrument] :is(.forte-presets select, select.forte-display) {
+  padding-left: 9px; padding-right: 26px; font-size: 12.5px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-weight: 600; letter-spacing: 0.1px;
+  color: color-mix(in srgb, var(--accent) 72%, #fff); text-shadow: 0 0 7px color-mix(in srgb, var(--accent) 60%, transparent);
+  border: 1px solid #000; border-radius: 4px;
+  background: linear-gradient(45deg, transparent 50%, var(--accent) 0) no-repeat right 15px center / 5px 5px,
+    linear-gradient(135deg, var(--accent) 50%, transparent 0) no-repeat right 10px center / 5px 5px,
+    linear-gradient(180deg, rgb(255 255 255 / 0.06), transparent 45%),
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 10%, #0b0b0d), color-mix(in srgb, var(--accent) 4%, #050506));
+  box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.85), inset 0 0 14px color-mix(in srgb, var(--accent) 12%, transparent),
+    0 0 0 3px #0b0b0d, 0 0 0 4px rgb(255 255 255 / 0.09), 0 2px 5px 3px rgb(0 0 0 / 0.5);
+}
+body[data-instrument] :is(.forte-presets select, select.forte-display):hover { border-color: color-mix(in srgb, var(--accent) 45%, #000); }
+body[data-instrument] :is(.forte-presets select, select.forte-display):active { box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.85), inset 0 0 18px color-mix(in srgb, var(--accent) 20%, transparent), 0 0 0 3px #0b0b0d, 0 0 0 4px rgb(255 255 255 / 0.09); }
 
 /* ---- the page: the views above the Controls panel, each headed by its bar, sharing the
    height (--split-rows); a panel folded away leaves its bar ---------------------------------- */
@@ -122,8 +159,8 @@ body[data-instrument] .forte-toggles button[aria-pressed="true"] { color: var(--
 .forte-bar-tools:empty { display: none; }
 /* the presets */
 body[data-instrument] :is(.forte-bar, .forte-kbtools) .forte-presets { margin: 0; min-width: 0; }
-body[data-instrument] :is(.forte-bar, .forte-kbtools) .forte-presets select { width: clamp(150px, 15vw, 240px); padding: 3px 8px; text-overflow: ellipsis; border-color: var(--accent); } /* outlined in the instrument's colour, to find it */
-body[data-instrument] .forte-kbtools .forte-presets select { width: clamp(120px, 11vw, 200px); } /* in Perform, beside the keys' tools */
+body[data-instrument] :is(.forte-bar, .forte-kbtools) .forte-presets select { width: clamp(150px, 15vw, 240px); padding-block: 3px; }
+body[data-instrument] .forte-kbtools .forte-presets select { width: clamp(120px, 12.5vw, 220px); } /* in Perform, beside the keys' tools */
 body[data-instrument] .forte-presets #reset { display: none; } /* "Default settings" in the menu presses it */
 /* fold: a chevron that points the way the panel goes */
 body[data-instrument] .forte-fold {
@@ -194,7 +231,7 @@ details.group:not(:has(.param)) { display: none; } /* every control in it is in 
 .forte-perform .param label { flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
 .forte-perform .param input[type=range] { order: 1; flex: 0 1 auto; width: clamp(70px, 8vw, 120px); min-width: 50px; margin: 0; }
 .forte-perform .param .val { order: 2; flex: none; min-width: 3.5em; font-size: 11.5px; text-align: right; }
-.forte-perform .param select { order: 1; width: auto; margin: 0; padding: 2px 6px; }
+.forte-perform .param select { order: 1; width: auto; margin: 0; padding: 2px 28px 2px 8px; }
 .forte-perform .forte-info { order: -1; }
 .forte-perform .param.check { cursor: pointer; flex-wrap: nowrap; } /* never its name under its box */
 .forte-perform .param.check > label { cursor: pointer; }
@@ -606,7 +643,7 @@ body[data-instrument] #toast { pointer-events: none; bottom: calc(var(--footer-h
 }
 /* 16px text in dropdowns on phones, or iOS zooms the page in when one is tapped */
 @media (pointer: coarse) and (max-width: 600px), (pointer: coarse) and (max-width: 1050px) and (max-height: 500px) {
-  body[data-instrument] select { font-size: 16px; }
+  body[data-instrument] :is(select, .forte-presets select, select.forte-display) { font-size: 16px; }
 }
 
 /* a guided tour of the physics (shared/tour.js): Tour in the header, and its card over the
@@ -770,7 +807,7 @@ details.forte-drawer-own:not([open]) > summary::after { content: "▸"; }
 .forte-drawer-presets:not(:has(.forte-presets)) { display: none; } /* in Perform it is above the keys */
 .forte-drawer-presets > h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
 .forte-drawer .forte-presets { margin: 0; }
-.forte-drawer .forte-presets select { width: 100%; border-color: var(--accent); text-overflow: ellipsis; }
+.forte-drawer .forte-presets select { width: 100%; }
 /* the groups from the Controls panel, one above another; a switch keeps its ⓘ on its line */
 .forte-drawer details.group > summary { padding: 6px 0; }
 .forte-drawer .param.check:not(.hint-open) { flex-wrap: nowrap; }

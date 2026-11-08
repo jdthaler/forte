@@ -478,7 +478,7 @@ function card(s) {
   const octRow = el('div', 'combine-row');
   octRow.append(el('span', '', 'Octave'), oct);
   // its presets, and its settings from its own page
-  const pre = el('select');
+  const pre = el('select', 'forte-display');
   pre.setAttribute('aria-label', `The ${entry.name}'s preset`);
   pre.append(new Option('Presets…', ''), ...(s.I.presets ?? []).map((p, i) => new Option(p.name, i)), new Option('Default settings', 'default'), new Option('As on its own page', 'own'));
   pre.addEventListener('change', () => {
