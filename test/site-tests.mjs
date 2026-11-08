@@ -15,6 +15,8 @@ import { compare, stateOf, contractPath, STATES } from '../tools/contract.mjs';
 import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue, FADERS, controllersOf, controlled, ccValue, SWITCHES, levelGain, pedalGain, onPedalGain, startMIDI, keyShift, setShift, shiftOf, signed, OCTAVES, SEMITONES } from '../shared/midi.js';
 import { LATEST, SYSTEMS, archive, downloads, downloadLinks, withPlugins, parseRelease, releaseLine } from '../shared/plugins.js';
 import { script as installerScript, SETUP, APP_ID } from '../tools/windows-installer.mjs';
+import { TUNING_GROUP } from '../shared/tuning.js';
+import { EXPRESSION } from '../shared/expression.js';
 
 let failures = 0;
 function test(name, fn) { // returns a promise for an async test
@@ -558,6 +560,13 @@ for (const { id, dir } of described) {
     for (const k of ['volume', 'room', 'tone']) if (I.chain[k]) assert.ok(params.has(I.chain[k]), `chain.${k} ${I.chain[k]}`);
     if (I.chain.body) assert.ok(params.has(I.chain.body.param), `chain.body ${I.chain.body.param}`);
     assert.ok(params.has(I.chain.volume), 'chain.volume');
+    // the drawer (shared/layout.js) is alike for every instrument: its Output is the room, the venue
+    // and the volume, its Tuning and Expression the shared groups, and an instrument's own output
+    // stages (pickups, a swell pedal, stereo spread) are a group of their own in the Controls panel
+    const titled = (t) => I.groups.filter((g) => g.title === t);
+    assert.deepEqual(titled('Output').map((g) => g.params.map((p) => p.id)), [['room', 'venue', 'volume']], 'one Output group: room, venue, volume');
+    assert.deepEqual(titled('Tuning'), [TUNING_GROUP], 'the shared Tuning group');
+    assert.deepEqual(titled('Expression'), [EXPRESSION], 'the shared Expression group');
     assert.ok(!I.engine && !I.engineParams, 'the engine is the C++ (wasm), not JavaScript');
     assert.ok(I.wasm?.binary && has(new URL(I.wasm.binary).pathname.slice(R.pathname.length)), `wasm.binary ${I.wasm?.binary}`);
     const E = (await import(I.wasm.module))[I.wasm.name];

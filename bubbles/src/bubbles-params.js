@@ -48,10 +48,15 @@ export const GROUPS = [
     ],
   },
   {
-    title: 'Output',
+    title: 'Hydrophones',
     params: [
       { id: 'echo', label: 'Surface echo at the hydrophones', type: 'checkbox', def: false,
         hint: 'The water’s surface reflects sound back down, inverted. On, each hydrophone hears every bubble twice: directly, and from its mirror image above the surface, a fraction of a millisecond later at the default depth. The two cancel in the bass (6–13 dB quieter at 30 cm, most of the keyboard in a 10 cm tank) and comb the treble; 20 m down the echo comes 27 ms later, a distinct slap. Off: the hydrophones hear the direct sound only, and the keyboard stays even.' },
+    ],
+  },
+  {
+    title: 'Output',
+    params: [
       { id: 'room', label: 'Room', min: 0, max: 1, def: 0.25, step: 0.01, fmt: (v) => `${(v * 100).toFixed(0)} %` },
       VENUE,
       { id: 'volume', label: 'Volume', perform: true, strip: true, min: 0, max: 2, def: 0.8, step: 0.01, fmt: (v) => `${(20 * Math.log10(Math.max(v, 1e-3))).toFixed(1)} dB` },

@@ -68,7 +68,7 @@ inline const ParamInfo kParams[p::count] = {
   {"irregular", "Irregularity", "Nozzles", ParamKind::continuous, 0, 1, 0.4, 0.01, false, true, nullptr, 0, kFormat_irregular, 3},
   {"spread", "Size spread", "Nozzles", ParamKind::continuous, 0, 15, 1.5, 0.1, false, false, nullptr, 0, kFormat_spread, 1},
   {"snap", "Neck snap time", "Nozzles", ParamKind::continuous, 0.01, 2, 0.05, 0, true, false, nullptr, 0, kFormat_snap, 2},
-  {"echo", "Surface echo at the hydrophones", "Output", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
+  {"echo", "Surface echo at the hydrophones", "Hydrophones", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},
