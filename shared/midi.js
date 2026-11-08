@@ -33,12 +33,13 @@
 //   - SWITCHES: its general-purpose switches CC80, 81 and 82 are the sustain, sostenuto and soft
 //     pedals (CC64, 66, 67), so they do whatever those do on each instrument;
 //   - a device's volume pedal (CC7) moves the page's Volume control (volumePedal, pedalVolume:
-//     its default toe down, silent heel down); the expression pedal (CC11), and CC7 on a page
+//     its top toe down, silent heel down); the expression pedal (CC11), and CC7 on a page
 //     without a Volume control or from a song, turn the page's output down (pedalGain, which
 //     shared/chain.js applies after the limiter): full until a pedal moves, silent heel down;
 //     an instrument that maps CC11 itself (an organ's swell) keeps it;
 //   - a program change n plays the menu's preset n + 1 (pedal 1 the first preset, then your own
-//     after the instrument's): choosePreset;
+//     after the instrument's): choosePreset; a Seaboard's, from its preset arrows, steps from
+//     the preset playing instead (riseProgram), so it keeps in step with the pedals and the menu;
 //   - it gets a section of the page's drawer (shared/fc300.js) once its switches (CC80–83) are
 //     heard, or its interface's name is the one it came by before, which can drive it over SysEx.
 //   The plugins do the same, but for CC7, which stays a gain after the limiter there (the host has a
@@ -91,12 +92,26 @@ export function setShift({ octave = shift.octave, transpose = shift.transpose } 
 }
 // "+2", "0", "−1" (a minus sign, not a hyphen)
 export const signed = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
-const shiftText = () => {
-  const { octave: o, transpose: t } = shift, parts = [];
+const shiftText = ({ octave: o, transpose: t } = shift) => {
+  const parts = [];
   if (o) parts.push(`${Math.abs(o)} octave${Math.abs(o) > 1 ? 's' : ''} ${o > 0 ? 'up' : 'down'}`);
   if (t) parts.push(`${Math.abs(t)} semitone${Math.abs(t) > 1 ? 's' : ''} ${t > 0 ? 'up' : 'down'}`);
   return parts.join(' and ');
 };
+
+// A note the instrument doesn't play: what the page says when one is struck (shared/shell.js, the
+// Combinations page, and the plugins' window, native/plugin/editor.html). lo…hi: the keys that
+// play; name: the instrument's, where there is more than one; open: the label of the checkbox that
+// would play it (a historical compass's Full range); octave and transpose: how far Octave and
+// Transpose moved it, a MIDI key's (shiftOf())
+const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+const keyName = (m) => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+export function rangeWarning(key, lo, hi, { name = '', open = '', octave = 0, transpose = 0 } = {}) {
+  const moved = shiftText({ octave, transpose });
+  return `${name ? `${name}: ` : ''}${keyName(key)} is out of range (${keyName(lo)}–${keyName(hi)}).`
+    + (open ? ` Tick ${open} to play it.` : '')
+    + (moved ? ` MIDI keys play ${moved}: Octave and Transpose are in the MIDI settings.` : '');
+}
 
 // Without the User Activation API (older browsers), let the notes through as before.
 const mayPlay = () => !navigator.userActivation || navigator.userActivation.hasBeenActive;
@@ -146,6 +161,26 @@ export function choosePreset(n) {
   sel.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+/**
+ * A Seaboard RISE's preset arrows send program change n, a number they count up and down by
+ * themselves (0–127) and that nothing here can set, so it soon disagrees with the preset playing
+ * (a foot controller, the menu or a preset link moved it). So a Seaboard's program change steps from
+ * the preset playing: up from its last number, the next preset; down, the one before (the list's
+ * ends hold; at its own ends, 0 and 127, should the RISE send its number again, that goes on the
+ * same way). Its last number is kept across pages and visits (the RISE keeps counting while it is
+ * on). Without one, or with one more than a step away (it counted elsewhere, or was turned off):
+ * in step, the RISE's number is the playing preset's own, so a number past it is a step forward,
+ * one below a step back, and the same one leaves it; after that one press it goes by its steps.
+ * With no preset playing (a control moved), the number's own preset, as any device's.
+ *   riseProgram(last, n, index, count) → the preset to play (0-based, as choosePreset), or index
+ */
+export function riseProgram(last, n, index, count) {
+  if (index < 0 || index >= count) return n;
+  const dir = typeof last !== 'number' || Math.abs(n - last) > 1 ? Math.sign(n - index)
+    : n > last ? 1 : n < last ? -1 : n === 0 ? -1 : n === 127 ? 1 : 0;
+  return Math.max(0, Math.min(count - 1, index + dir));
+}
+
 /** The presets a program change counts (the menu's options, the instrument's then your own), and
  *  which of them is chosen now (−1: none, as after a control is moved). */
 export function presetChoices() {
@@ -162,14 +197,22 @@ export const presetIndex = () => { const sel = typeof document !== 'undefined' &
  */
 let volumeTo = null;
 export function volumePedal(fn) { volumeTo = fn; }
-/** The Volume control p at a volume pedal's v (0..127): its default with the toe down, silent heel
- *  down, (v/127)² between (General MIDI's 40·log10, as setLevel); in dB for a control in dB. */
+/** The Volume control p at a volume pedal's v (0..127): its top with the toe down, silent heel down,
+ *  (v/127)² between (General MIDI's 40·log10, as setLevel), so the pedal sweeps the control's whole
+ *  range as its slider does; in dB for a control in dB. */
 export function pedalVolume(p, v) {
   const u = Math.min(1, Math.max(0, v / 127));
-  let x = p.min < 0 ? (u <= 0 ? p.min : p.def + 40 * Math.log10(u)) : p.def * u * u;
+  let x = p.min < 0 ? (u <= 0 ? p.min : p.max + 40 * Math.log10(u)) : p.max * u * u;
   if (p.step) x = Math.round(x / p.step) * p.step;
   return Math.min(p.max, Math.max(p.min, x));
 }
+
+// The page's Morph slider (shared/morph.js gives it: morphControl(fn), fn(v) for v 0..127), which an
+// FC-300's EXP 2 moves, as it comes (its CC1) and driven alike; a keyboard's mod wheel stays the mod wheel
+let morphTo = null;
+export function morphControl(fn) { morphTo = fn; }
+/** An FC-300's EXP 2 at v (0..127) on the page's Morph: false when the page has none. */
+export function footMorph(v) { if (!morphTo) return false; morphTo(v); return true; }
 
 // A Roland FC-300's section of the drawer (shared/fc300.js), loaded the first time one is seen:
 // an input that sends its switches (CC80–83), or one with the name the last one came by
@@ -204,6 +247,8 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
     // a device's keys follow Octave and Transpose (shift)
     const input = (id) => { let i = inputs.get(id); if (!i) inputs.set(id, (i = createInput(send, controllers, { shift: true }))); return i; };
     const seaboards = new Set(), feet = new Set();
+    const PROGRAM_KEY = 'forte/rise-program/v1'; // a Seaboard's last program change (riseProgram)
+    let program; try { program = JSON.parse(localStorage.getItem(PROGRAM_KEY)); } catch { /* none, or storage blocked */ }
     const footed = (inp) => { if (feet.has(inp.id)) return; feet.add(inp.id); foot((f) => f.input(inp.id, inp.name, true)); };
     const bind = () => {
       const names = [];
@@ -220,8 +265,16 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
         inp.onmidimessage = (ev) => {
           const d = ev.data;
           if (board) rise((r) => r.midi(inp.id, d));
+          if (board && (d[0] & 0xf0) === 0xc0) { // its preset arrows: a step from the preset playing
+            const i = presetIndex(), to = riseProgram(program, d[1], i, presetChoices().length);
+            program = d[1];
+            try { localStorage.setItem(PROGRAM_KEY, String(program)); } catch { /* storage blocked */ }
+            if (to !== i) choosePreset(to);
+            return;
+          }
           if ((d[0] & 0xf0) === 0xb0 && d[1] >= 80 && d[1] <= 83) footed(inp); // an FC-300's switches, as it comes
           if (feet.has(inp.id)) foot((f) => f.midi(inp.id, d));
+          if (feet.has(inp.id) && (d[0] & 0xf0) === 0xb0 && d[1] === 1 && footMorph(d[2])) return; // its EXP 2: Morph
           input(inp.id).take(d);
         };
         // A Seaboard sends MPE (notes on channels 2–16, each bending ±48 semitones, ROLI

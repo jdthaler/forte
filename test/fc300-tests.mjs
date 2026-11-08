@@ -8,7 +8,7 @@
 import assert from 'node:assert/strict';
 import * as sx from '../shared/fc300-sysex.js';
 import { footModel, drive, face, PEDALS } from '../shared/fc300.js';
-import { createInput, volumePedal, pedalVolume, pedalGain, setLevel } from '../shared/midi.js';
+import { createInput, volumePedal, pedalVolume, pedalGain, setLevel, morphControl, footMorph } from '../shared/midi.js';
 
 let failures = 0;
 function test(name, fn) {
@@ -95,7 +95,9 @@ test('driven by Forte: CTL 1 and 2 are the sustain and sostenuto pedals down whi
   r = drive({ pedal: 'toe1', down: true }, { soft: true });
   assert.deepEqual([r.soft, r.send], [false, [[0xb0, 67, 0]]]);
   assert.deepEqual(drive({ pedal: 'exp1', value: 40 }).send, [[0xb0, 7, 40]]);
-  assert.deepEqual(drive({ pedal: 'exp2', value: 127 }).send, [[0xb0, 1, 127]]);
+  r = drive({ pedal: 'exp2', value: 127 });
+  assert.deepEqual([r.send, r.morph], [[], 127], 'EXP 2: the page\'s Morph');
+  assert.equal(drive({ pedal: 'exp1', value: 40 }).morph, null);
   assert.deepEqual(drive({ pedal: 'toe2', down: true }).send, [], 'EXP 2\'s toe switch: free');
 });
 
@@ -128,12 +130,13 @@ test('driven by Forte: its face shows the preset: its light red for the first fi
   for (const m of msgs) assert.ok(sx.parse(m) !== null || m[6] === 0x12, 'well formed');
 });
 
-test('a volume pedal on the Volume control: its default toe down, silent heel down, (v/127)² between; in dB for one in dB', () => {
+test('a volume pedal on the Volume control: its top toe down, silent heel down, (v/127)² between; in dB for one in dB', () => {
   const gain = { id: 'volume', min: 0, max: 2, def: 0.8, step: 0.01 }, dB = { id: 'volume', min: -30, max: 6, def: 0, step: 0.1 };
-  assert.equal(pedalVolume(gain, 127), 0.8); assert.equal(pedalVolume(gain, 0), 0);
-  assert.equal(pedalVolume(gain, 64), Math.round(0.8 * (64 / 127) ** 2 * 100) / 100);
-  assert.equal(pedalVolume(dB, 127), 0); assert.equal(pedalVolume(dB, 0), -30);
-  assert.ok(Math.abs(pedalVolume(dB, 64) - 40 * Math.log10(64 / 127)) < 0.051, '40·log10, as General MIDI');
+  assert.equal(pedalVolume(gain, 127), 2, 'the toe all the way down: the Volume at its top'); assert.equal(pedalVolume(gain, 0), 0);
+  assert.equal(pedalVolume(gain, 64), Math.round(2 * (64 / 127) ** 2 * 100) / 100);
+  assert.equal(pedalVolume(gain, 80), 0.79, 'its default (0.8) about five eighths down');
+  assert.equal(pedalVolume(dB, 127), 6); assert.equal(pedalVolume(dB, 0), -30);
+  assert.ok(Math.abs(pedalVolume(dB, 64) - (6 + 40 * Math.log10(64 / 127))) < 0.051, '40·log10, as General MIDI');
   assert.equal(pedalVolume(dB, 2), -30, 'no quieter than its bottom');
 });
 
@@ -155,6 +158,13 @@ test('a device\'s CC7 moves the Volume control where the page has one; a song\'s
     assert.deepEqual(moved, [50], 'an instrument that maps CC7 keeps it');
     song.letGo(); device.letGo();
   } finally { volumePedal(null); setLevel(7, 127); setLevel(11, 127); }
+});
+
+test('EXP 2 moves the page\'s Morph while it has one', () => {
+  const got = [];
+  assert.equal(footMorph(64), false, 'no Morph: nothing taken');
+  morphControl((v) => got.push(v));
+  try { assert.equal(footMorph(90), true); assert.deepEqual(got, [90]); } finally { morphControl(null); }
 });
 
 if (failures) { console.log(`\n${failures} failing`); process.exit(1); }

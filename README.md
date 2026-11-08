@@ -236,11 +236,19 @@ the left: its faders and pad with the controls they move and where they are,
 its keywave with a dot for each finger (across: the key and its Glide; up:
 its Slide; size: its Press), and its five dimensions (Strike, Glide, Slide,
 Press and Lift), each lit as it comes in, with what it does on that
-instrument. Press (the note's own pressure, as any aftertouch) shapes the
+instrument and, at the end of its line, its Expression switch (the same one
+as in Controls: off, the line dims and says what the instrument does
+instead). A light beside the faders says which mode they are in. The RISE's
+mode button sends nothing, so it shows white once a fader sends and cyan once
+a fader moves the RISE's own Glide, Slide or Press sensitivity (seen in the
+settings it reads, below); until then it asks for a fader. Press (the note's own pressure, as any aftertouch) shapes the
 notes of most instruments that hold them; on the struck and plucked ones a
 firm press (past half way, so a finger resting on a key changes nothing) lays
 a palm, a hand, a mallet or a felt on what rings and damps it, as hard as the
-key is pressed. The chevron folds the
+key is pressed. Its preset arrows step through the Presets menu from the
+preset playing, whichever way it got there (the FC-300's pedals, the menu),
+so the two stay in step; the first press after the RISE has counted
+elsewhere goes the way its own number lies. The chevron folds the
 panel to a rail. (Pages only: the plugins' window doesn't show it.)
 
 **The RISE's own settings:** under *On the RISE*, the panel reads the RISE's
@@ -330,8 +338,8 @@ messages, on the pages, in the plugins and in the Forte app:
 
 | On the FC-300 | It sends | In Forte |
 |---|---|---|
-| EXP 1 | CC7, volume | on the pages, moves the Volume control (toe down: its default; heel down: silent); in the plugins, turns the instrument down; full until it moves |
-| EXP 2 | CC1, the mod wheel | whatever the mod wheel moves (on the Electric Grand, Tine and Reed Pianos, the tremolo) |
+| EXP 1 | CC7, volume | on the pages, moves the Volume control across its whole range (toe down: its top; heel down: silent); in the plugins, turns the instrument down; full until it moves |
+| EXP 2 | CC1, the mod wheel | on the pages, the Morph slider (heel down: its From preset; toe down: its To one), whatever the instrument; in the plugins, whatever the mod wheel moves (on the Electric Grand, Tine and Reed Pianos, the tremolo). A keyboard's mod wheel, and a Seaboard RISE's pad (Y), still move the mod wheel's control |
 | CTL 1 | CC80 | the sustain pedal (or what Space is: hold, the Leslie) |
 | CTL 2 | CC81 | the sostenuto pedal |
 | EXP 1's toe switch | CC82 | the soft pedal (the Ribbon Piano's una corda, the Regal's tremulant) |
@@ -408,7 +416,8 @@ pick *From* and *To* (Default settings, the instrument's presets or your
 own) and move the slider. Every setting the two give goes part of the way,
 a number smoothly and a choice or a switch halfway across; volume, the room
 and the tuning stay as you have them. Choosing a preset from the Presets
-list makes it the one you morph from.
+list makes it the one you morph from. A Roland FC-300's EXP 2 pedal moves
+the slider (heel down *From*, toe down *To*).
 
 **Tuning**, in the drawer, is the same on every instrument: the
 **pitch** standard (A = 440 Hz, or 415 for baroque pitch, 392, 422.5, 430,

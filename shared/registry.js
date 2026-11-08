@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.49.1';
+export const FORTE_VERSION = '0.50.0';
 
 // Where each instrument's page keeps its settings in the browser (the Combinations page reads an
 // instrument's settings from there, as it was left on its own page).
@@ -589,7 +589,7 @@ export const INSTRUMENTS = [
     accent: '#e8a65c',
   },
   {
-    id: 'nmr', name: 'NMR Spin Echo', section: 'devices', ready: true, version: '0.2.0', trim: 6.5,
+    id: 'nmr', name: 'NMR Spin Echo', section: 'devices', ready: true, version: '0.3.0', trim: 6.5,
     plugin: { code: 'Nmrs', ready: true },
     tagline: 'Every key a tube of liquid in an NMR magnet, its field set so the sample\'s lowest line is the note: a pulse tips the protons\' spins, each chemical group rings at its own shift, so ethanol is a chord whose J couplings beat, the note fades as the spins drift out of step, and the pedal\'s π pulse calls them back as Hahn\'s echo.',
     physics: 'Nuclear magnetic resonance · chemical shifts and J couplings, solved exactly · Hahn echoes and CPMG trains · T₁ and T₂',

@@ -61,7 +61,7 @@ import { createChain } from './chain.js';
 import { createKeyboard } from './keyboard.js';
 import { trimGain, paramsStore } from './registry.js';
 import { controlOwns, unfocus } from './focus.js';
-import { startMIDI, resumeMIDI, pageMIDI, volumePedal, pedalVolume, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader } from './midi.js';
+import { startMIDI, resumeMIDI, pageMIDI, volumePedal, pedalVolume, wheelValue, SOFT_PEDAL, touched, createSostenuto, pageMpe, controllersOf, controlled, tellFader, rangeWarning, shiftOf } from './midi.js';
 import { attachPresets } from './user-presets.js';
 import { connectQuality, qualityControl } from './quality.js';
 import { dress, faceOf } from './faces.js';
@@ -200,10 +200,16 @@ export function createShell(cfg) {
   // an instrument that speaks only while held says so the first time a key is let go too soon
   const pressedAt = new Map();
   let holdHinted = false;
+  // a key outside the keys that play (a MIDI key, or a computer key past the end) says so; a
+  // historical compass says what opens it
+  function outside(key, midi) {
+    const closed = cfg.compass && !shell.P[cfg.compass.param] && key >= RANGE[0] && key <= RANGE[1];
+    toast(rangeWarning(key, LO, HI, { ...(midi && shiftOf()), open: closed ? ALL.find((p) => p.id === cfg.compass.param)?.label : '' }));
+  }
   // own: the note's own expression (MPE), posted just before it; without, a key that had some
-  // starts plain again
-  async function down(key, vel, own) {
-    if (key < LO || key > HI) return;
+  // starts plain again; midi: from a MIDI key
+  async function down(key, vel, own, midi = false) {
+    if (key < LO || key > HI) { outside(key, midi); return; }
     if (cfg.holdHint) pressedAt.set(key, performance.now());
     latched.delete(key); sost.strike(key);
     sounding.set(key, (sounding.get(key) || 0) + 1);
@@ -322,7 +328,7 @@ export function createShell(cfg) {
     const [st, d1, d2] = ev.data, cmd = st & 0xf0;
     const { own: its, with: own } = notes.midi(ev.data);
     if (its) return;
-    if (cmd === 0x90 && d2 > 0) down(d1, engineVelocity(touched(d2 / 127) * (soft ? SOFT_PEDAL : 1)), own); // the velocity curve, the soft pedal
+    if (cmd === 0x90 && d2 > 0) down(d1, engineVelocity(touched(d2 / 127) * (soft ? SOFT_PEDAL : 1)), own, true); // the velocity curve, the soft pedal
     else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) up(d1, cmd === 0x80 ? d2 / 127 : undefined);
     else if (cmd === 0xb0) {
       if (d1 === 64 && cfg.space) setSustain(d2 >= 64);
@@ -356,6 +362,20 @@ export function createShell(cfg) {
   // ---- parameters ------------------------------------------------------------------
   const controls = new Map();
   const toSlider = (p, v) => (p.log ? (1000 * Math.log(v / p.min)) / Math.log(p.max / p.min) : (1000 * (v - p.min)) / (p.max - p.min));
+  // the widest values a slider shows, across its travel, ends and default included: shared/
+  // instrument.css keeps the room the widest takes (data-widest), so the value doesn't grow and
+  // shrink, nor move what sits beside it. A few of the longest (digits counted alike: they are tabular)
+  const widest = (p) => {
+    const seen = new Set();
+    for (let t = 0; t <= 1000; t++) { // every place its slider stops
+      for (const v of t === 0 ? [p.min, p.max, p.def, fromSlider(p, t)] : [fromSlider(p, t)]) {
+        try { seen.add(String(p.fmt ? p.fmt(v) : v)); } catch { /* a format that needs more than the value */ }
+      }
+    }
+    const shape = (x) => x.replace(/[0-9]/g, '0');
+    const longest = [...new Map([...seen].map((x) => [shape(x), x])).values()].sort((x, y) => y.length - x.length);
+    return longest.slice(0, 12).join('\n');
+  };
   const fromSlider = (p, t) => {
     let v = p.log ? p.min * (p.max / p.min) ** (t / 1000) : p.min + ((p.max - p.min) * t) / 1000;
     if (p.step) v = Math.round(v / p.step) * p.step;
@@ -389,6 +409,7 @@ export function createShell(cfg) {
       } else {
         wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
         val = wrap.querySelector('.val');
+        val.dataset.widest = widest(p); // its room for the widest value it shows (shared/instrument.css)
         input = document.createElement('input');
         input.type = 'range'; input.min = 0; input.max = 1000; input.step = 1; input.id = `p-${p.id}`;
         input.addEventListener('input', () => shell.setParam(p.id, fromSlider(p, +input.value), true));
@@ -414,6 +435,7 @@ export function createShell(cfg) {
   function refresh(id, dragging = false) {
     const c = controls.get(id);
     if (!c) return;
+    if (EXPRESSION_IDS.includes(id)) tellSwitches(); // a Seaboard's panel shows it too
     const v = shell.P[id];
     if (c.p.type === 'select') { c.input.value = v; c.face?.show(); }
     else if (c.p.type === 'checkbox') c.input.checked = !!v;
@@ -530,6 +552,26 @@ export function createShell(cfg) {
     }
     pluginKeys(u);
   };
+
+  // ---- the Expression switches on a Seaboard's panel (shared/rise.js) ---------------------------
+  // The panel asks for them ('forte-switches?') once it is up, and the shell answers with
+  // 'forte-switches' ({ id: on } for each switch this instrument answers to), and again whenever
+  // one changes, whatever changed it; the panel turns one with 'forte-switch' ({ id, on }), as its
+  // checkbox here would.
+  function tellSwitches() {
+    if (shell.tellingSwitches) return;
+    shell.tellingSwitches = true;
+    queueMicrotask(() => {
+      shell.tellingSwitches = false;
+      const detail = Object.fromEntries(EXPRESSION_IDS.filter((id) => controls.has(id)).map((id) => [id, !!shell.P[id]]));
+      document.dispatchEvent(new CustomEvent('forte-switches', { detail }));
+    });
+  }
+  document.addEventListener('forte-switches?', tellSwitches);
+  document.addEventListener('forte-switch', (e) => {
+    const { id, on } = e.detail ?? {};
+    if (EXPRESSION_IDS.includes(id) && controls.has(id)) shell.setParam(id, !!on);
+  });
 
   for (const id of controls.keys()) refresh(id);
   refreshVisibility();
