@@ -547,6 +547,7 @@ function card(s) {
   level.innerHTML = '<div class="row"><label></label><span class="val"></span></div>';
   level.querySelector('label').textContent = 'Level';
   const val = level.querySelector('.val'), slider = el('input');
+  val.dataset.widest = [LEVEL.min, LEVEL.max].map(fmtDb).join('\n'); // its room, as it changes (shared/layout.css)
   slider.type = 'range'; slider.min = LEVEL.min; slider.max = LEVEL.max; slider.step = 0.5; slider.value = s.level;
   slider.setAttribute('aria-label', `The ${entry.name}'s level`);
   const show = () => { val.textContent = fmtDb(s.level); slider.setAttribute('aria-valuetext', val.textContent); slider.style.setProperty('--fill', `${(100 * (s.level - LEVEL.min)) / (LEVEL.max - LEVEL.min)}%`); };
@@ -590,6 +591,7 @@ addSel.addEventListener('change', () => {
   const input = el('input');
   input.type = 'range'; input.id = `p-${p.id}`; input.min = p.min; input.max = p.max; input.step = p.step; input.value = state.volume;
   const val = wrap.querySelector('.val');
+  val.dataset.widest = [p.min, p.max].map(fmtDb).join('\n');
   const show = () => { val.textContent = fmtDb(state.volume); input.setAttribute('aria-valuetext', val.textContent); input.style.setProperty('--fill', `${(100 * (state.volume - p.min)) / (p.max - p.min)}%`); };
   input.addEventListener('input', () => { state.volume = +input.value; if (bus) bus.gain.setTargetAtTime(dB(state.volume), ctx.currentTime, 0.02); show(); save(); });
   input.addEventListener('dblclick', () => { input.value = p.def; input.dispatchEvent(new Event('input')); });

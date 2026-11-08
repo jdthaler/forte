@@ -356,6 +356,20 @@ export function createShell(cfg) {
   // ---- parameters ------------------------------------------------------------------
   const controls = new Map();
   const toSlider = (p, v) => (p.log ? (1000 * Math.log(v / p.min)) / Math.log(p.max / p.min) : (1000 * (v - p.min)) / (p.max - p.min));
+  // the widest values a slider shows, across its travel, ends and default included: shared/
+  // instrument.css keeps the room the widest takes (data-widest), so the value doesn't grow and
+  // shrink, nor move what sits beside it. A few of the longest (digits counted alike: they are tabular)
+  const widest = (p) => {
+    const seen = new Set();
+    for (let t = 0; t <= 1000; t++) { // every place its slider stops
+      for (const v of t === 0 ? [p.min, p.max, p.def, fromSlider(p, t)] : [fromSlider(p, t)]) {
+        try { seen.add(String(p.fmt ? p.fmt(v) : v)); } catch { /* a format that needs more than the value */ }
+      }
+    }
+    const shape = (x) => x.replace(/[0-9]/g, '0');
+    const longest = [...new Map([...seen].map((x) => [shape(x), x])).values()].sort((x, y) => y.length - x.length);
+    return longest.slice(0, 12).join('\n');
+  };
   const fromSlider = (p, t) => {
     let v = p.log ? p.min * (p.max / p.min) ** (t / 1000) : p.min + ((p.max - p.min) * t) / 1000;
     if (p.step) v = Math.round(v / p.step) * p.step;
@@ -389,6 +403,7 @@ export function createShell(cfg) {
       } else {
         wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
         val = wrap.querySelector('.val');
+        val.dataset.widest = widest(p); // its room for the widest value it shows (shared/instrument.css)
         input = document.createElement('input');
         input.type = 'range'; input.min = 0; input.max = 1000; input.step = 1; input.id = `p-${p.id}`;
         input.addEventListener('input', () => shell.setParam(p.id, fromSlider(p, +input.value), true));

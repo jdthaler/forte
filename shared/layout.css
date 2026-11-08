@@ -296,6 +296,10 @@ details.group:not(:has(.param)) { display: none; } /* every control in it is in 
   flex: 0 1 auto; display: flex; align-items: center; gap: 7px; min-width: 0; height: 32px; margin: 0; padding: 0 10px;
   border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, 0.03); font-size: 12px;
 }
+/* a slider's value keeps the room its widest value takes (shared/shell.js data-widest), so neither it
+   nor what sits beside it moves as the value changes; right-aligned, the digits stay put */
+.param .val[data-widest] { display: inline-block; text-align: right; }
+.param .val[data-widest]::after { content: attr(data-widest); display: block; height: 0; overflow: hidden; visibility: hidden; white-space: pre; }
 .forte-perform .param[hidden] { display: none; }
 .forte-perform .param .hint { display: none; }
 .forte-perform .param :is(.row, .forte-param-head) { display: contents; }

@@ -10,7 +10,7 @@
 //
 // As it comes (Standard mode) it sends control and program changes, which shared/midi.js plays:
 // CTL 1 and 2 and EXP 1's toe switch are the sustain, sostenuto and soft pedals, EXP 1 the volume,
-// EXP 2 the mod wheel, the number pedals the presets. Its switches come latched (a press down, the
+// EXP 2 the page's Morph (shared/morph.js; the mod wheel where there is none), the number pedals the presets. Its switches come latched (a press down, the
 // next up), which its own menus change and SysEx can't.
 //
 // Driven by Forte (its System Exclusive mode, shared/fc300-sysex.js; a button here, the browser's
@@ -20,7 +20,7 @@
 // a patch (red the first five, green the next); its display shows the preset's number and its LCD
 // the instrument and the preset. Nothing is written to it: at its next power-up it is as it was.
 
-import { pageMIDI, createInput, controllersOf, presetChoices, presetIndex, choosePreset } from './midi.js';
+import { pageMIDI, createInput, controllersOf, presetChoices, presetIndex, choosePreset, footMorph } from './midi.js';
 import { ASK, parse, event, enter, leave, display, lcd, lights } from './fc300-sysex.js';
 
 export const PEDALS = ['down', 'up', 'ctl1', 'ctl2', 'number1', 'number2', 'number3', 'number4', 'number5', 'toe1', 'toe2', 'exp1', 'exp2'];
@@ -61,10 +61,10 @@ export function footModel({ now = () => performance.now() / 1000 } = {}) {
  * What a pedal does while Forte drives the FC-300 (an event from fc300-sysex.js event), given
  * state = { soft (the toe switch's soft pedal is down), index (the preset playing, −1 none), count
  * (how many presets) }: { send: [channel messages for the page], preset: the preset to choose or
- * null, soft: the toe switch's state after it }.
+ * null, soft: the toe switch's state after it, morph: EXP 2's 0..127 for the page's Morph or null }.
  */
 export function drive(ev, { soft = false, index = -1, count = 0 } = {}) {
-  const out = { send: [], preset: null, soft };
+  const out = { send: [], preset: null, soft, morph: null };
   if (!ev?.pedal) return out;
   const { pedal, down } = ev;
   const cc = (n, on) => out.send.push([0xb0, n, on ? 127 : 0]);
@@ -72,7 +72,7 @@ export function drive(ev, { soft = false, index = -1, count = 0 } = {}) {
   else if (pedal === 'ctl2') cc(66, down);                           // the sostenuto
   else if (pedal === 'toe1' && down) { out.soft = !soft; cc(67, out.soft); } // the soft pedal: a press puts it down, the next lifts it
   else if (pedal === 'exp1') out.send.push([0xb0, 7, ev.value]);     // the volume
-  else if (pedal === 'exp2') out.send.push([0xb0, 1, ev.value]);     // the mod wheel
+  else if (pedal === 'exp2') out.morph = ev.value;                   // Morph (the mod wheel on a page without one)
   else if (down && count > 0 && (pedal === 'up' || pedal === 'down')) {
     const at = index < 0 ? (pedal === 'up' ? -1 : count) : index;
     const n = at + (pedal === 'up' ? 1 : -1);
@@ -176,8 +176,8 @@ function meanings(I, params) {
     ctl2: own(66) ?? 'Sostenuto: holds the keys down as it goes down',
     toe1: own(67) ?? (I?.strike === false ? 'Soft pedal: nothing here (how hard a key is struck doesn\'t matter)' : 'Soft pedal: softer strikes'),
     toe2: 'nothing here',
-    exp1: own(7, true) ?? (volume ? `${volume.label}: toe down its default, heel down silent` : 'Volume: heel down silent'),
-    exp2: own(1, true) ?? (wheel ? `${wheel.label} (the mod wheel)` : 'the mod wheel: nothing here'),
+    exp1: own(7, true) ?? (volume ? `${volume.label}: toe down its top, heel down silent` : 'Volume: heel down silent'),
+    exp2: own(1, true) ?? (wheel ? `${wheel.label} (the mod wheel)` : 'the mod wheel: nothing here'), // on a page without Morph
   };
 }
 
@@ -214,7 +214,11 @@ export function fc300Panel() {
     rows.numbers.dd.textContent = driving ? 'Presets: ▲ ▼ the next and the one before, 1–5 the five around it' : 'Presets in the menu\'s order (▲ for 6–10)';
     rows.toe1.dd.textContent = `${meaning.toe1} (a press down, the next up)`;
     rows.toe2.dd.classList.add('none');
+    morphed();
   };
+  // EXP 2 moves the page's Morph (shared/midi.js footMorph), which comes once the presets are ready
+  const MORPH = 'Morph: heel down its From preset, toe down its To one';
+  const morphed = () => { const t = document.querySelector('#forte-morph-t') ? MORPH : meaning.exp2; if (rows.exp2.dd.textContent !== t) rows.exp2.dd.textContent = t; };
   const slug = document.body.dataset.instrument;
   if (slug) {
     import(new URL(`../${slug}/src/${slug}-instrument.js`, import.meta.url).href).then((m) => {
@@ -227,6 +231,7 @@ export function fc300Panel() {
   const request = () => { if (!frame) frame = requestAnimationFrame(draw); };
   function draw() {
     frame = 0;
+    morphed();
     const lit = (key, on) => parts[key]?.classList.toggle('on', !!on);
     for (const k of ['down', 'up', 'ctl1', 'ctl2', 'toe1', 'toe2']) lit(k, model.down[k]);
     if (driving) lit('toe1', soft);
@@ -296,6 +301,7 @@ export function fc300Panel() {
     const out = drive(ev, { soft, index: presetIndex(), count: presetChoices().length });
     soft = out.soft;
     for (const d of out.send) foot.take(d);
+    if (out.morph !== null && !footMorph(out.morph)) foot.take([0xb0, 1, out.morph]);
     if (out.preset !== null) choosePreset(out.preset);
     if (ev.pedal === 'toe1' || ev.pedal === 'up' || ev.pedal === 'down') show();
     request();

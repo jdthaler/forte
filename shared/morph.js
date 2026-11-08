@@ -11,6 +11,7 @@
 
 import { morph } from './presets.js';
 import { unfocus } from './focus.js';
+import { morphControl } from './midi.js';
 
 const DEFAULT = 'default';
 
@@ -37,6 +38,7 @@ export function attachMorph({ instrument: I, params, factory, mine, now, set, ke
   groups.appendChild(det);
   const from = det.querySelector('#forte-morph-from'), to = det.querySelector('#forte-morph-to');
   const slider = det.querySelector('#forte-morph-t'), val = det.querySelector('.val');
+  val.dataset.widest = '100 %'; // its room, as it changes (shared/layout.css)
 
   // ---- the state, kept in this browser -------------------------------------------------------------
   let s = {};
@@ -90,6 +92,7 @@ export function attachMorph({ instrument: I, params, factory, mine, now, set, ke
   const soon = () => { if (!frame) frame = requestAnimationFrame(apply); };
 
   slider.addEventListener('input', () => { state.t = +slider.value / 1000; show(); save(); soon(); });
+  morphControl((v) => { state.t = Math.min(1, Math.max(0, v / 127)); show(); save(); soon(); }); // an FC-300's EXP 2 (shared/midi.js)
   slider.addEventListener('dblclick', () => { state.t = 0; show(); save(); soon(); });
   slider.addEventListener('change', () => unfocus(slider));
   for (const [sel, k] of [[from, 'from'], [to, 'to']]) {

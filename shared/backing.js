@@ -386,10 +386,12 @@ export function attachBacking(shell, { id, styles = ['pulsetube'], about = {}, s
   document.querySelector('#groups')?.appendChild(det);
 
   const dB = (v) => (v <= 0.001 ? 'off' : `${(20 * Math.log10(v / 0.6)).toFixed(1)} dB`);
+  vol.val.dataset.widest = `${dB(0.002)}\n${dB(1)}`; // its room, as it changes (shared/layout.css)
   function show() {
     const s = style();
     styleSel.value = S.style; styleHint.textContent = describe(S.style);
     tempo.input.value = S.tempo;
+    tempo.val.dataset.widest = S.style === 'pulsetube' ? '240 BPM · 4.00 Hz' : '240 BPM'; // its room (shared/layout.css)
     tempo.val.textContent = S.style === 'pulsetube' ? `${S.tempo} BPM · ${(S.tempo / 60).toFixed(2)} Hz` : `${S.tempo} BPM`;
     tempo.input.setAttribute('aria-valuetext', tempo.val.textContent);
     accSel.value = S.accomp; seaSel.value = S.sea; seaWrap.hidden = !s.sea;
