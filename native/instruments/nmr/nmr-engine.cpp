@@ -11,7 +11,8 @@
 namespace forte::nmr {
 
 constexpr double OUT = 0.25;      // a 90° pulse on fully relaxed spins: the signal's start
-constexpr double GATE_T = 0.002;  // s: the receiver opens over this after the pulse (the probe's ring-down)
+constexpr double GATE_T = 0.002;  // s: the receiver opens over this after a pulse (the probe's ring-down)
+constexpr double BLANK_T = 0.001; // s: the receiver closes over this before a π pulse, which fires once it has
 constexpr double REL_T = 0.006;   // s: the receiver closes with this time constant
 constexpr double FADE_T = 0.004;  // s: a voice replaced by a new pulse on its key fades with this
 constexpr double BEND_T = 0.01;   // s: the field follows the pitch wheel with this time constant
@@ -97,6 +98,7 @@ void NmrEngine::noteOn(int key, double velocity) {
   v->key = key;
   v->amp = OUT * std::sin(theta) * before;
   v->age = v->t0 = v->S = v->D = v->phi = v->gate = 0;
+  v->keyAt = -1;
   v->rel = 1;
   v->bendNow = wheel * expr.bendOf(key);
   v->peak = std::fabs(v->amp);
@@ -156,6 +158,7 @@ void NmrEngine::noteOff(int key, double velocity) {
 void NmrEngine::allNotesOff() {
   for (Voice &v : voices) v.on = false;
   pedal = pending = false;
+  allAt = -1;
   press.clear();
 }
 
@@ -164,11 +167,22 @@ void NmrEngine::setSustain(bool on) {
   pedal = on;
 }
 
+// Ask for a π pulse. A spectrometer blanks its receiver for every pulse, which would otherwise
+// swamp it: the receivers listening close over BLANK_T, the pulse fires once they have, and they
+// open again as the probe rings down (GATE_T), as after a key's pulse. Heard open, the pulse would be
+// a click: it turns the real channel over (M_x → −M_x) in microseconds.
+void NmrEngine::arm(int only) {
+  if (only < 0) { if (allAt < 0) allAt = clock + BLANK_T; return; }
+  for (Voice &v : voices)
+    if (v.on && !v.fading && v.key == only && v.keyAt < 0) v.keyAt = clock + BLANK_T;
+}
+
 // A π pulse about y on every sample still sounding: each one's coherences are carried across
 // (ρ' = R ρ Rᵀ, order +1 to −1), the phases its spins gathered from the field are negated, and its
 // magnetisation along the field turned upside down.
 void NmrEngine::pulse(int only) {
   pulses++;
+  pulsedAt = clock;
   Message m;
   m.type = kPulse; m.count = 0;
   for (Voice &v : voices) {
@@ -179,6 +193,7 @@ void NmrEngine::pulse(int only) {
     piPulse(k, scratch.data(), v.x.data());
     v.t0 = v.age;
     v.S = -v.S; v.phi = -v.phi;
+    v.gate = 0; // the probe rings down; the receiver opens again over GATE_T
     lines(v);
     mz[v.key] = -recovered(v.key); mzT[v.key] = clock;
     if (m.count < 30) { m.values[m.count++] = (float)v.key; m.values[m.count++] = (float)mz[v.key]; }
@@ -205,6 +220,9 @@ void NmrEngine::play(Voice &v, float *L, float *R, int n) {
   // the receiver: opening, closing, or fading for a newer pulse
   const double closeStep = v.fading ? std::exp(-1 / (fs * FADE_T)) : !v.receiving ? std::exp(-1 / (fs * (v.closeT ? v.closeT : REL_T))) : 1;
   const double gateStep = 1 / (fs * GATE_T);
+  // a π pulse armed for this sample: its receiver closes, to be shut when the pulse fires
+  const bool blank = (allAt >= 0 || v.keyAt >= 0) && v.receiving && !v.fading;
+  const double blankStep = 1 / (fs * BLANK_T);
   const double noise = P[p::noise] <= -100 ? 0 : std::pow(10.0, P[p::noise] / 20) * OUT;
   const bool quad = (int)P[p::channels] == channels_::quadrature;
   // the noise's band: the receiver's filter, a little above the highest line
@@ -227,7 +245,8 @@ void NmrEngine::play(Voice &v, float *L, float *R, int n) {
       s *= c * (e0 + (e1 - e0) * i / n);
     }
     c *= cr;
-    if (gate < 1) gate = std::min(1.0, gate + gateStep);
+    if (blank) gate = std::max(0.0, gate - blankStep);
+    else if (gate < 1) gate = std::min(1.0, gate + gateStep);
     rel *= closeStep;
     const double open = (0.5 - 0.5 * std::cos(std::numbers::pi * gate)) * rel;
     double yl = s.real(), yr = quad ? s.imag() : s.real();
@@ -282,9 +301,14 @@ void NmrEngine::process(float *L, float *R, int n) {
   if (!hasParams) return;
   for (int i0 = 0; i0 < n; i0 += CB) {
     const int m = std::min(CB, n - i0);
-    if (pending) { pending = false; pulse(); }
+    // the π pulses armed BLANK_T ago fire, the receivers shut by now
+    constexpr double EPS = 1e-9;
+    if (allAt >= 0 && clock >= allAt - EPS) { allAt = -1; pulse(); }
+    for (Voice &v : voices)
+      if (v.keyAt >= 0 && clock >= v.keyAt - EPS) { v.keyAt = -1; if (v.on && !v.fading) pulse(v.key); }
+    if (pending) { pending = false; arm(); }
     else if (pedal && P[p::train] > 0.5) {
-      if (toPulse <= 0) { pulse(); toPulse += P[p::spacing]; if (toPulse <= 0) toPulse = P[p::spacing]; }
+      if (toPulse <= 0) { arm(); toPulse += P[p::spacing]; if (toPulse <= 0) toPulse = P[p::spacing]; }
     }
     // Press: a firm press into a held key runs its own echo train, a π pulse on its sample at once
     // and then every echo time, up to four times as often the harder it is pressed
@@ -292,7 +316,7 @@ void NmrEngine::process(float *L, float *R, int n) {
       if (!v.on || v.fading || !v.held || !v.receiving) continue;
       const double x = press.of(v.key);
       if (x <= 0) { v.echo = 0; continue; }
-      if (v.echo <= 0) { pulse(v.key); v.echo += P[p::spacing] / (1 + 3 * x); if (v.echo <= 0) v.echo = P[p::spacing]; }
+      if (v.echo <= 0) { arm(v.key); v.echo += P[p::spacing] / (1 + 3 * x); if (v.echo <= 0) v.echo = P[p::spacing]; }
       v.echo -= m / fs;
     }
     wheel = glideTo(wheel, wheelTarget, m / fs, BEND_T);

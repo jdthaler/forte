@@ -33,14 +33,16 @@ function views(m) {
 
 const Base = wasmEngine(BUILD, { messages: views });
 
-// The engine, with the tests' hooks: pulses (π pulses fired), mz(key) (a key's magnetisation along
-// the field now) and lines(key) (the lines its sounding voice plays).
+// The engine, with the tests' hooks: pulses (π pulses fired), pulsedAt (when the last one fired, s),
+// mz(key) (a key's magnetisation along the field now) and lines(key) (the lines its sounding voice
+// plays).
 export class NmrWasmEngine extends Base {
   constructor(fs) {
     super(fs);
     this.e = Base.exports.forte_engine(this.h);
   }
   get pulses() { return Base.exports.nmr_engine_pulses(this.e); }
+  get pulsedAt() { return Base.exports.nmr_engine_pulsed_at(this.e); }
   mz(key) { return Base.exports.nmr_engine_mz(this.e, key); }
   lines(key) { return Base.exports.nmr_engine_lines(this.e, key); }
 }

@@ -2,7 +2,8 @@
 // sample after its pulse: the order −1 coherences of its spins (nmr-model.h), heard as lines that
 // precess at their own frequencies, under one envelope for what the spins share: T₂, the field's
 // spread (dephasing, which π pulses undo), diffusion through it, and the field's offset (the
-// pitch wheel). The pedal fires π pulses at every sounding sample; each key's magnetisation along
+// pitch wheel). The pedal fires π pulses at every sounding sample, each with the receivers blanked
+// around it, as a spectrometer's are; each key's magnetisation along
 // the field (T₁) is kept between its notes.
 #pragma once
 
@@ -40,9 +41,11 @@ class NmrEngine : public Engine {
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
-  // the tests: π pulses fired, a key's magnetisation along the field now (in units of its
-  // equilibrium), and the lines its sounding voice plays
+  // the tests: π pulses fired and when the last one did (s, on the engine's clock), a key's
+  // magnetisation along the field now (in units of its equilibrium), and the lines its sounding
+  // voice plays
   int pulses = 0;
+  double pulsedAt = -1;
   double mzOf(int key) const;
   int linesOf(int key) const;
 
@@ -51,6 +54,7 @@ class NmrEngine : public Engine {
   struct Voice {
     bool on = false, held = true, fading = false, receiving = true;
     double echo = 0;   // until its next π pulse while its key is pressed, s (Press)
+    double keyAt = -1; // when a π pulse on its sample alone fires (Press), on the clock; −1: none armed
     double closeT = 0; // how fast the receiver closes after this lift, s (0: as usual; forte/lift.h)
     int key = 0, nl = 0;
     double amp = 0, age = 0, t0 = 0, S = 0, D = 0, phi = 0, gate = 0, rel = 1, bendNow = 1, peak = 0;
@@ -62,6 +66,7 @@ class NmrEngine : public Engine {
   };
   const KeySystem &system(int key);
   void lines(Voice &v);
+  void arm(int only = -1);   // ask for a π pulse: the receivers close, and it fires BLANK_T later
   void pulse(int only = -1); // only: that key's sample (−1: every one)
   void play(Voice &v, float *L, float *R, int n);
   void frame();
@@ -69,6 +74,7 @@ class NmrEngine : public Engine {
   std::array<double, p::count> P{};
   bool hasParams = false, pedal = false, pending = false;
   double wheel = 1, wheelTarget = 1, toPulse = 0, toFrame = 0, clock = 0;
+  double allAt = -1; // when an armed π pulse on every sample fires, on the clock; −1: none
   uint32_t seed = 0x2545f491u;
   std::array<std::unique_ptr<KeySystem>, 128> sys{};
   std::array<int, 128> sysSample{};

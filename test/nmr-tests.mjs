@@ -78,7 +78,8 @@ const peakEnv = ({ L, R }, t, w = 0.004) => {
   for (let i = Math.max(0, Math.round((t - w / 2) * FS)); i < Math.min(L.length, Math.round((t + w / 2) * FS)); i++) m = Math.max(m, Math.hypot(L[i], R[i]));
   return m;
 };
-// π pulses fire on the engine's 128-sample blocks: these times fall on them
+// π pulses are asked for on the engine's 128-sample blocks: these times fall on them (each fires a
+// little later, once the receiver has closed: e.pulsedAt)
 const onBlock = (t) => (Math.round((t * FS) / 128) * 128) / FS;
 // a note's start, as it would be in a perfect field (once the receiver has opened, at 2 ms)
 const startOf = (key, o) => envAt(note(key, { ...o, shim: 0.2 }, 0.01), 0.003, 0.001);
@@ -196,22 +197,39 @@ test('the fade: water\'s note falls as e^(−t/T₂ − πΔν t), Δν the shim
 test('Hahn\'s echo: hold a key, press the pedal at τ, and the faded note swells back at 2τ to e^(−2τ/T₂) of its start', () => {
   const t2 = 1.5, o = P({ sample: 'water', shim: 400, t2, t1: 5 }), tau = onBlock(0.24);
   const r = play(o, [{ at: 0, on: 60, vel: 1 }, { at: tau, pedal: true }], 0.8);
-  const start = startOf(60, o), dead = envAt(r, tau - 0.01), echo = peakEnv(r, 2 * tau);
+  const at = r.e.pulsedAt; // once the receiver has closed
+  assert.ok(at > tau && at < tau + 0.002, `the pulse ${((at - tau) * 1000).toFixed(2)} ms after the pedal`);
+  const start = startOf(60, o), dead = envAt(r, tau - 0.01), echo = peakEnv(r, 2 * at);
   assert.ok(dead < 0.02 * start, `dephased before the pulse: ${dead / start}`);
-  const want = Math.exp(-2 * tau / t2);
+  const want = Math.exp(-2 * at / t2);
   assert.ok(Math.abs(echo / start / want - 1) < 0.03, `echo ${(echo / start).toFixed(4)} vs ${want.toFixed(4)}`);
-  assert.ok(envAt(r, 2 * tau + 0.05) < 0.1 * echo, 'and it fades again');
+  assert.ok(envAt(r, 2 * at + 0.05) < 0.1 * echo, 'and it fades again');
   assert.equal(r.e.pulses, 1);
 });
 test('an echo train (CPMG): with the pedal held, π pulses every echo time bring an echo after each, falling by T₂ alone', () => {
   const t2 = 1, sp = onBlock(0.16), o = P({ sample: 'water', shim: 400, t2, t1: 5, train: true, spacing: sp });
   const r = play(o, [{ at: 0, on: 60, vel: 1 }, { at: sp / 2, pedal: true }], 1.2);
-  const start = startOf(60, o);
-  for (let n = 1; n <= 6; n++) {
-    const t = n * sp, got = peakEnv(r, t) / start, want = Math.exp(-t / t2);
+  const start = startOf(60, o), first = r.e.pulsedAt - (r.e.pulses - 1) * sp;
+  // each pulse puts the next echo as far after it as the last echo was before it
+  for (let n = 1, t = 0; n <= 6; n++) {
+    t = 2 * (first + (n - 1) * sp) - t;
+    const got = peakEnv(r, t) / start, want = Math.exp(-t / t2);
     assert.ok(Math.abs(got / want - 1) < 0.04, `echo ${n} at ${t.toFixed(2)} s: ${got.toFixed(4)} vs ${want.toFixed(4)}`);
   }
   assert.ok(r.e.pulses >= 5);
+});
+test('the receiver is blanked for each π pulse, as a spectrometer\'s is: it closes over 1 ms, the pulse fires, and it opens as the probe rings down; heard open, the pulse would click, turning the real channel over (M_x → −M_x) at once', () => {
+  const tau = onBlock(0.3), r = play(P({ sample: 'water', shim: 1, t2: 3, t1: 3 }), [{ at: 0, on: 69, vel: 1 }, { at: tau, pedal: true }], 0.4);
+  const at = Math.round(r.e.pulsedAt * FS), before = envAt(r, tau - 0.005);
+  assert.ok(Math.hypot(r.L[at], r.R[at]) < 1e-3 * before, `shut at the pulse: ${Math.hypot(r.L[at], r.R[at]) / before}`);
+  assert.ok(envAt(r, r.e.pulsedAt + 0.004) > 0.95 * before, 'and open again 3 ms after');
+  // no click: the third difference around the pulse stays under 1 % of the signal (a jump of the
+  // real channel from M_x to −M_x would be up to twice it)
+  const d3 = (x, a, b) => { let m = 0; for (let i = a; i < b; i++) m = Math.max(m, Math.abs(x[i] - 3 * x[i - 1] + 3 * x[i - 2] - x[i - 3])); return m; };
+  for (const [ch, x] of [['real', r.L], ['imaginary', r.R]]) {
+    const near = d3(x, at - 240, at + 240);
+    assert.ok(near < 0.01 * before, `${ch}: ${(near / before).toFixed(4)} of the signal`);
+  }
 });
 test('Press: a firm press into a held key runs its own echo train, π pulses on its sample alone every echo time, up to four times as often; a resting finger none', () => {
   const sp = onBlock(0.32), o = P({ sample: 'water', shim: 400, t2: 1, t1: 5, spacing: sp, acquire: 'ring' });
@@ -232,8 +250,8 @@ test('diffusion in a gradient steals the echo: exp(−⅔ γ²G² D τ³), γG =
   const shim = 2000, t2 = 20, key = 96, tau = onBlock(0.15), o = P({ sample: 'water', profile: 'gradient', shim, t2, t1: 30, acquire: 'ring' });
   const k = model.keySystem(key, o), D = model.sample('water').D, gG = (TAU * shim * 1e-9 * k.f0) / model.COIL_M;
   const r = play(o, [{ at: 0, on: key, vel: 1 }, { at: tau, pedal: true }], 2 * tau + 0.05);
-  const got = peakEnv(r, 2 * tau, 0.002) / startOf(key, o);
-  const want = Math.exp(-2 * tau / t2) * Math.exp((-2 / 3) * gG * gG * D * tau ** 3);
+  const at = r.e.pulsedAt, got = peakEnv(r, 2 * at, 0.002) / startOf(key, o);
+  const want = Math.exp(-2 * at / t2) * Math.exp((-2 / 3) * gG * gG * D * at ** 3);
   assert.ok(want < 0.8, `the test should see diffusion: ${want}`);
   assert.ok(Math.abs(got / want - 1) < 0.05, `${got.toFixed(4)} vs ${want.toFixed(4)}`);
 });
