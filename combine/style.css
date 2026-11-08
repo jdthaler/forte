@@ -16,7 +16,10 @@
 .combine-part-head .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--part); flex: none; }
 .combine-part-head .spacer { flex: 1; }
 .combine-part-head button { padding: 2px 8px; font-size: 12px; line-height: 1.4; flex: none; }
-.combine-part-head .combine-on[aria-pressed="true"] { background: var(--part); color: #111; border-color: transparent; }
+/* On: a latching key with a lamp that lights in the instrument's colour (shared/layout.css) */
+.combine-part-head .combine-on { display: inline-flex; align-items: center; gap: 6px; }
+.combine-part-head .combine-on::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #3a3a40, #121215); box-shadow: inset 0 1px 1px rgb(0 0 0 / 0.8), 0 1px 0 rgb(255 255 255 / 0.07); }
+.combine-part-head .combine-on[aria-pressed="true"]::before { background: radial-gradient(circle at 40% 35%, #fff, var(--part) 55%); box-shadow: 0 0 7px var(--part); }
 .combine-row { display: flex; align-items: center; gap: 6px; font-size: 12.5px; min-width: 0; }
 .combine-row > span { flex: none; width: 4.2em; color: var(--muted); }
 .combine-row select { flex: 1 1 0; min-width: 0; }
