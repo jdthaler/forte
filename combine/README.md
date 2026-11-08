@@ -22,8 +22,9 @@ you left it on its own page, so it layers with the rest until you move its keys.
   there; where one stops and the next starts, the keyboard is split. *Press a key…* takes the next
   key you play, on screen, from the computer or from MIDI.
 * **Octave**: moves what it plays up or down, so a bass on the left hand can sound where it should.
-* **Preset**: one of its own presets, its default settings, or its settings as on its own page
-  again, after you change them there.
+* **Preset**: one of its own presets, one of yours saved on its own page, its default settings,
+  or its settings as on its own page again, after you change them there. The menu names the one
+  it plays, until a MIDI controller moves its settings.
 * **Level**: how loud it is against the others, in decibels.
 * **On** turns it off and on without losing its settings; **✕** takes it off. Its name links to
   its own page, with every setting, its views and How it works.
@@ -32,6 +33,15 @@ The **Combinations** menu starts from a set of them: the piano and the viola org
 layered, a tonewheel organ's bass under an electric grand, a gong below a gamelan, timpani, marimba
 and glass armonica across three splits, and others. **Default settings** goes back to the first.
 The page remembers what you made here, and each instrument's settings with it.
+
+The same menu keeps your own, as an instrument's Presets menu keeps your presets:
+*Save this combination…* names it and keeps it in this browser, under **Your combinations**;
+*Copy a link to this combination* makes a link that opens the page with it; *Your combinations
+and files…* lists them (play, link, save to a file, delete) and opens a combinations file. A
+combination holds each instrument, its keys, octave, level and on or off, and every setting it
+plays with (by its contract's parameter ids, as a preset file holds them), so it plays the same
+whatever you have done on the instruments' own pages since. The menu names the combination
+playing until you change something; a MIDI program change counts yours after the starting ones.
 
 ## How the keys are shared
 
@@ -69,14 +79,20 @@ sum, and its tooltip each instrument's share.
   reverb, rather than one shared space.
 * **No pan or mix between them** beyond each one's level: the stereo is each instrument's own.
 * **In the plugins, the Forte app.** It plays up to four the same way, each with its keys, octave,
-  level and on/off on a card under its header (**+** beside its Instrument menu adds one), but
-  starts from no combinations of its own. In a DAW, several Forte plugins on one MIDI track do it
-  too.
+  level and on/off on a card under its header (**+** beside its Instrument menu adds one). Its
+  combinations menu, beside **+**, saves them as yours, files in a `Combinations` folder beside the
+  instruments' presets (`~/Library/Audio/Presets/Forte/Combinations` on a Mac,
+  `%APPDATA%\Forte\Presets\Combinations` on Windows, `~/.local/share/forte/presets/Combinations` on
+  Linux) in the same format as this page's files, so either opens the other's; it starts from none
+  of the combinations above. In a DAW, several Forte plugins on one MIDI track do it too.
 
 ## Files
 
-* `src/combine-params.js`: the combinations, the routing (`routed`) and the saved state.
+* `src/combine-params.js`: the combinations, the routing (`routed`), the saved state, and your
+  combinations' file and link formats.
 * `src/combine-main.js`: the page: the instruments hosted from their descriptors, the keys, MIDI
   and the views.
-* `test/combine-tests.mjs`: the routing, and every combination against the registry and the
-  instruments' presets.
+* `src/combine-mine.js`: your combinations in the Presets menu, and their dialog.
+* `test/combine-tests.mjs`: the routing, every combination against the registry and the
+  instruments' presets, and your combinations' files (the one the Forte app's tests read,
+  `native/tests/presets/combinations/`) and links.

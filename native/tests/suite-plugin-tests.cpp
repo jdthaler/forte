@@ -4,7 +4,8 @@
 // keys, as the site's Combinations page plays them. And every instrument's saved
 // states from releases (states/: below 1.0 its latest release's only, tools/contract.mjs), loaded into today's plugins, and
 // your own presets: the files the site writes (presets/, shared/presets.js) open in the window,
-// and the window writes the same.
+// and the window writes the same; and your combinations, as the site's Combinations page writes them
+// (presets/combinations/, combine/src/combine-params.js).
 
 #include <algorithm>
 #include <cmath>
@@ -746,6 +747,101 @@ TEST("your presets: another instrument's file, a damaged one and a path out of t
   // a name a file system won't take still saves, under a name it will
   CHECK(app.call("[\"savePreset\", \"Bells: 1/2 \\\"open\\\"?\"]").find("\"file\": \"Bells- 1-2 -open--.json\"") != std::string::npos);
   CHECK(has(listed(app), "Bells: 1/2 \"open\"?|Bells- 1-2 -open--.json|0"));
+  std::filesystem::remove_all(home);
+}
+
+// ---- your combinations (plugin/presets.h): the site's Combinations page's files ------------------------
+namespace {
+// a file's versions taken out ("…Version": "")
+std::string unversioned(std::string t) {
+  for (const char *k : {"\"forteVersion\": \"", "\"instrumentVersion\": \""})
+    for (size_t a = t.find(k); a != std::string::npos; a = t.find(k, a + 1)) { const size_t from = a + std::strlen(k), b = t.find('"', from); t.erase(from, b - from); }
+  return t;
+}
+std::vector<std::string> combinationsListed(App &app) {
+  std::vector<std::string> out;
+  const auto r = choc::json::parse(app.call("[\"combinations\"]"));
+  for (uint32_t k = 0; k < r["list"].size(); k++)
+    out.push_back(std::string(r["list"][k][0].getString()) + "|" + std::string(r["list"][k][1].getString()) + "|" + std::to_string(r["list"][k][2].get<int>()));
+  return out;
+}
+} // namespace
+
+TEST("your combinations: the site's file plays in the window, each instrument on its keys with its settings, and the window saves the same file") {
+  const auto home = presetsHome();
+  const auto golden = std::filesystem::path(FORTE_PRESETS_TEST_DIR) / "combinations" / "organ-and-grand.json";
+  const std::string site = readFile(golden), name = "Organ bass, electric grand above";
+  std::filesystem::create_directories(home / "Combinations");
+  std::filesystem::copy_file(golden, home / "Combinations" / "from the site.json");
+  // what the organ's Ballad preset sets, as the host sees it
+  std::vector<double> want;
+  {
+    App organ;
+    organ.call("[\"choose\", \"organ\"]");
+    organ.run(512);
+    double k = -1;
+    CHECK(organ.params->text_to_value(organ.p, 0x7ffffffe, "Ballad — 80 8000 000", &k) && k > 0);
+    organ.call("[\"set\", " + std::to_string(organ.number(organ.call("[\"describe\"]"), "presets")) + ", " + std::to_string((int)k) + "]");
+    organ.run(512);
+    want = values(organ);
+  }
+  App app;
+  app.run(512);
+  CHECK(has(combinationsListed(app), name + "|from the site.json|0"));
+  CHECK(app.call("[\"combinations\"]").find("Combinations") != std::string::npos);
+  const auto r = choc::json::parse(app.call("[\"loadCombination\", \"from the site.json\", 0]"));
+  CHECK(r["ok"].getBool() && r["name"].getString() == name && r["skipped"].getString().empty());
+  app.run(512);
+  const auto d = app.describe();
+  CHECK(d["parts"].size() == 2 && d["combination"].getString() == name);
+  if (d["parts"].size() == 2) {
+    CHECK(d["parts"][0]["slug"].getString() == "organ" && d["parts"][1]["slug"].getString() == "grand");
+    CHECK(d["parts"][0]["lo"].get<int>() == 0 && d["parts"][0]["hi"].get<int>() == 47); // A0: every key below
+    CHECK(d["parts"][1]["lo"].get<int>() == 48 && d["parts"][1]["hi"].get<int>() == 127); // C8: every key above
+    CHECK(d["parts"][1]["oct"].get<int>() == -1 && d["parts"][1]["level"].get<double>() == -4.5 && d["parts"][1]["on"].getBool());
+  }
+  const std::vector<double> got = values(app);
+  CHECK(got.size() == want.size());
+  for (size_t i = 0; i < got.size() && i < want.size(); i++)
+    if (got[i] != want[i]) { std::printf("       the organ's parameter %zu is %.17g, Ballad's is %.17g\n", i, got[i], want[i]); CHECK(got[i] == want[i]); }
+  // the window saves it again: byte for byte the site's, but for the versions
+  const auto s = choc::json::parse(app.call("[\"saveCombination\", " + jsonString(name) + "]"));
+  CHECK(s["ok"].getBool());
+  const std::string file(s["file"].getString());
+  CHECK(file == name + ".json");
+  const std::string mine = readFile(home / "Combinations" / u8(file));
+  if (unversioned(mine) != unversioned(site)) std::printf("       the window wrote\n%s\n       the site writes\n%s\n", mine.c_str(), site.c_str());
+  CHECK(unversioned(mine) == unversioned(site));
+  CHECK(mine.find("\"instrumentVersion\": \"\"") == std::string::npos);
+  CHECK(has(combinationsListed(app), name + "|" + file + "|0"));
+  // a part's keys changed: no longer the combination
+  app.call("[\"zone\", 1, 60, 127, -1, -4.5, true]");
+  CHECK(app.describe()["combination"].getString().empty());
+  // and back to it
+  CHECK(app.call("[\"loadCombination\", " + jsonString(file) + ", 0]").find("\"ok\": true") != std::string::npos);
+  CHECK(app.describe()["parts"][1]["lo"].get<int>() == 48);
+  std::filesystem::remove_all(home);
+}
+
+TEST("your combinations: an instrument the app hasn't got is left out, and named; a damaged file, a preset file and a path out of the folder are not combinations") {
+  const auto home = presetsHome();
+  std::filesystem::create_directories(home / "Combinations");
+  std::string t = readFile(std::filesystem::path(FORTE_PRESETS_TEST_DIR) / "combinations" / "organ-and-grand.json");
+  t.replace(t.find("\"organ\""), 7, "\"theremin\"");
+  { std::ofstream(home / "Combinations" / "theremin.json") << t; }
+  { std::ofstream(home / "Combinations" / "broken.json") << "{\"forte\": \"combinations\", \"comb"; }
+  std::filesystem::copy_file(std::filesystem::path(FORTE_PRESETS_TEST_DIR) / "gongs.json", home / "Combinations" / "gongs.json");
+  std::filesystem::copy_file(std::filesystem::path(FORTE_PRESETS_TEST_DIR) / "combinations" / "organ-and-grand.json", home / "outside.json");
+  App app;
+  app.run(512);
+  CHECK(combinationsListed(app).size() == 1);
+  const auto r = choc::json::parse(app.call("[\"loadCombination\", \"theremin.json\", 0]"));
+  CHECK(r["ok"].getBool() && r["skipped"].getString() == "theremin");
+  CHECK(app.describe()["parts"].size() == 1 && app.slug() == "grand");
+  CHECK(app.call("[\"loadCombination\", \"broken.json\", 0]").find("\"ok\": false") != std::string::npos);
+  CHECK(app.call("[\"loadCombination\", \"gongs.json\", 0]").find("not a Forte combinations file") != std::string::npos);
+  CHECK(app.call("[\"loadCombination\", \"../outside.json\", 0]").find("\"ok\": false") != std::string::npos);
+  CHECK(app.call("[\"loadCombination\", \"theremin.json\", 3]").find("no such combination") != std::string::npos);
   std::filesystem::remove_all(home);
 }
 

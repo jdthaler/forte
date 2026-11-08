@@ -34,6 +34,36 @@ bool readPreset(const InstrumentInfo &I, const std::string &file, int index, std
 std::string presetText(const InstrumentInfo &I, const std::string &name, const double *values);
 std::string writePreset(const InstrumentInfo &I, const std::string &name, const double *values, std::string &error);
 
+// Your combinations in the Forte app (plugin.cpp, Suite): files in the site's format
+// (combine/src/combine-params.js), in a folder beside the instruments' (Combinations: on a Mac
+// ~/Library/Audio/Presets/Forte/Combinations), so one saved on the site's Combinations page opens
+// in the app and one saved in the app opens there.
+std::string combinationsFolder();
+struct UserCombination {
+  std::string name, file; // file: its name in the folder
+  int index;              // the combination's place in the file
+};
+std::vector<UserCombination> listCombinations();
+// One instrument of a combination: its keys (MIDI's numbers, A0 to C8 on the site: the ends mean
+// every key below and above), octave (−2…+2), level (dB), whether it plays, and every parameter's
+// value as the plugin keeps it (as readPreset gives them).
+struct CombinationPart {
+  const InstrumentInfo *I = nullptr;
+  int lo = 21, hi = 108, oct = 0;
+  double level = 0;
+  bool on = true;
+  std::vector<double> values;
+};
+// Combination `index` of a file in the folder, its instruments found by their slugs (find: null
+// for one this app doesn't have, which is left out, and named in skipped). False, with the reason
+// in error, when the file can't be read or none of its instruments is here.
+bool readCombination(const std::string &file, int index, const InstrumentInfo *(*find)(const std::string &slug, const void *ctx), const void *ctx,
+                     std::string &name, std::vector<CombinationPart> &parts, std::string &skipped, std::string &error);
+// The parts as a combinations file's text, and saved as "<name>.json" in the folder (an older one
+// by that name replaced): the file's name, or "" with the reason in error.
+std::string combinationText(const std::string &name, const std::vector<CombinationPart> &parts, const std::string &forteVersion);
+std::string writeCombination(const std::string &name, const std::vector<CombinationPart> &parts, const std::string &forteVersion, std::string &error);
+
 // Show the folder (made first if need be) in the Finder, Explorer or the file manager.
 bool showFolder(const std::string &folder);
 

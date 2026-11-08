@@ -478,7 +478,8 @@ computer keys.
 To play several instruments at once, open **Combinations** (on the front
 page, and in every page's menu): up to four, each on the keys you give it,
 so the same keys layer them and keys apart split the keyboard, with its
-own octave, preset and level ([combine/](combine/README.md)). On a
+own octave, preset and level ([combine/](combine/README.md)). Its Presets menu saves a
+combination as one of yours, as a file or as a link, as an instrument's saves your presets. On a
 phone the page scrolls between the header and the keys, which stay put, with the
 controls' bar just above the keys, and the drawer opens from the header; turn it sideways
 for wider keys. Use
@@ -505,7 +506,10 @@ which `make install` runs) before it loads them. The download with every instrum
 Forte app, one standalone that plays any of them from its Instrument menu, or up to four at
 once, as the [Combinations](combine/) page does: **+** beside the menu adds one, and its card gives
 it its keys (the same keys layer instruments, keys apart split the keyboard), its octave, its
-level, and on or off.
+level, and on or off. The menu beside **+** saves them all together as a combination of yours, a
+file in the `Combinations` folder beside the instruments' (on a Mac,
+`~/Library/Audio/Presets/Forte/Combinations`), which the site's Combinations page opens too, and
+plays it again.
 
 A plugin's window also shows the instrument's views from its page: press **Views**, beside
 the pedal, and they draw what the plugin plays, whether the notes come from the DAW, a MIDI

@@ -35,10 +35,12 @@
 
 import { rotaryKnob } from './faces.js';
 import { focusedByPointer, unfocus } from './focus.js';
+import { installDropdowns } from './dropdown.js';
 import { inPlugin } from './in-plugin.js';
 import { midiSettings } from './midi.js';
 
 const body = document.body;
+installDropdowns(); // what a dropdown opens, as a panel (shared/dropdown.js)
 const STORE = `forte/${body.dataset.instrument || 'page'}/layout/v1`;
 const MODE = 'forte/mode/v1';
 const touch = matchMedia('(pointer: coarse)').matches;
