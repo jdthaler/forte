@@ -245,7 +245,10 @@ settings it reads, below); until then it asks for a fader. Press (the note's own
 notes of most instruments that hold them; on the struck and plucked ones a
 firm press (past half way, so a finger resting on a key changes nothing) lays
 a palm, a hand, a mallet or a felt on what rings and damps it, as hard as the
-key is pressed. The chevron folds the
+key is pressed. Its preset arrows step through the Presets menu from the
+preset playing, whichever way it got there (the FC-300's pedals, the menu),
+so the two stay in step; the first press after the RISE has counted
+elsewhere goes the way its own number lies. The chevron folds the
 panel to a rail. (Pages only: the plugins' window doesn't show it.)
 
 **The RISE's own settings:** under *On the RISE*, the panel reads the RISE's

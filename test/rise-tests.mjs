@@ -7,7 +7,7 @@
 
 import assert from 'node:assert/strict';
 import { riseModel, DIMENSIONS, KEYS } from '../shared/rise.js';
-import { FADERS } from '../shared/midi.js';
+import { FADERS, riseProgram } from '../shared/midi.js';
 import * as sx from '../shared/rise-sysex.js';
 
 let failures = 0;
@@ -65,6 +65,26 @@ test('the faders and the pad: their values by CC, and MIDI mode once a fader sen
   for (const [n] of FADERS) m.midi([0xb0, n, n - 100]);
   assert.equal(m.faderMode, 'midi');
   assert.deepEqual(FADERS.map(([n]) => m.cc[n]), [7, 9, 11, 13, 14]);
+});
+
+test('its preset arrows step from the preset playing, whatever number they count', () => {
+  // in step (its number is the preset's): one up is forward, one down back, the same stays
+  assert.equal(riseProgram(undefined, 4, 3, 10), 4);
+  assert.equal(riseProgram(undefined, 2, 3, 10), 2);
+  assert.equal(riseProgram(undefined, 3, 3, 10), 3);
+  // out of step (a pedal moved Forte to preset 6 while the RISE counts 1): steps from 6
+  assert.equal(riseProgram(1, 2, 5, 10), 6, 'forward');
+  assert.equal(riseProgram(2, 1, 6, 10), 5, 'back');
+  // a last number more than a step away is stale (it counted elsewhere): as if in step
+  assert.equal(riseProgram(7, 1, 4, 10), 3);
+  assert.equal(riseProgram(null, 6, 4, 10), 5);
+  // the list's ends hold; at the RISE's own ends a repeated number goes on its way
+  assert.equal(riseProgram(5, 6, 9, 10), 9);
+  assert.equal(riseProgram(1, 0, 0, 10), 0);
+  assert.equal(riseProgram(0, 0, 4, 10), 3, 'left at 0 again');
+  assert.equal(riseProgram(127, 127, 4, 10), 5, 'right at 127 again');
+  // no preset playing (a control moved): the number's own preset, as any device's program change
+  assert.equal(riseProgram(3, 4, -1, 10), 4);
 });
 
 test('All Notes Off lets every finger go', () => {
