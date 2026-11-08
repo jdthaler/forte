@@ -44,10 +44,14 @@ body[data-instrument] .brand h1 { white-space: nowrap; }
 body[data-instrument] .brand .sub { flex: 1 1 0; min-width: 0; contain: inline-size; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 1700px) { body[data-instrument] .brand .sub { display: none; } }
 body[data-instrument] > header .status { margin-left: auto; justify-content: flex-end; }
-.forte-mode { display: inline-flex; flex: none; padding: 2px; gap: 2px; border: 1px solid var(--line); border-radius: 9px; background: rgba(0, 0, 0, 0.28); }
-body[data-instrument] .forte-mode button { border: 0; border-radius: 7px; background: transparent; color: var(--muted); padding: 2px 11px; }
-body[data-instrument] .forte-mode button:hover { color: var(--text); }
-body[data-instrument] .forte-mode button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink, #111); font-weight: 600; }
+/* Discover | Perform: a slide switch, its cap at the mode it is in, in a slot cut into the panel */
+.forte-mode { display: inline-flex; flex: none; padding: 2px; gap: 2px; border: 1px solid #060608; border-radius: 9px; background: linear-gradient(180deg, #08080a, #141417); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.75), 0 1px 0 rgb(255 255 255 / 0.06); }
+body[data-instrument] .forte-mode button { border: 1px solid transparent; border-radius: 7px; background: transparent; box-shadow: none; color: var(--muted); padding: 2px 11px; }
+body[data-instrument] .forte-mode button:hover { color: var(--text); background: transparent; }
+body[data-instrument] .forte-mode button[aria-pressed="true"] {
+  color: var(--accent); font-weight: 600; border-color: #060608; text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 45%, transparent);
+  background: linear-gradient(180deg, #44444c, #2c2c33 50%, #222228); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16), 0 1px 3px rgb(0 0 0 / 0.8);
+}
 /* "Start audio" until the audio is on, then the CPU meter (the black hole's voice count) in its place */
 body[data-instrument] #start.running,
 body[data-instrument] #start:not(.running) ~ :is(#cpu, #voices),
@@ -129,6 +133,44 @@ body[data-instrument] :is(.forte-presets select, select.forte-display) {
 body[data-instrument] :is(.forte-presets select, select.forte-display):hover { border-color: color-mix(in srgb, var(--accent) 45%, #000); }
 body[data-instrument] :is(.forte-presets select, select.forte-display):is(:active, .forte-open) { box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.85), inset 0 0 18px color-mix(in srgb, var(--accent) 20%, transparent), 0 0 0 3px #0b0b0d, 0 0 0 4px rgb(255 255 255 / 0.09); }
 
+/* ---- buttons, as hardware: moulded keys lit from above that press in, as the dropdowns are. A
+   page's own buttons get the face only where they draw nothing of their own (zero specificity);
+   the latching ones (a view's toggle, Latch) have a lamp that lights; Discover | Perform is a
+   slide switch; Start audio is a key in the instrument's colour ------------------------------- */
+:where(body[data-instrument]) button:not(:where(.forte-info, .forte-dropdown *)) {
+  --face: linear-gradient(180deg, #36363d, #26262c 55%, #1d1d22);
+  color: var(--text); border: 1px solid #060608; background: var(--face);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.11), inset 0 -1px 0 rgb(0 0 0 / 0.4), 0 1px 2px rgb(0 0 0 / 0.6);
+}
+:where(body[data-instrument]) button:not(:where(.forte-info)):hover { --face: linear-gradient(180deg, #40404a, #2c2c33 55%, #212127); border-color: #060608; }
+:where(body[data-instrument]) button:not(:where(.forte-info)):is(:active, .on, [aria-pressed="true"], [aria-expanded="true"]:not(.forte-fold)) {
+  --face: linear-gradient(180deg, #18181c, #232328); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.7), 0 1px 0 rgb(255 255 255 / 0.05);
+}
+:where(body[data-instrument]) button:disabled { box-shadow: none; }
+/* Start audio, and a page's other primary button: a key in the instrument's colour */
+body[data-instrument] button.primary {
+  color: var(--accent-ink, #111); border-color: color-mix(in srgb, var(--accent) 40%, #000);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 70%, #fff), var(--accent) 45%, color-mix(in srgb, var(--accent) 78%, #000));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.45), inset 0 -1px 0 rgb(0 0 0 / 0.25), 0 1px 2px rgb(0 0 0 / 0.6), 0 0 12px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+body[data-instrument] button.primary:hover { filter: brightness(1.07); border-color: color-mix(in srgb, var(--accent) 40%, #000); }
+body[data-instrument] button.primary:active { filter: brightness(0.92); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.35), 0 1px 0 rgb(255 255 255 / 0.05); }
+/* Tour, Songs, How it works, Plugin: round keys with the instrument's colour in their legend */
+body[data-instrument] .forte-about {
+  border: 1px solid #060608; background: linear-gradient(180deg, #34343b, #24242a 55%, #1c1c21);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.11), inset 0 -1px 0 rgb(0 0 0 / 0.4), 0 1px 2px rgb(0 0 0 / 0.6);
+}
+body[data-instrument] .forte-about:hover { border-color: #060608; background: linear-gradient(180deg, #3e3e46, #2b2b31 55%, #212126); }
+body[data-instrument] .forte-about:active { background: linear-gradient(180deg, #18181c, #232328); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.7); }
+/* a lamp: dark until it lights in the instrument's colour (a toggle's, Latch's) */
+body[data-instrument] .forte-toggles button::before, body[data-instrument] .forte-latch::before {
+  content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; border: 0; opacity: 1;
+  background: radial-gradient(circle at 40% 35%, #3a3a40, #121215); box-shadow: inset 0 1px 1px rgb(0 0 0 / 0.8), 0 1px 0 rgb(255 255 255 / 0.07);
+}
+body[data-instrument] :is(.forte-toggles button[aria-pressed="true"], .forte-latch.on)::before {
+  background: radial-gradient(circle at 40% 35%, #fff, var(--accent) 55%); box-shadow: 0 0 7px var(--accent), 0 0 2px var(--accent);
+}
+
 /* ---- the page: the views above the Controls panel, each headed by its bar, sharing the
    height (--split-rows); a panel folded away leaves its bar ---------------------------------- */
 body[data-instrument] > main { grid-template-columns: minmax(0, 1fr); grid-template-rows: var(--split-rows, auto minmax(0, 0.6fr) auto minmax(0, 0.4fr)); }
@@ -155,15 +197,13 @@ body[data-instrument] #groups { display: grid; grid-template-columns: repeat(aut
 body[data-instrument] .forte-toggles button {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 3px 12px 3px 10px; border-radius: 999px; font-size: 12px; color: var(--muted);
-  background: transparent; border: 1px solid var(--line);
 }
 .forte-toggles button::before {
   content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%;
   border: 1.5px solid currentColor; opacity: 0.7;
 }
 body[data-instrument] .forte-toggles button:hover { color: var(--text); }
-body[data-instrument] .forte-toggles button[aria-pressed="true"] { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
-.forte-toggles button[aria-pressed="true"]::before { background: var(--accent); border-color: var(--accent); opacity: 1; }
+body[data-instrument] .forte-toggles button[aria-pressed="true"] { color: var(--text); }
 .forte-bar-tools { flex: none; display: flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; }
 .forte-bar-tools:empty { display: none; }
 /* the presets */
@@ -174,7 +214,7 @@ body[data-instrument] .forte-presets #reset { display: none; } /* "Default setti
 /* fold: a chevron that points the way the panel goes */
 body[data-instrument] .forte-fold {
   flex: none; display: grid; place-items: center; width: 30px; height: 28px; min-height: 0; padding: 0;
-  border: 1px solid var(--line); border-radius: 7px; background: transparent; color: var(--muted);
+  border-radius: 7px; color: var(--muted);
 }
 body[data-instrument] .forte-fold:hover { color: var(--text); }
 .forte-fold svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.15s; }
@@ -492,7 +532,8 @@ body[data-instrument] .forte-kbbar .forte-info { padding: 0; } /* a circle, not 
 body.tools-below .forte-controls-bar { display: none; }
 body[data-instrument] .forte-kbsize button { width: 32px; padding: 3px 0; font-weight: 600; }
 .forte-pedal { min-width: 84px; }
-.forte-pedal.on, .forte-latch.on { background: var(--accent); color: var(--accent-ink, #111); border-color: transparent; }
+body[data-instrument] .forte-pedal.on { color: var(--accent); }
+body[data-instrument] .forte-latch { display: inline-flex; align-items: center; gap: 7px; }
 /* ⌨: the page's hints for the computer keyboard and MIDI, and their readouts */
 body[data-instrument] .forte-keys { font-size: 15px; padding: 1px 8px; }
 .forte-keys-pop {
