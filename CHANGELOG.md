@@ -16,6 +16,24 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-11-08 — the FC-300's pedals, and values that keep their room; the NMR's π pulses no longer click; a warning for a note out of range; RISE panel switches, fader mode and preset arrows
+
+### Forte 0.50.0
+- **The volume pedal reaches the top:** a volume pedal's toe down puts the page's Volume control at its top (+6 dB), heel down silent, (v/127)² between; it stopped at the default before.
+- **EXP 2 is Morph:** on the pages, a Roland FC-300's EXP 2 moves the Morph slider (heel down its From preset, toe down its To one) on every instrument, as it comes and while Forte drives it. A keyboard's mod wheel and a Seaboard RISE's pad (Y) still move the mod wheel's control; the plugins can't tell the FC-300 from a keyboard, so there EXP 2 is still the mod wheel.
+- **Values keep their room:** every slider's value (and the Combinations page's levels, Morph's and the backing's) keeps the width its widest value takes, so neither it nor the box and slider beside it grow or shrink as the number changes.
+- **A note out of range says so:** a key struck past the keys an instrument plays, from a MIDI keyboard, a computer key or a song, now shows a short message naming the note and the keys that do play, e.g. "C7 is out of range (F1–F6)". Where a historical compass stops it, the message says to tick Full range; where Octave or Transpose moved a MIDI key there, it says how far. The same message shows on every instrument page, on the Combinations page (naming the instrument), and in the plugins' window and the Forte app.
+- Messages (toasts) on phones now show above the controls' bar instead of behind it.
+- The Seaboard RISE's panel puts each Expression switch (Strike, Glide, Slide, Press, Lift) at the end of its dimension's line, the same switch as in Controls: turned off, the line dims and says what the instrument does instead.
+- The panel's fader-mode light no longer says "No fader or pad yet" in white mode: until a fader moves it asks for one (the RISE's mode button sends nothing over MIDI), turns white when a fader sends, and turns cyan when the RISE's own Glide, Slide or Press sensitivity moves by itself in the settings it reads. The pad, which sends in either mode, no longer counts as white.
+- A Seaboard RISE's preset arrows step the Presets menu forward and back from the preset playing, instead of jumping to the preset their own count names, so they stay in step with the FC-300's pedals and the menu.
+
+### NMR Spin Echo 0.3.0
+- **π pulses no longer click:** the receiver is blanked for each π pulse, as a spectrometer's is. It
+  closes over 1 ms, the pulse fires once it is shut, and it opens again over 2 ms as the probe rings
+  down. Heard open, each pulse of the pedal, the echo train or Press clicked, because it turns the
+  real channel from M_x to −M_x at once. A pulse now comes about a millisecond after the pedal.
+
 ## 2026-11-08 — the plugins build on Windows again
 
 ### Forte 0.49.1
