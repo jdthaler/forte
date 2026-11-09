@@ -72,15 +72,17 @@ jobs:
           INPUT_TAG: ${{ inputs.tag }}
         run: |
           taken() { gh release view "$1" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "refs/tags/$1" >/dev/null; }
+          # a draft an earlier attempt left for this same commit (GitHub stopped its uploads): finish it
+          resumable() { [ "$(gh release view "$1" --json isDraft,targetCommitish --jq '"\(.isDraft) \(.targetCommitish)"' 2>/dev/null)" = "true $SHA" ]; }
           tag="$INPUT_TAG"
           if [ -n "$tag" ]; then
             [[ "$tag" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "::error::Tags are letters, digits, dots, dashes and underscores."; exit 1; }
-            ! taken "$tag" || { echo "::error::$tag already exists. Give another tag."; exit 1; }
+            resumable "$tag" || ! taken "$tag" || { echo "::error::$tag already exists. Give another tag."; exit 1; }
           else
             # plugins-v<Forte version>, or plugins-v<Forte version>-2, -3… when an instrument
             # changed without Forte's version
             base=$(node tools/plugin-release.mjs --tag); tag=$base; n=1
-            while taken "$tag"; do n=$((n + 1)); tag="$base-$n"; done
+            while taken "$tag" && ! resumable "$tag"; do n=$((n + 1)); tag="$base-$n"; done
           fi
           echo "TAG=$tag" >> "$GITHUB_ENV"
 
@@ -110,4 +112,25 @@ jobs:
           node tools/plugin-release.mjs > notes.md
           cp manifest.txt dist/
           (cd dist && sha256sum * > SHA256SUMS.txt)
-          gh release create "$TAG" dist/* --target "$SHA" --title "Forte plugins ($TAG)" --notes-file notes.md --latest
+          # A draft first, then the archives one at a time, then publish. Some 840 uploads at
+          # once trip GitHub's secondary rate limit, which used to fail the run and leave a
+          # half-filled draft; now an upload refused waits and tries again, and a run started
+          # again finishes the draft it left (the step above picks it).
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --notes-file notes.md
+          else
+            gh release create "$TAG" --draft --target "$SHA" --title "Forte plugins ($TAG)" --notes-file notes.md
+          fi
+          gh release view "$TAG" --json assets --jq '.assets[] | select(.state == "uploaded") | .name' > have.txt
+          echo "$(wc -l < have.txt) archives already uploaded"
+          waits=0
+          for f in $(ls dist); do
+            grep -qxF "$f" have.txt && continue
+            until gh release upload "$TAG" "dist/$f" --clobber; do
+              waits=$((waits + 1))
+              [ "$waits" -le 20 ] || { echo "::error::GitHub kept refusing the uploads; start this workflow again on live to finish the draft $TAG."; exit 1; }
+              echo "upload of $f refused; waiting 3 minutes (wait $waits of 20)"
+              sleep 180
+            done
+          done
+          gh release edit "$TAG" --draft=false --latest
