@@ -312,7 +312,7 @@ split, loss or water change. Ten bowls take about 7 % of a core in C++.
 
 ## Quality
 
-The Quality setting (in the controls, for phones and older computers) keeps
+The Quality setting (for phones and older computers) keeps
 High as described here. Medium plays each bowl's families up to (4,0) and Low
 up to (3,0): the (2,0) note and its (3,0) shimmer, which is also where a bowl
 squeals when pressed hard, stay; the higher families, 25–60 dB under the note,

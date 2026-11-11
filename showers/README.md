@@ -269,7 +269,7 @@ tools/render-showers.mjs               node tools/render-showers.mjs → example
 
 ## Quality
 
-The Quality setting (CPU, at the end of the controls) lets fewer crystals ring at once: 20 at
+The Quality setting (for phones and older computers) lets fewer crystals ring at once: 20 at
 Medium and 12 at Low, against 32 at High, the quietest one whose key is up fading first. A
 crystal on its own sounds the same at every setting; the instrument is light already, so that
 is all it trims.

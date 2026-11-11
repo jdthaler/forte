@@ -485,7 +485,7 @@ tools/render-carillon.mjs                 node tools/render-carillon.mjs → exa
 
 ## Quality
 
-The Quality setting (in the controls, for phones and older computers) keeps
+The Quality setting (for phones and older computers) keeps
 High as described here. Medium lets 24 bells ring at once instead of 36,
 leaves out each bell's modes above 16 kHz and stops a mode once it is 70 dB
 under the bell's loudest (100 dB at High); Low lets 12 bells ring, stops at

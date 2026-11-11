@@ -438,7 +438,7 @@ tools/render-bowed.mjs                node tools/render-bowed.mjs → examples/b
 
 ## Quality
 
-The Quality setting (in the controls, for phones and older computers) keeps
+The Quality setting (for phones and older computers) keeps
 High as described here. Every held string is bowed in full at every setting,
 so a note speaks, settles and sits at the same pitch. Medium and Low run the
 soundboard at half the sample rate (each mode tuned to answer as at High) and

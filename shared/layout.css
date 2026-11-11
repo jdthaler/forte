@@ -700,6 +700,9 @@ body[data-instrument] #toast { z-index: 45; pointer-events: none; bottom: calc(v
 @media (max-width: 1050px) and (max-height: 500px) {
   .forte-kbbar > .forte-perform { flex: 1 1 auto; }
   .forte-perform .param { height: 40px; }
+  /* no room for a value's gloss, "600 Pa (61 mm of water)" (shared/shell.js): the Controls show it */
+  .forte-perform .param .val .gloss { display: none; }
+  .forte-perform .param .val[data-widest-short]::after { content: attr(data-widest-short); }
   .forte-kbbar:has(> .forte-perform:not(:empty)) .forte-kbmap { flex: 0 1 72px; min-width: 0; }
   body[data-instrument] #keyboard { height: min(var(--kb-h, 115px), 24svh); } /* a third shorter than 36svh, for the views */
   /* the controls' bar heads the controls and scrolls with them: the views keep the room */

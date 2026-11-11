@@ -249,7 +249,7 @@ tools/render-cavity.mjs               node tools/render-cavity.mjs → examples/
 
 ## Quality
 
-The Quality setting (in the controls, for phones and older computers) keeps
+The Quality setting (for phones and older computers) keeps
 High as described here. Medium rings at most 16 cavities at once and leaves
 out the modes a bunch rings 40 dB or more under a cavity's loudest; Low rings
 8, and keeps only the modes within 30 dB. Both let a mode, and a cavity, go

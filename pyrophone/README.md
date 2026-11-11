@@ -301,7 +301,7 @@ tools/render-pyrophone.mjs                  node tools/render-pyrophone.mjs → 
 
 ## Quality
 
-The Quality setting (in the controls, for phones and older computers) changes
+The Quality setting (for phones and older computers) changes
 nothing here: Medium and Low play exactly as High. A tube sings through all of
 its modes and its flame together, so none can go without changing the note,
 a released tube already fades out as soon as it stops singing, and two dozen
