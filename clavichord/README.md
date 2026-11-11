@@ -45,7 +45,7 @@ for its note with the key down (below, 4), from the stiff string's
 
   f_n = (n / 2L) √(T/μ) · √(1 + B n²),  B = π² E I / (T L²)
 
-which gives 19 N at FF (95 MPa in the brass), 39 N at c¹ (540 MPa in the
+which gives 20 N at FF (100 MPa in the brass), 39 N at c¹ (540 MPa in the
 iron) and 18 N at f³ (590 MPa). Clavichord strings are slack beside a
 harpsichord's: that is what lets a finger bend them.
 
@@ -116,14 +116,40 @@ reaction on it, the afterlengths' and its own mass and damping balance when
   D(ω) = −ω² M + iωR + Σ [T(1/L + 1/a) − (2T/L) Σₙ ω²/Dₙ − (2T/a) Σₘ ω²/Dₘ] = 0,  Dₙ = ωₙ² − ω² + 2iσₙω
 
 A partial sounds at the root of D near its own pole: above the rigid nut's
-frequency where the key's mass rules, by 8 ¢ at c¹ and up to 60 ¢ at FF,
-where the tangent's own bounce on the strings (at a few tens of hertz) is
-not far below the note. The tuner tunes the strings by ear, with the key
-down; the model does the same, solving for the root and setting each
-string's tension so that the note sounds at its pitch with the default key
-and finger at the default pressure. Below FF the bounce reaches the note
-itself and the tangent takes most of the fundamental: there the notes are
-mostly their upper partials.
+frequency where the key's mass rules, and the lower the partial the more.
+Well above the tangent's own bounce on the strings (a few tens of hertz) the
+key and finger are simply a mass on the strings' end, and partial n is sharp
+by
+
+  Δω/ω = G / (2 M ωₙ²),  G = Σ 2T/L over the course
+
+which falls as 1/n². So the fundamental moves most, by 8 ¢ at c¹ and 63 ¢
+at FF, where the bounce is not far below the note, and the partials above it
+far less: at FF the 2nd by 16 ¢ and the 4th by 4 ¢.
+
+The tuner tunes the strings by ear, with the key down, and an ear takes a
+note's pitch from the partials that sound. The model does the same. It
+weighs each partial's shift by its share of the sound: the stroke gives
+partial n 1/n² of the energy, and the soundboard answers a force on the
+bridge with its response at the partial's frequency (the pressure at the
+microphones, the board's resonances smoothed over two octaves), which falls
+away as f⁴ below the board's lowest resonance at 218 Hz. Then it sets each
+string's tension so that the weighted mean of the shifts is tuned out, with
+the default key and finger at the default pressure (the first four
+partials' shifts solved for, the rest following them as 1/n²; three passes,
+since the shifts depend on the tension).
+
+From c¹ up the fundamental carries the note, and sounds within 1.5 ¢ of
+its pitch. Down the bass the board answers the fundamental less and less,
+and the weight moves to the partials above it. At c the fundamental is left
+14 ¢ sharp and the 2nd partial, the loudest, is 1 ¢ flat. At C the
+fundamental is 46 ¢ sharp and 45 dB under the 3rd and 4th partials, which
+are within 2 ¢. At FF it is 62 ¢ sharp and 60 dB under the partials that
+carry the note, which are within 2.2 ¢ before their own stiffness (it
+sharpens the 5th by 2 ¢ and the 10th by 8 ¢). Between, from f to a, the fundamental
+and the 2nd partial sound about equally and sit some 5 ¢ either side of the
+note. Below FF the bounce reaches the note itself and the tangent takes most
+of the fundamental: there the notes are mostly their upper partials.
 
 ### 5. The listing, and key up
 
@@ -164,6 +190,18 @@ cannot sound together.
 octave up, on its own bridge at half the speaking length and struck by the
 same tangent, as on some of Hieronymus Albrecht Hass's large clavichords.
 
+It is tuned to its pair, a beatless octave: its fundamental where the
+pair's second partial would be on a rigid nut. The tangent they share then
+moves the two as one partial of the course (4, above, counts the 4′ in with
+the pair at every even partial), and with three strings on it the give
+there is half as much again. The stroke starts all three with the same
+slope at the tangent; but the 4′'s fundamental is half a wave from there to
+the bridge where the pair's second partial is a whole one, so the two reach
+the bridge opposed, as they do at the pair's 6th and 10th partials, while
+at the 4th, 8th and 12th the 4′'s even partials arrive with the pair's.
+With the 4′s on, a bass note's 2nd partial is about 10 dB weaker and its
+4th and 8th about 2 dB stronger: a brighter, leaner bass.
+
 ### 8. Bridge and soundboard
 
 Each string pushes on the bridge with T y′(0) = T z/L + Σ (T kₙ + EI kₙ³) qₙ.
@@ -181,7 +219,7 @@ a contact pickup would.
 One voice per course, from a pool of 32 (20 sound at once at High; the
 quietest released one, then the oldest, fades out in 10 ms). At a course's
 first stroke its strings are designed from the parameters (closed forms and
-the tuning root, under a millisecond), and its partials are two-pole
+the tuning for the tangent's give, under a millisecond), and its partials are two-pole
 resonators whose coefficients follow the tension every sample: up to 96
 speaking partials below *Highest partial* (10 kHz), 8 afterlength partials
 and, once the tangent has gone, 32 of the open string. The tangent is
@@ -207,7 +245,7 @@ second difference.
    with it thinned to almost nothing: the afterlengths' fixed pitches ring
    along, and each release rings on.
 6. **06-bass-without-then-with-4-foot-strings**: a bass line, then the
-   same with the 4′ strings: brighter, fuller.
+   same with the 4′ strings: brighter, leaner.
 
 On the page, the **strings** view draws one string of the course from the
 side, its heights hugely exaggerated: the tangent holding it up, the
@@ -228,7 +266,7 @@ clavichord/src/clavichord-instrument.js   the descriptor: everything a host need
 clavichord/src/clavichord-main.js         page wiring and views
 clavichord/src/clavichord-wasm.js         the engine and model as WebAssembly (clavichord/wasm/clavichord.wasm), for the page and the tests
 native/instruments/clavichord/            the physics in C++: model (scale, wire, tuning for the tangent's give, listing, soundboard), engine, the page's and tests' hooks
-test/clavichord-tests.mjs                 node test/clavichord-tests.mjs (26 tests, ~12 s)
+test/clavichord-tests.mjs                 node test/clavichord-tests.mjs (31 tests, ~18 s)
 tools/render-clavichord.mjs               node tools/render-clavichord.mjs → examples/clavichord/
 ```
 
@@ -251,8 +289,19 @@ tools/render-clavichord.mjs               node tools/render-clavichord.mjs → e
 * **No sympathetic resonance** of the other courses, and no case or
   cavity: the soundboard is an equivalent rectangular plate, its loss factor
   a single number, as the harpsichord's.
+* **The tuner's ear is a weighted mean.** Each partial's shift counts by
+  the stroke's 1/n² and the board's smoothed response, not by a model of
+  hearing; and it is the tangent's give that is tuned out, not the wire's
+  own stiffness, which leaves a stiff string's upper partials sharp as on
+  any strung instrument.
+* **The 4′ pushes the board where its pair does.** Its bridge has no place
+  of its own on the board, so where the two arrive opposed they cancel as
+  far as their sizes allow; a bridge elsewhere on the board would let more
+  of both through above the board's lowest resonances.
 * **Below FF** (with *Full range*) the instrument goes on where no
-  clavichord did, and the tangent's give takes most of the fundamental.
+  clavichord did: the tangent's give takes most of the fundamental, and the
+  thick strings' stiffness leaves the partials that sound 10 to 40 ¢ sharp
+  at A0.
 
 ## Quality
 

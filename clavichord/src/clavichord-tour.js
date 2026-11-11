@@ -51,6 +51,6 @@ Hold C and trill on C♯: each C♯ takes the strings, and each time it lets go,
     views: ['Spectrum', 'The course'],
     preset: '4′ strings in the bass',
     play: [run('D2 F2 A2 D3', { step: 0.7, dur: 0.65 }), { at: 2.9, set: { octave: false } }, run('D2 F2 A2 D3', { at: 3, step: 0.7, dur: 0.65 })],
-    text: `Some large clavichords, such as Hieronymus Albrecht Hass's, add a third string an octave up to each bass key, struck by the same tangent: a brighter, fuller bass. First with them, then without.`,
+    text: `Some large clavichords, such as Hieronymus Albrecht Hass's, add a third string an octave up to each bass key, struck by the same tangent and tuned to the pair: it adds to the 4th and 8th partials and takes from the 2nd, a brighter, leaner bass. First with them, then without.`,
   },
 ]);

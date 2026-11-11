@@ -23,6 +23,7 @@ constexpr double DROP[3] = {1e-5, 1e-4, 3e-4};  // a held string's top partials 
 ClavichordEngine::ClavichordEngine(double fs) : Engine(fs), dt(1 / fs) {
   slides.fill(NAN);
   board.init(fs);
+  boardResponse(KEY_LO, 440); // (its table, made here and not at the first stroke)
 }
 
 void ClavichordEngine::setParams(const double *p) {
@@ -452,7 +453,6 @@ static void hpCoeffs(double f, double fs, double &b0, double &b1, double &b2, do
   const double w = (2 * pi * std::min(f, 0.45 * fs)) / fs, c = std::cos(w), al = std::sin(w) / std::numbers::sqrt2, a0 = 1 + al;
   b0 = (1 + c) / 2 / a0; b1 = -(1 + c) / a0; b2 = (1 + c) / 2 / a0; a1 = (-2 * c) / a0; a2 = (1 - al) / a0;
 }
-static double hp100(double f) { return (f / 100) / std::hypot(1.0, f / 100); } // the acoustic short circuit round the case
 // |pressure per newton| at mic j from segment s, rms over the top third of the modal band: the
 // residual path's level, so the two join.
 static double residualGain(const BoardModel &B, int s, int j) {
