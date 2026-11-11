@@ -420,7 +420,7 @@ tools/render-arc.mjs                node tools/render-arc.mjs → examples/arc/
 
 ## Quality
 
-The Quality setting (in the controls, for phones and older computers) changes
+The Quality setting (for phones and older computers) changes
 nothing here: Medium and Low play exactly as High. Each lamp is one circuit
 that has to be stepped finely for its arc to sing at all, the number of lamps
 is yours to set (Number of arcs), and six of them cost little.

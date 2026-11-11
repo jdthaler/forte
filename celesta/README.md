@@ -246,7 +246,7 @@ tools/render-celesta.mjs               node tools/render-celesta.mjs → example
 
 ## Quality
 
-The Quality setting (in the controls, for phones and older computers) keeps
+The Quality setting (for phones and older computers) keeps
 High as described here. The celesta is light already, so Medium and Low trim
 little: Medium lets 16 bars ring at once instead of 24, Low 10, and both
 leave out a bar's modes above 16 and 12 kHz and let a bar go once it has

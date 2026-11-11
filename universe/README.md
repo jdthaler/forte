@@ -258,7 +258,7 @@ tools/render-universe.mjs                node tools/render-universe.mjs → exam
 
 ## Quality
 
-The Quality setting (CPU, at the end of the controls) plays fewer harmonics and voices: 16
+The Quality setting (for phones and older computers) plays fewer harmonics and voices: 16
 harmonics and 20 voices at Medium, 10 and 12 at Low, against 24 and 32 at High, the oldest
 released voice going first. The harmonics it keeps sound the same; Silk damping has taken most
 of what lies past the tenth already.

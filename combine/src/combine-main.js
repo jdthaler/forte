@@ -383,6 +383,8 @@ const typing = (t) => t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' &
 const keysDown = new Map(); // code → key
 let spaceHeld = false;
 window.addEventListener('keydown', (e) => {
+  // macOS sends no keyup for a key let go while ⌘ is down, and its note would hang: ⌘ lets the keys go
+  if (e.key === 'Meta') letGo();
   if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
   if (controlOwns(e)) return; // a control reached with Tab keeps its own keys (shared/focus.js)
   if (e.target?.tagName === 'SELECT') { if (e.code === 'Space' || e.code.startsWith('Arrow') || codeToKey(e.code) !== null) e.target.blur(); else return; }

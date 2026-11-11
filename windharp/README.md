@@ -482,7 +482,7 @@ tools/render-windharp.mjs                 node tools/render-windharp.mjs → exa
 
 ## Quality
 
-The Quality setting (in the controls, for phones and older computers) keeps
+The Quality setting (for phones and older computers) keeps
 High as described here. A string whose shutter is open plays exactly as at
 High at every setting: its modes and wake stations are what make it lock onto
 a harmonic, so none are left out. What Medium and Low trim is the strings you

@@ -86,7 +86,7 @@ e^(−t/τ_s). τ_s is Bhat et al.'s fit to 371 measurements:
 
 times *Scattering*, since real pulsars scatter ten times more or less than
 this. At DM 20 and 1.4 GHz it is nanoseconds; at DM 400 and 1.4 GHz,
-milliseconds; at 150 MHz everything is a hundred thousand times longer.
+milliseconds; at 150 MHz everything is about five thousand times longer.
 
 **The telescope.** The receiver takes in a band of frequencies (*Observing
 frequency* ± half the *Bandwidth*). Its upper half is the left channel and

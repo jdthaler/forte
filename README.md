@@ -116,7 +116,8 @@ from C, with the black keys on the row above. `Q`–`]` continues an octave
 up. `←`/`→` shift the octave, and `↑`/`↓` adjust each instrument's main
 control (usually velocity). `Space` is the sustain pedal or that
 instrument's equivalent (hold, mute bar, Leslie speed), on every
-instrument except the black hole, where there is nothing to hold.
+instrument except the carillon, whose bells have no dampers, and the
+black hole, where there is nothing to hold.
 **Enable MIDI** connects a MIDI keyboard (Chrome, Edge and Firefox;
 Safari, and every browser on iPhone or iPad, has no Web MIDI, so the button
 is hidden there),
@@ -298,6 +299,7 @@ and the RISE 2; Chrome and Edge only (Safari has no Web MIDI).
 | Telharmonium | Manual II's 1st, 3rd and 5th harmonic stops | Distance down the line | Swell pedal |
 | Cellulophone | Tremolo screen · Damping arcs · Valve amplifier drive | Slot width | Key pushed back (timbre) |
 | Magnetic Resonator Piano | Drive (coil current) · Swell time · Hammer | Phase error | Brightness |
+| Ondes Martenot | Pulling (lock range) · 8 (octaviant) · S (souffle) | Detector balance | Keyboard vibrato (side to side) |
 | Viola Organista | Key pressure · Treadle unevenness · Rosin grain | Bow position β | Wheel speed |
 | Glass Armonica | Skin moisture · Treadle unevenness · Water in the bowls | Finger pressure | Treadle speed |
 | Clavicylinder | Foot’s push · Cloth wetness · Grip | Key pressure | Treadle speed |
@@ -323,6 +325,8 @@ and the RISE 2; Chrome and Edge only (Safari has no Web MIDI).
 | Project 8 | Magnetic field · Energy · Receiver noise | Trap depth | Gas pressure |
 | ABRACADABRA | Stream speed · Stream · SQUID noise | Coupling to photons | Halo speed |
 | TESS | Temperature · Star radius · Orbit at A4 | Planet radius | Impact parameter |
+| CUORE | Pulse energy · Heater period at A4 · Bias voltage | Teflon holders | Heat sink temperature |
+| Ion Chain | Beam on the chain · Beam angle to the axis · Electrode distance | Pulse length | Radial pull |
 | Chladni Plate | Bow speed · Rosin · Ring time | Bow force (× threshold) | Bow shift along the edge |
 | Birdsong | Air sac pressure · Tension sweep · Trachea length | Labial tension | Syllable rate |
 | Ringing Planets | Depth · Distance · Direction from the quake | Attenuation | Spin |
