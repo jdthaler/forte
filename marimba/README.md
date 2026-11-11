@@ -276,6 +276,11 @@ tools/render-marimba.mjs                 node tools/render-marimba.mjs → examp
 * **A beam, not a solid**, as on the vibraphone: no width modes, no
   warping. Past C7 the marimba's bars are too short for a beam to describe
   them well.
+* **The cut never goes through the bar.** Undercut depth above 100 %
+  deepens each bar's tuned cut until a twentieth of the wood is left under
+  it, and no further. Only the marimba's bars from A7 to C8, past its real
+  compass, whose tuned cuts are the deepest (0.80 to 0.85 of the bar),
+  get there, between 111 % and 119 %.
 * **Each tube resonance couples to one bar mode.** The tube's two
   resonances share one mouth, and an off-centre mouth would let bar mode 1
   drive the second resonance and mode 2 the first; those cross terms are
