@@ -35,7 +35,7 @@ export const GROUPS = [
         options: [['unfretted', 'Unfretted (bundfrei): two strings to every key'], ['fretted', 'Double-fretted (gebunden): neighbours share, D and A free']],
         hint: 'On a fretted clavichord two neighbouring keys share a pair of strings, their tangents a semitone apart along it: the one nearer the bridge sounds, so C and C♯ cannot sound together. Let the upper go while the lower is held, and the lower speaks again, plucked by the string springing back.' },
       { id: 'octave', label: '4′ strings in the bass', type: 'checkbox', def: false,
-        hint: 'A third string an octave up beside each pair in the bass (to e), struck by the same tangent: a brighter, fuller bass, as on some of Hieronymus Albrecht Hass’s large clavichords.' },
+        hint: 'A third string an octave up beside each pair in the bass (to e), struck by the same tangent and tuned to the pair, as on some of Hieronymus Albrecht Hass’s large clavichords. It adds to the note’s 4th and 8th partials and takes from its 2nd: a brighter, leaner bass.' },
       { id: 'detune', label: 'Unison spread (the pair)', min: 0, max: 8, def: 1.5, step: 0.1, fmt: (v) => `${v.toFixed(1)} ¢`,
         hint: 'No two strings of a pair are ever exactly in tune: a cent or two apart, they beat slowly. Applies to new notes.' },
       { id: 'listing', label: 'Listing cloth', min: 0.02, max: 4, def: 1, log: true, fmt: (v) => `× ${v.toFixed(2)}`,

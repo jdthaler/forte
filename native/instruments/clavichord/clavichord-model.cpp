@@ -103,58 +103,121 @@ double restHeight(const StringDesign *S, int n, double L, double F) {
 // tangent's rest, with each partial driven by the tangent (gₙz̈, as the engine has it), the tangent
 // balances when
 //   D(ω) = −ω²M + iωR + Σ_strings [T(1/L + 1/a) − (2T/L)Σₙ ω²/Dₙ − (2T/a)Σₘ ω²/Dₘ] = 0,
-// Dₙ = ωₙ² − ω² + 2iσₙω for the speaking length's partials and the afterlength's alike. A
-// partial n of the group (the pair, or the 4′) is the root near its own pole: with the rest of D
-// as D′ and G = Σ 2T/L over the group, ω² = ωₙ² + 2iσₙω − Gω²/D′(ω), found by iterating. A little
-// sharp where the key's mass rules, flat where the springs do; and in the deep bass, where the
-// tangent's own bounce falls near the note, by as much as the poles there make it. Returns Re ω
-// over ωₙ for string c's partial n.
-double tangentShift(const StringDesign *S, int nStr, int c, double L, double M, double R, const Params &P, int n) {
-  using C = std::complex<double>;
-  static thread_local Modes sp[CHOIRS], af[CHOIRS];
-  const auto inGroup = [&](int s) { return (c == 2) == (s == 2); };
+// Dₙ = ωₙ² − ω² + 2iσₙω for the speaking length's partials and the afterlength's alike. The
+// strings that share a pole there move the tangent as one: the pair's partial n and, when n is
+// even, the 4′'s partial n/2, an octave string's fundamental lying on the pair's second partial.
+// That partial of the course is the root near the pole: with the rest of D as D′ and G = Σ 2T/L
+// over those strings, ω² = ωₙ² + 2iσₙω − Gω²/D′(ω), found by iterating. A little sharp where the
+// key's mass rules, flat where the springs do; and in the deep bass, where the tangent's own
+// bounce falls near the note, by as much as the poles there make it: the fundamental most, the
+// partials above it about as 1/n².
+namespace {
+using Cx = std::complex<double>;
+// the strings' partials on a tangent at L, each string at its nominal tension
+void giveModes(const StringDesign *S, int nStr, double L, const Params &P, Modes *sp, Modes *af) {
+  for (int s = 0; s < nStr; s++) {
+    speakingModes(S[s], L, S[s].Tnom, P, 48000, N_MAX, sp[s]);
+    afterModes(S[s], L, S[s].Tnom, P, M_AFTER, af[s]);
+  }
+}
+// Re ω over ωₙ for string c's partial n
+double giveRoot(const StringDesign *S, int nStr, const Modes *sp, const Modes *af, int c, double M, double R, int n) {
+  // the course's partial (in the pair's count), and each string's partial at that pole (−1: none)
+  const int m = c == 2 ? 2 * n : n;
+  int at[CHOIRS];
   double G = 0;
   for (int s = 0; s < nStr; s++) {
-    const double T = S[s].Tnom;
-    speakingModes(S[s], L, T, P, 48000, N_MAX, sp[s]);
-    afterModes(S[s], L, T, P, M_AFTER, af[s]);
-    if (inGroup(s)) G += 2 * T / sp[s].len;
+    const int i = s == 2 ? (m % 2 ? 0 : m / 2) : m;
+    at[s] = i >= 1 && i <= sp[s].N ? i - 1 : -1;
+    if (at[s] >= 0) G += 2 * S[s].Tnom / sp[s].len;
   }
   const double wn = TAU * sp[c].f[n - 1], sn = sp[c].sigma[n - 1];
-  const auto rest = [&](C w) {
-    C D = -w * w * M + C(0, 1) * w * R;
+  const auto rest = [&](Cx w) {
+    Cx D = -w * w * M + Cx(0, 1) * w * R;
     for (int s = 0; s < nStr; s++) {
       const double T = S[s].Tnom, Ls = sp[s].len, a = af[s].len;
-      C sum = 0, sumA = 0;
+      Cx sum = 0, sumA = 0;
       for (int i = 0; i < sp[s].N; i++) {
-        if (i == n - 1 && inGroup(s)) continue;
+        if (i == at[s]) continue;
         const double wi = TAU * sp[s].f[i];
-        sum += w * w / (wi * wi - w * w + C(0, 2 * sp[s].sigma[i]) * w);
+        sum += w * w / (wi * wi - w * w + Cx(0, 2 * sp[s].sigma[i]) * w);
       }
       for (int i = 0; i < af[s].N; i++) {
         const double wi = TAU * af[s].f[i];
-        sumA += w * w / (wi * wi - w * w + C(0, 2 * af[s].sigma[i]) * w);
+        sumA += w * w / (wi * wi - w * w + Cx(0, 2 * af[s].sigma[i]) * w);
       }
       D += T * (1 / Ls + 1 / a) - (2 * T / Ls) * sum - (2 * T / a) * sumA;
     }
     return D;
   };
-  C w = wn;
-  for (int it = 0; it < 200; it++) {
-    C next = std::sqrt(wn * wn + C(0, 2 * sn) * w - G * w * w / rest(w));
-    if (next.real() < 0) next = -next;
-    const bool done = std::abs(next - w) < 1e-9 * wn;
-    w = 0.5 * (w + next);
-    if (done) break;
+  const auto step = [&](Cx w) {
+    const Cx next = std::sqrt(wn * wn + Cx(0, 2 * sn) * w - G * w * w / rest(w));
+    return next.real() < 0 ? -next : next;
+  };
+  // Steffensen's way with that iteration (Aitken's Δ² on each two steps: a handful of steps in all)
+  Cx w = wn;
+  bool found = false;
+  for (int it = 0; it < 12 && !found; it++) {
+    const Cx w1 = step(w);
+    if (std::abs(w1 - w) < 1e-10 * wn) { w = w1; found = true; break; }
+    const Cx w2 = step(w1), dd = w2 - 2.0 * w1 + w;
+    w = std::abs(dd) > 0 ? w - (w1 - w) * (w1 - w) / dd : w2;
+    if (!(std::abs(w - wn) < 0.25 * wn)) break; // it has left the pole's neighbourhood
+  }
+  // and where that will not settle, the iteration itself, each step halved
+  if (!found) {
+    w = wn;
+    for (int it = 0; it < 200; it++) {
+      const Cx next = step(w);
+      const bool done = std::abs(next - w) < 1e-9 * wn;
+      w = 0.5 * (w + next);
+      if (done) break;
+    }
   }
   return w.real() / wn;
 }
+thread_local Modes giveSp[CHOIRS], giveAf[CHOIRS]; // (too large for an audio thread's stack)
+} // namespace
 
-// Each string tuned, with the course's own key down at the nominal touch (a key and finger of the
-// default mass), so that its fundamental is the target: the stiff string's T = 4L²f²μ − EI(π/L)²
-// for f the target over the tangent's shift (tangentShift; a few passes, since the shift depends on
-// T). The tangent then rests where the pair's (or three's) pull balances the touch,
-// z = F/(ΣT·(1/L + 1/a)); with no key down the strings are that much slacker, T₀ = T − EA·Δl(z)/l.
+double tangentShift(const StringDesign *S, int nStr, int c, double L, double M, double R, const Params &P, int n) {
+  giveModes(S, nStr, L, P, giveSp, giveAf);
+  return giveRoot(S, nStr, giveSp, giveAf, c, M, R, std::min(n, giveSp[c].N));
+}
+
+// What the tuner hears. A note's pitch is that of the partials that sound, and the tangent's give
+// moves them unequally; so each partial's shift (¢) is weighed by its share of the sound: the
+// stroke gives partial n 1/n² of the energy (a step in the tangent's speed), and the board
+// answers a force on the bridge at its frequency with boardResponse. The first GIVE_ROOTS shifts
+// are solved for; the rest follow the last of their own kind as 1/n², the massive end's law (odd
+// and even apart: a 4′ rides on the even ones).
+constexpr int GIVE_ROOTS = 4, GIVE_HEARD = 32, GIVE_PASSES = 3;
+static double heardOf(const StringDesign &S, const Modes &m, const double *cents) {
+  const int nr = std::min(GIVE_ROOTS, m.N), nh = std::min(GIVE_HEARD, m.N);
+  double sum = 0, wsum = 0;
+  for (int n = 1; n <= nh; n++) {
+    const int k = n <= nr ? n : nr - ((n - nr) & 1); // the last solved one of n's kind
+    const double w = boardResponse(S.course, m.f[n - 1]) / (n * n);
+    sum += w * cents[k - 1] * double(k * k) / (n * n); wsum += w;
+  }
+  return sum / wsum;
+}
+double heardShift(const StringDesign *S, int nStr, int c, double L, double M, double R, const Params &P) {
+  giveModes(S, nStr, L, P, giveSp, giveAf);
+  double cents[GIVE_ROOTS];
+  for (int n = 1; n <= std::min(GIVE_ROOTS, giveSp[c].N); n++) cents[n - 1] = 1200 * std::log2(giveRoot(S, nStr, giveSp, giveAf, c, M, R, n));
+  return heardOf(S[c], giveSp[c], cents);
+}
+
+// Each string of the pair tuned, with the course's own key down at the nominal touch (a key and
+// finger of the default mass), so that the note is heard at the target: the stiff string's
+// T = 4L²f²μ − EI(π/L)² for f the target less the shift the tuner hears (heardOf; a few passes,
+// since the shifts depend on T). Where the fundamental carries the note that is the fundamental's
+// own shift, and it sounds on pitch; in the bass, where the board hardly answers it, the partials
+// above it are on pitch and the fundamental is left sharp. The 4′ is tuned to the pair, a beatless
+// octave: its fundamental where the pair's second partial is on a rigid nut, so that the tangent
+// they share moves the two as one (and then its own little bit off). The tangent then rests where
+// the pair's (or three's) pull balances the touch, z = F/(ΣT·(1/L + 1/a)); with no key down the
+// strings are that much slacker, T₀ = T − EA·Δl(z)/l.
 void designCourse(int course, const Params &P, StringDesign *out, int n) {
   const double L = scaleLength(course), a = afterLength(course);
   for (int c = 0; c < n; c++) {
@@ -169,14 +232,17 @@ void designCourse(int course, const Params &P, StringDesign *out, int n) {
     S.f0 = keyPitch(course, P) * (c == 2 ? 2 : 1) * std::pow(2.0, detuneCents(course, c, P) / 1200);
     S.Tnom = 4 * S.L * S.L * S.f0 * S.f0 * S.mu - S.EI * pi * pi / (S.L * S.L);
   }
-  for (int pass = 0; pass < 4; pass++) {
-    double sh[CHOIRS];
-    for (int c = 0; c < n; c++) sh[c] = tangentShift(out, n, c, L, MASS_NOM, ACTION::damping, P, 1);
-    for (int c = 0; c < n; c++) {
-      StringDesign &S = out[c];
-      const double f = S.f0 / sh[c];
-      S.Tnom = 4 * S.L * S.L * f * f * S.mu - S.EI * pi * pi / (S.L * S.L);
+  const auto tune = [](StringDesign &S, double f) { S.Tnom = 4 * S.L * S.L * f * f * S.mu - S.EI * pi * pi / (S.L * S.L); };
+  for (int pass = 0; pass < GIVE_PASSES; pass++) {
+    giveModes(out, n, L, P, giveSp, giveAf);
+    double sh[2];
+    for (int c = 0; c < 2; c++) {
+      double cents[GIVE_ROOTS];
+      for (int k = 1; k <= std::min(GIVE_ROOTS, giveSp[c].N); k++) cents[k - 1] = 1200 * std::log2(giveRoot(out, n, giveSp, giveAf, c, MASS_NOM, ACTION::damping, k));
+      sh[c] = heardOf(out[c], giveSp[c], cents);
     }
+    for (int c = 0; c < 2; c++) tune(out[c], out[c].f0 * std::pow(2.0, -sh[c] / 1200));
+    if (n > 2) tune(out[2], partialFreq(out[0], out[0].L, out[0].Tnom, 2) * out[2].f0 / (2 * out[0].f0));
   }
   double pull = 0;
   for (int c = 0; c < n; c++) pull += out[c].Tnom * (1 / out[c].L + 1 / a);
@@ -326,6 +392,57 @@ std::array<double, 2> boardAdmittance(double x, double y, double f, const double
   re += B.Ginf / (1 + std::pow(B.fTop / f, 4));
   const double yy = re * re + im * im, zr = re / yy, zi = -im / yy + w * BOARD::mb, zz = zr * zr + zi * zi;
   return {zr / zz, -zi / zz};
+}
+
+// The board as heard: |pressure at the two microphones|² per (force on the bridge)², as the engine's
+// board gives it in its modal band (each mode's acceleration at the microphones, less the short
+// circuit round the case; the bridge's mass in series as a low-pass at 1/(2π m_b G₀)), its
+// resonances smoothed over two octaves (the geometric mean: the board's lowest modes lie more than
+// an octave apart). Below the lowest of them the board moves against its stiffness and the pressure
+// falls as f², so this as f⁴.
+namespace {
+constexpr int RESP_OCT = 12, RESP_N = 10 * RESP_OCT + 1; // 20 Hz to 20.5 kHz, a semitone apart
+constexpr double RESP_F0 = 20;
+struct Response { double ln[NSEG][RESP_N]; };
+Response buildResponse() {
+  const BoardModel &B = boardModel();
+  constexpr int FINE = 8, HALF = FINE * RESP_OCT; // 96 points to the octave, an octave either side
+  const int nf = (RESP_N - 1) * FINE + 1 + 2 * HALF;
+  const double fb = 1 / (TAU * BOARD::mb * B.Ginf);
+  std::vector<double> raw(nf);
+  Response r;
+  for (int s = 0; s < NSEG; s++) {
+    for (int i = 0; i < nf; i++) {
+      const double f = RESP_F0 * std::pow(2.0, (i - HALF) / double(FINE * RESP_OCT)), w = TAU * f;
+      double tot = 0;
+      for (int j = 0; j < 2; j++) {
+        double re = 0, im = 0;
+        for (int k = 0; k < B.K; k++) {
+          const double wk = TAU * B.f[k], d = wk * wk - w * w, s2 = 2 * B.sigma[k] * w, den = d * d + s2 * s2;
+          const double g = B.mic[2 * k + j] * hp100(B.f[k]) * B.phi[k * NSEG + s] * -w * w;
+          re += g * d / den; im -= g * s2 / den;
+        }
+        tot += re * re + im * im;
+      }
+      raw[i] = std::log(tot / (1 + (f / fb) * (f / fb)));
+    }
+    for (int i = 0; i < RESP_N; i++) {
+      double sum = 0;
+      for (int k = -HALF; k <= HALF; k++) sum += raw[i * FINE + HALF + k] * (k == -HALF || k == HALF ? 0.5 : 1);
+      r.ln[s][i] = sum / (2 * HALF);
+    }
+  }
+  return r;
+}
+} // namespace
+double boardResponse(int m, double f) {
+  static const Response R = buildResponse();
+  const auto w = segmentWeights(m);
+  const double x = clamp(std::log2(f / RESP_F0) * RESP_OCT, 0.0, RESP_N - 1.0);
+  const int i = std::min((int)x, RESP_N - 2);
+  double g = 0;
+  for (int s = 0; s < NSEG; s++) if (w[s] > 0) g += w[s] * std::exp(R.ln[s][i] + (x - i) * (R.ln[s][i + 1] - R.ln[s][i]));
+  return g;
 }
 
 // ---- the action
