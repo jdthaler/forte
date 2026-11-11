@@ -113,7 +113,9 @@ Geometry barGeometry(int kind, int k, double depth, double ratio) {
   // that the loop below brings to pitch
   const bool tabled = BAR_COUNT == KEY_MAX - KEY_MIN + 1;
   const double A = tabled ? BAR_TABLE[kind][k - KEY_MIN].A : kind == XYLOPHONE ? bl.A : 0.5;
-  const double D = (tabled ? BAR_TABLE[kind][k - KEY_MIN].D : 0.4) * depth;
+  // (deepened past the tuned cut, the cut stops with a twentieth of the bar left under it, CUT_MAX: only
+  // the marimba's bars above its real compass, A7 to C8, whose tuned cuts are the deepest, get there)
+  const double D = std::min((tabled ? BAR_TABLE[kind][k - KEY_MIN].D : 0.4) * depth, vibraphone::CUT_MAX);
   double L = tabled ? BAR_TABLE[kind][k - KEY_MIN].L : std::sqrt(0.6 * bl.h0 * std::sqrt(ROSEWOOD.E / ROSEWOOD.rho) / keyFreq(k));
   if (!tabled || depth != 1 || ratio != 1) {
     // at a fixed shape f₁ ∝ 1/L², nearly (shear and rotary inertia add a little)
