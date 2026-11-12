@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../shared/boot.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Breit-Wigner Keyboard · Forte</title>
+  <meta name="description" content="Every key an unstable particle, the plainest resonance there is: one mass, the note, and one width. Struck, it rings at its mass and dies in its lifetime, so its spectrum is the Breit–Wigner line: a ρ meson's thud, a Z boson's knock, a J/ψ's needle that rings for minutes.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Forte">
+  <meta property="og:title" content="Breit-Wigner Keyboard · Forte">
+  <meta property="og:description" content="Every key an unstable particle, the plainest resonance there is: one mass, the note, and one width. Struck, it rings at its mass and dies in its lifetime, so its spectrum is the Breit–Wigner line: a ρ meson's thud, a Z boson's knock, a J/ψ's needle that rings for minutes.">
+  <meta property="og:url" content="https://forte.jthaler.net/breitwigner/">
+  <meta property="og:image" content="https://forte.jthaler.net/breitwigner/preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Breit-Wigner Keyboard's page in Forte, playing a chord">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="../shared/forte.css">
+  <link rel="stylesheet" href="../shared/instrument.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/layout.css">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+  <link rel="icon" href="../icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Forte">
+</head>
+<body data-instrument="breitwigner">
+  <div class="forte-edge" aria-hidden="true"></div>
+  <header>
+    <div class="brand">
+      <nav data-forte-nav></nav>
+      <h1>Breit-Wigner Keyboard</h1>
+      <span class="sub">every key an unstable state: one mass, one width</span>
+    </div>
+    <div class="status">
+      <button id="start" class="primary">Start audio</button>
+      <button id="midi-btn">Enable MIDI</button>
+      <span id="midi" class="pill">MIDI off</span>
+      <span id="cpu" class="pill">audio off</span>
+      <button id="panic" title="Silence everything">Panic</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="controls">
+      <div class="preset-row">
+        <select id="preset" aria-label="Preset"></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="groups"></div>
+    </aside>
+
+    <section id="views">
+      <div class="row">
+        <div class="card" data-perform data-view="Lines">
+          <div class="card-head"><h2>Lines</h2><span class="muted" id="lines-read"></span></div>
+          <canvas id="lines"></canvas>
+          <div class="caption">Every ringing key's Breit–Wigner line, drawn at its mass: as high as the chance |ψ|² that the state is still there, as wide as its width Γ. Dashed, the last key's line whole, and at the right the same line under a glass, four widths to either side. A line sinks without changing its shape. Let a key go and a second channel opens: its line spreads as it falls.</div>
+        </div>
+        <div class="card" data-perform data-view="Decay law">
+          <div class="card-head"><h2>Decay law</h2><span class="muted">|ψ|² of each key · dashed: e^(−t/τ)</span></div>
+          <canvas id="decay"></canvas>
+          <div class="caption">The chance that each state is still there, on a logarithmic scale against time (now at the right). An exponential decay is a straight line, and its slope is the width: a factor e every lifetime τ = 1/Γ. Where a line bends down, a channel has opened.</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card" data-view="Amplitude">
+          <div class="card-head"><h2>Amplitude</h2><span class="muted" id="turn-read"></span></div>
+          <canvas id="argand"></canvas>
+          <div class="caption">The last key's amplitude ψ in the complex plane, in slow motion: it turns once for every cycle of the note and shrinks by e^(−πΓ/M) each turn, so a wide state spirals in within a few turns and a narrow one circles for thousands. What is heard is its height, the imaginary part (the bar at the right).</div>
+        </div>
+        <div class="card" data-view="Spectrum">
+          <div class="card-head"><h2>Spectrum</h2><span class="muted">live output · markers: the ringing keys' masses</span></div>
+          <canvas id="spectrum"></canvas>
+          <div class="caption">A narrow state is a spike here and a wide one a hump: the line itself, once the note has had its lifetime to sound.</div>
+        </div>
+        <div class="card" data-view="Spectrogram">
+          <div class="card-head"><h2>Spectrogram</h2><span class="muted">live output · ticks: the ringing keys' masses</span></div>
+          <canvas id="spectrogram"></canvas>
+          <div class="caption">Width against lifetime: a wide state is a short smear across many frequencies, a narrow one a long thin trace. Their product never changes.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="kb-help">
+      <span>Play with <kbd>Z</kbd>–<kbd>/</kbd> and <kbd>Q</kbd>–<kbd>]</kbd> rows</span>
+      <span>octave <kbd>←</kbd><kbd>→</kbd> <b id="oct"></b></span>
+      <span>velocity <kbd>↑</kbd><kbd>↓</kbd> <b id="ctl-read"></b></span>
+      <span>keep the key-up channel shut: hold <kbd>Space</kbd> <b id="hold" class="off">off</b></span>
+    </div>
+    <div id="keyboard"></div>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="../shared/nav.js"></script>
+  <script type="module" src="src/breitwigner-main.js"></script>
+  <script type="module" src="src/breitwigner-tour.js"></script>
+</body>
+</html>

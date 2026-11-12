@@ -90,6 +90,7 @@ bells, air, circuits, space, particles) and whether the notes ring out or sustai
 | ✅ | [Ringing Planets](planets/) | the free oscillations of the Earth, Mars and the Moon after a great quake: every key the planet's spheroidal and toroidal normal modes, solved by spectral elements from PREM (within 0.6 % of the measured modes) and from InSight's and Apollo's models, sped up until the football mode ₀S₂ is the note; Q from the rock's shear and bulk losses with its physical dispersion, the spin's Coriolis splitting into beating singlets, a megathrust, strike-slip, normal fault or explosion at any depth exciting each singlet by its strain, the station's distance and direction putting some modes on nodes; heard as the ground's motion, a seismometer, a gravimeter or the horizontal pair in stereo |
 | ✅ | [Pulsars](pulsars/) | spinning neutron stars, every key a pulsar turning at the note: the beam's core and cone from the rotating vector model, as wide as the open field lines at the emission height and capped by the light cylinder, an interpulse from the other pole; on the way here dispersion (4.15 ms × DM / f²) and Bhat et al.'s scattering tails, the band's upper and lower halves in stereo, undedispersed, through a filterbank or coherently dedispersed |
 | ✅ | [Singing Dunes](dunes/) | avalanches down a dune's slip face, each key a sand whose grains shear at the note (f = 0.4·√(g/d), Douady 2006): patches of grains as Kuramoto oscillators pulled into step by the flowing layer above a threshold speed, so a slow slide rumbles and a fast one booms; sorting and water raise the threshold; or, the other theory, a dry layer ringing as a waveguide (Vriend 2007) |
+| ✅ | [Breit-Wigner Keyboard](breitwigner/) | the plainest resonance there is: every key an unstable particle with a mass, the note, and a width Γ, and nothing else. Struck, its amplitude turns at its mass and dies at half its width (e^(−iMt)·e^(−Γt/2), exact to the sample), so the note is one decaying sine whose spectrum is the Breit–Wigner line and whose lifetime is ħ/Γ. The presets are real resonances by Γ/M, from the Particle Data Group: a ρ meson's thud (19 %), a Z boson's knock (2.7 %), a φ's soft mallet (0.42 %), a J/ψ's needle that rings for minutes (30 ppm); the width from key to key as Mⁿ (Sargent's rule, n = 5: a bass that rings under a treble of ticks); partial widths that add (letting a key go opens a second decay channel, a firm press a third); a boost on pitch bend (energy γM, and time dilation: γ times the life); and a key struck again adds its amplitude to what still rings |
 
 ### Devices built to study physics
 
@@ -206,7 +207,8 @@ deepens, so its electron stays longer; on the NMR Spin Echo a firm press
 runs the key's own echo train; on Ringing Planets it sets off aftershocks,
 and on the Black-Hole Keyboard it drops matter in, each clump ringing the
 hole again. On the Ion Chain a held key's laser pushes its ions, so a firm
-press keeps them ringing. Slide, set before a strike, is TESS's planet's
+press keeps them ringing. On the Breit-Wigner Keyboard a firm press opens
+a third decay channel, so the note dies while it is pressed. Slide, set before a strike, is TESS's planet's
 path across its star, CUORE's own thermistor bias, where a Collider Showers
 particle lands, and a Whistlers line's plasma density; on the Wind Harp it
 is how gusty the wind is at that key's strings.
@@ -230,7 +232,9 @@ Keyboard's binary orbits, the Black-Hole Keyboard's recoil, ABRACADABRA's
 Earth through the halo), TESS's transit-timing variations, the Early
 Universe's sound speed, the Singing Dunes' shear, the Collider Showers'
 crystal temperature, the Whistlers' L-shell, the Quantum Keyboard's well
-squeezed, and the Storage Ring's tune (its sidebands move; its pitch can't).
+squeezed, the Breit-Wigner Keyboard's boost (up only: the state's energy is
+γ times its mass, and it lives γ times longer), and the Storage Ring's tune
+(its sidebands move; its pitch can't).
 
 **The RISE's panel:** while a Seaboard is plugged in, each page draws it at
 the left: its faders and pad with the controls they move and where they are,
@@ -333,6 +337,7 @@ and the RISE 2; Chrome and Edge only (Safari has no Web MIDI).
 | Pulsars | Magnetic inclination · Sightline · Pulse-to-pulse jitter | Observing frequency | Dispersion measure |
 | Singing Dunes | Sorting · Water in the sand · Avalanche speed | Collision length | Push |
 | NMR Spin Echo | Pulse angle · T₂ · Receiver noise | Echo time | Field inhomogeneity (shim) |
+| Breit-Wigner Keyboard | Width grows as Mⁿ · Key-up channel Γ₂ · Press channel Γ₃ | Phase at birth | Width Γ/M |
 
 </details>
 
