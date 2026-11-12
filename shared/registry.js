@@ -596,6 +596,14 @@ export const INSTRUMENTS = [
     vibrates: 'matter', notes: 'ring',
     accent: '#6fc3ff',
   },
+  {
+    id: 'breitwigner', name: 'Breit-Wigner Keyboard', section: 'phenomena', ready: true, version: '0.1.0', trim: -2,
+    plugin: { code: 'Brei', ready: true },
+    tagline: 'Every key an unstable particle, the plainest resonance there is: one mass, the note, and one width. Struck, it rings at its mass and dies in its lifetime, so its spectrum is the Breit–Wigner line: a ρ meson\'s thud, a Z boson\'s knock, a J/ψ\'s needle that rings for minutes.',
+    physics: 'Unstable states · the Breit–Wigner line · exponential decay · Γτ = ħ · time dilation',
+    vibrates: 'matter', notes: 'ring',
+    accent: '#ff6ad5',
+  },
 ];
 
 // The template (docs/template/), the starting point for new instruments: not listed, but it
