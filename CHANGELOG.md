@@ -16,6 +16,40 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-11-12 — the clavichord's bass in tune; the marimba's deepest cut; fixes from a site audit
+
+### Forte 0.50.1
+- **The front page keeps its tab after About, All Plugins or Credits closes.** Closing one cleared the tab from the link, so the next search showed every tab and a reload lost the tab.
+- **A value's gloss makes room above the keys of a phone held sideways.** There a strip control shows "600 Pa", not "600 Pa (61 mm of water)", which ran under the Regal's Volume slider and squeezed out the controls' names; the Controls still show the whole value.
+- **A computer key let go while ⌘ is down no longer leaves its note sounding** (on every page and on Combinations): macOS sends no key-up then, so pressing ⌘ lets the held keys go.
+- The instruments' notes no longer say that Quality is in the controls: it is beside the CPU readout at the top of the page.
+
+### Vibraphone 0.11.1
+- The bars' solver, which the marimba shares, gives up on a shape that is no bar where it searched for ever. The vibraphone's own bars never get there, and sound as before.
+
+### Clavichord 0.3.0
+- **The bass sounds in tune.** The tangent rides the strings on the key and the finger, which raises a string's fundamental most (63 ¢ at FF) and its partial n by 1/n² of that. The strings were tuned to put the fundamental on pitch, which left every other partial flat, by up to 57 ¢ at FF, 45 ¢ at C and 18 ¢ at c, where the fundamental is 15 to 60 dB under them and the ear takes the note from the partials. Each string is now tuned as a tuner's ear would have it: the partials' shifts, each weighed by its share of the stroke and by how well the soundboard gives it to the air around its frequency, average to nothing. From FF to c the partials that sound are within a few cents of the note (FF's 3rd to 8th are 3 to 6 ¢ sharp) and the fundamental is left sharp, 62 ¢ at FF, 46 ¢ at C, 14 ¢ at c; from c¹ up nothing moves by more than 2 ¢. FF's strings carry 20 N where they carried 18.7 N.
+- **A 4′ string is tuned to its pair,** its fundamental on the pair's 2nd partial, and the three strings' partials there move the tangent as one. With the two in tune the model finds what a shared bridge gives: the 4′'s fundamental reaches the bridge opposed to the pair's 2nd partial, so the 2nd grows about 10 dB weaker and the 4th and 8th about 2 dB stronger. The option's hint and the tour say "a brighter, leaner bass" where they said "fuller".
+- The course card's **tuned for its give** row lists what the tangent's give does to the fundamental, the 2nd partial and the 4th.
+- A note's strings are designed in about half the time (the tangent's roots are found by an accelerated iteration).
+- With **Full range** on, the keys below FF now sound sharp where they sounded flat (their thick wire's stiffness, 10 to 40 ¢ at A0), since the tuning leaves the wire's stiffness to the ear.
+- The examples are rendered again.
+
+### Marimba and Xylophone 0.2.1
+- **Undercut depth near its top no longer freezes the page or the plugin on the marimba's highest keys.** Above about 117 % the cut asked of B7 and C8 was deeper than the bar is thick, and the model never finished solving them. The cut now stops with a twentieth of the wood left under it, which only the bars from A7 to C8, past the marimba's real compass, reach (between 111 % and 119 %).
+
+### TESS 0.4.1
+- The notes gave the photon noise of the default star (T = 9) as about 190 ppm a sample, the figure for T = 8. The model's is about 260 ppm, as it always played.
+
+### Birdsong 0.2.1
+- The notes called the place where the two onset lines cross, at tension ¼, a Takens–Bogdanov point. The lines belong to different rest points there; that point is at zero tension.
+
+### Pulsars 0.2.1
+- The notes said scattering at 150 MHz is a hundred thousand times longer than at 1.4 GHz. By the fit the model uses it is about five thousand times.
+
+### Singing Dunes 0.2.1
+- The notes gave C2's grains as 372 µm; 0.4 √(g/d) puts them at 367 µm.
+
 ## 2026-11-08 — the FC-300's pedals, and values that keep their room; the NMR's π pulses no longer click; a warning for a note out of range; RISE panel switches, fader mode and preset arrows
 
 ### Forte 0.50.0

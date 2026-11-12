@@ -1,9 +1,0 @@
-# the clavichord's bass in tune
-
-### Clavichord (minor)
-- **The bass sounds in tune.** The tangent rides the strings on the key and the finger, which raises a string's fundamental most (63 ¢ at FF) and its partial n by 1/n² of that. The strings were tuned to put the fundamental on pitch, which left every other partial flat, by up to 57 ¢ at FF, 45 ¢ at C and 18 ¢ at c, where the fundamental is 15 to 60 dB under them and the ear takes the note from the partials. Each string is now tuned as a tuner's ear would have it: the partials' shifts, each weighed by its share of the stroke and by how well the soundboard gives it to the air around its frequency, average to nothing. From FF to c the partials that sound are within a few cents of the note (FF's 3rd to 8th are 3 to 6 ¢ sharp) and the fundamental is left sharp, 62 ¢ at FF, 46 ¢ at C, 14 ¢ at c; from c¹ up nothing moves by more than 2 ¢. FF's strings carry 20 N where they carried 18.7 N.
-- **A 4′ string is tuned to its pair,** its fundamental on the pair's 2nd partial, and the three strings' partials there move the tangent as one. With the two in tune the model finds what a shared bridge gives: the 4′'s fundamental reaches the bridge opposed to the pair's 2nd partial, so the 2nd grows about 10 dB weaker and the 4th and 8th about 2 dB stronger. The option's hint and the tour say "a brighter, leaner bass" where they said "fuller".
-- The course card's **tuned for its give** row lists what the tangent's give does to the fundamental, the 2nd partial and the 4th.
-- A note's strings are designed in about half the time (the tangent's roots are found by an accelerated iteration).
-- With **Full range** on, the keys below FF now sound sharp where they sounded flat (their thick wire's stiffness, 10 to 40 ¢ at A0), since the tuning leaves the wire's stiffness to the ear.
-- The examples are rendered again.

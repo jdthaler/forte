@@ -1,18 +1,23 @@
-forte marimba 0.2.0
-kind 0
+forte vibraphone 0.11.1
 depth 1
-eta 0.0011999999999999999
+eta 0.0001
+temp 20
+fullRange 0
 tubes 1
-gap 25
+gap 30
 detune 0
-offset 0
-hardness 300
-mass 14
-strike 0.41999999999999998
-across 0.10000000000000001
+motor 1
+speed 2.25
+cd 0.69999999999999996
+twist 0
+shaft2 0
+hardness 800
+mass 12
+strike 0.45000000000000001
+across 0.84999999999999998
 speedMax 3
-roll 0
-rollRate 12
+damp 0.29999999999999999
+pedalLock 0
 room 0.25
 venue 1
 volume 0.80000000000000004
@@ -35,4 +40,4 @@ glideOn 0
 slideOn 1
 pressOn 1
 liftOn 0
-preset 15
+preset 14
