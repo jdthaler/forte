@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <numbers>
 
 namespace forte::vibraphone {
@@ -167,7 +168,13 @@ double bandEig(const std::vector<double> &kv, const std::vector<double> &mv, int
   const double *k = kv.data(), *m = mv.data();
   std::vector<double> d(N), Lb(N * 4);
   double lo = 0, hi = guess;
-  while (ldl(k, m, N, hi, d.data(), Lb.data()) < idx) hi *= 4;
+  // (a shape that is no bar, such as a cut deeper than the bar is thick, has no such mode to bracket:
+  // give up on it, where an open-ended search would never return)
+  int grown = 0;
+  while (ldl(k, m, N, hi, d.data(), Lb.data()) < idx) {
+    if (++grown > 100) { if (xOut) xOut->assign(N, 0.0); return std::numeric_limits<double>::quiet_NaN(); }
+    hi *= 4;
+  }
   for (int it = 0; it < 200 && hi - lo > tol * hi; it++) {
     const double mid = 0.5 * (lo + hi);
     if (ldl(k, m, N, mid, d.data(), Lb.data()) >= idx) hi = mid; else lo = mid;

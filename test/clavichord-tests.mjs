@@ -53,13 +53,16 @@ function tone(x, f, a, b) {
   for (let i = a; i < b; i++) { const h = 0.5 - 0.5 * Math.cos((2 * PI * (i - a)) / (b - a)); re += h * x[i] * Math.cos(w * i); im += h * x[i] * Math.sin(w * i); }
   return Math.hypot(re, im);
 }
-// Frequency of the strongest line within ±40 ¢ of f0 in [a, b): Goertzel scan, parabolic peak.
-function peakFreq(x, a, b, f0) {
-  const c = []; for (let k = -80; k <= 80; k++) c.push(Math.log(tone(x, f0 * 2 ** (k / 2400), a, b) + 1e-30));
+// Frequency of the strongest line within ±40 ¢ (span half-cents) of f0 in [a, b): Goertzel scan, parabolic peak.
+function peakFreq(x, a, b, f0, span = 80) {
+  const c = []; for (let k = -span; k <= span; k++) c.push(Math.log(tone(x, f0 * 2 ** (k / 2400), a, b) + 1e-30));
   let i = 1; for (let k = 1; k < c.length - 1; k++) if (c[k] > c[i]) i = k;
   const d = (0.5 * (c[i - 1] - c[i + 1])) / (c[i - 1] - 2 * c[i] + c[i + 1]);
-  return f0 * 2 ** ((i - 80 + d) / 2400);
+  return f0 * 2 ** ((i - span + d) / 2400);
 }
+// Where the model puts key k's partial n as it sounds at the nominal touch (Hz): the stiff string's
+// own, moved by the tangent's give.
+const partialAt = (k, n, p = P({ detune: 0 }), choir = 0) => M.partials(k, choir, p)[n - 1].f * 2 ** (M.give(k, p, n, choir) / 1200);
 const rms = (x, a, b) => { let s = 0; a = Math.round(a); b = Math.round(b); for (let i = a; i < b; i++) s += x[i] * x[i]; return Math.sqrt(s / (b - a)); };
 const peakOf = (x, a = 0, b = x.length) => { let p = 0; for (let i = Math.round(a); i < Math.round(b); i++) p = Math.max(p, Math.abs(x[i])); return p; };
 const dB = (r) => 20 * Math.log10(r);
@@ -127,7 +130,7 @@ test('pressure tuning: harder is sharper, by ½·ΔT/T, most in the slack bass a
     }
     assert.ok(M.cents(k, P(), 1.6) > 1 && M.cents(k, P(), 0.4) < -0.5, `${k}: ${M.cents(k, P(), 1.6)} ¢`);
   }
-  assert.ok(M.cents(36, P(), 1.6) > M.cents(60, P(), 1.6) && M.cents(84, P(), 1.6) > M.cents(60, P(), 1.6), 'the tenor least');
+  assert.ok(M.cents(KEY_LO, P(), 1.6) > 3 * M.cents(53, P(), 1.6) && M.cents(84, P(), 1.6) > 3 * M.cents(53, P(), 1.6), 'the tenor least');
 });
 test('the listing\'s damping of a partial: σ∞ times the share of its energy in the cloth, 1 − sin(2βw)/2βw', () => {
   const l = 0.8, w = 0.07;
@@ -148,18 +151,83 @@ test('the soundboard: plate modes from a few hundred hertz, its admittance posit
   assert.ok(b[0].f > 150 && b[0].f < 400, `first mode ${b[0].f}`);
   for (const f of [50, 200, 500, 1000, 3000, 8000]) for (const k of [36, 60, 84]) assert.ok(M.admittance(k, f).re > 0, `${k} at ${f}`);
 });
+test('the board as heard: under its lowest resonance the pressure falls as f² (this as f⁴), and no resonance stands out of the two-octave mean', () => {
+  for (const k of [KEY_LO, 60, KEY_HI]) {
+    // a board moving against its stiffness: pressure ∝ acceleration ∝ f² for a given force, and each
+    // mode's own 1/(1 − (f/f_k)²) on top, small this far under the lowest (218 Hz): 16 to 18 an octave
+    const r = M.boardResponse(k, 40) / M.boardResponse(k, 20);
+    assert.ok(r > 16 && r < 18, `${k}: × ${r.toFixed(2)} from 20 to 40 Hz`);
+    for (let f = 20; f < 16000; f *= 2 ** (1 / 12)) {
+      const step = 10 * Math.log10(M.boardResponse(k, f * 2 ** (1 / 12)) / M.boardResponse(k, f));
+      assert.ok(Math.abs(step) < 2.5, `${k}: ${step.toFixed(2)} dB in a semitone at ${f.toFixed(0)} Hz`);
+    }
+  }
+});
+test('the tangent\'s give: above its bounce the key and finger are a mass on the strings\' end, and partial n sounds sharp by G/(2Mωₙ²), G = Σ 2T/L; twice the mass, half of it', () => {
+  for (const [k, n] of [[KEY_LO, 8], [36, 8], [48, 6], [60, 4], [72, 3]]) {
+    const p = P({ detune: 0 }), c = M.course(k, p), w = 2 * PI * M.partials(k, 0, p)[n - 1].f;
+    const G = c.strings.reduce((sum, x) => sum + (2 * x.Tnom) / c.L, 0), mass = (1200 / Math.LN2) * (G / (2 * 0.012 * w * w));
+    near(M.give(k, p, n) / mass, 1, 0.03, `${k} partial ${n}: ${M.give(k, p, n).toFixed(3)} ¢ vs ${mass.toFixed(3)}`);
+    near(M.give(k, { ...p, mass: 24 }, n) / M.give(k, p, n), 0.5, 0.02, `${k}: a 24 g key`);
+    // and the lower the partial the more: the fundamental most
+    assert.ok(M.give(k, p, 1) > 3 * M.give(k, p, 2) && M.give(k, p, 2) > 3 * M.give(k, p, 4) && M.give(k, p, 4) > 0, `${k}: ${[1, 2, 4].map((i) => M.give(k, p, i).toFixed(1))}`);
+  }
+  assert.ok(M.give(KEY_LO, P(), 1) > 50 && M.give(60, P(), 1) < 10, 'tens of cents at FF, a few at c¹');
+});
+test('tuned by ear: the partials\' shifts, each weighed by its share of the sound (1/n² from the stroke, times the board\'s response), average to nothing', () => {
+  // (each of the first 32 partials' shifts solved for here; the model solves four and lets the rest fall as 1/n²)
+  const mean = (k, p) => {
+    const parts = M.partials(k, 0, p);
+    let sum = 0, weight = 0;
+    for (let n = 1; n <= Math.min(32, parts.length); n++) { const w = M.boardResponse(k, parts[n - 1].f) / (n * n); sum += w * M.give(k, p, n); weight += w; }
+    return sum / weight;
+  };
+  for (let k = 21; k <= 108; k += 3) {
+    const p = P({ detune: 0 }), rigid = M.course(k, p).centsNominal;
+    near(rigid + mean(k, p), 0, 0.1, `${k}: the weighted mean`);
+    near(rigid + M.heard(k, p), 0, 1e-3, `${k}: as the model has it`);
+    // where the fundamental carries the note it is on pitch; in the bass the partials above it are,
+    // and the fundamental, which the board hardly answers there, is left as sharp as the tangent makes it
+    const at = (n) => rigid + M.give(k, p, n);
+    if (k >= 60) assert.ok(Math.abs(at(1)) < 1.5, `${k}: fundamental ${at(1).toFixed(2)} ¢`);
+    if (k >= KEY_LO && k < 48) {
+      assert.ok(at(1) > 15, `${k}: fundamental ${at(1).toFixed(1)} ¢`);
+      for (const n of [3, 4, 5, 6]) assert.ok(Math.abs(at(n)) < 7, `${k} partial ${n}: ${at(n).toFixed(2)} ¢`);
+    }
+  }
+  // the 4′s on: the pair still tuned so
+  for (const k of [KEY_LO, 36, 48]) { const p = P({ detune: 0, octave: true }); near(M.course(k, p).centsNominal + mean(k, p), 0, 0.15, `${k} with its 4′`); }
+});
+test('a 4′ string is tuned to its pair, a beatless octave: its fundamental on their second partial (on a rigid nut), and the tangent moves the two as one', () => {
+  for (const k of [KEY_LO, 36, 43, 52]) {
+    const p = P({ detune: 0, octave: true });
+    near(cents(M.partials(k, 2, p)[0].f, M.partials(k, 0, p)[1].f), 0, 1e-6, `${k}: rigid`);
+    near(M.give(k, p, 1, 2), M.give(k, p, 2, 0), 0.02, `${k}: the same shift`);
+    // more strings on the tangent at that partial, more give than the pair alone has
+    assert.ok(M.give(k, p, 2) > 1.2 * M.give(k, P({ detune: 0 }), 2), `${k}: ${M.give(k, p, 2).toFixed(1)} ¢ with the 4′`);
+  }
+});
 
 console.log('engine');
-test('in tune across the compass at the default touch (within 2 ¢), the tangent\'s give tuned out', () => {
+test('in tune by ear across the compass at the default touch: each partial that sounds is where the model puts it (within 0.5 ¢), and the loudest within 6 ¢ of the note (the wire\'s own stiffness aside)', () => {
   for (const k of [KEY_LO, 36, 43, 48, 55, 60, 67, 72, 79, 84, KEY_HI]) {
-    const f = keyFreq(k), { L } = hold(k, 0.6, 1.2, P({ detune: 0 })), got = peakFreq(L, 0.4 * FS, 1.2 * FS, f);
-    assert.ok(Math.abs(cents(got, f)) < 2, `${k}: ${cents(got, f).toFixed(2)} ¢`);
+    const p = P({ detune: 0 }), { L } = hold(k, 0.6, 1.3, p), parts = M.partials(k, 0, p), f = keyFreq(k);
+    const heard = [];
+    for (let n = 1; n <= Math.min(6, parts.length); n++) {
+      const want = partialAt(k, n, p), got = peakFreq(L, 0.3 * FS, 1.3 * FS, want, 20);
+      // (from n × the note, were the string limp: its stiffness sharpens partial n by fₙ/(n f₁))
+      heard.push({ n, level: tone(L, got, 0.3 * FS, 1.3 * FS), off: cents(got, want), note: cents(got, (f * parts[n - 1].f) / parts[0].f) });
+    }
+    const top = heard.reduce((a, b) => (b.level > a.level ? b : a));
+    for (const h of heard) if (h.level > 0.01 * top.level) assert.ok(Math.abs(h.off) < 0.5, `${k} partial ${h.n}: ${h.off.toFixed(2)} ¢ from the model`);
+    assert.ok(Math.abs(top.note) < 6, `${k}: its loudest partial (${top.n}) ${top.note.toFixed(2)} ¢ from the note`);
   }
 });
 test('the keyboard\'s tuning: A = 415 Hz and ¼-comma meantone move the notes by their cents', () => {
+  const sounds = (k, p) => peakFreq(hold(k, 0.6, 1.2, p).L, 0.4 * FS, 1.2 * FS, partialAt(k, 1, p));
   for (const [k, o, c] of [[69, { pitch: 415 }, cents(415, 440)], [64, { temperament: 'meantone' }, -3.42], [60, { temperament: 'meantone' }, 10.26]]) {
-    const f = keyFreq(k) * 2 ** (c / 1200), { L } = hold(k, 0.6, 1.2, P({ detune: 0, ...o }));
-    assert.ok(Math.abs(cents(peakFreq(L, 0.4 * FS, 1.2 * FS, f), f)) < 1, `${k}`);
+    const moved = cents(sounds(k, P({ detune: 0, ...o })), sounds(k, P({ detune: 0 })));
+    assert.ok(Math.abs(moved - c) < 1, `${k}: ${moved.toFixed(2)} ¢ for ${c.toFixed(2)}`);
   }
 });
 test('the tangent settles where the model says, and stays on the strings while the key is down', () => {
@@ -172,8 +240,9 @@ test('the tangent settles where the model says, and stays on the strings while t
 });
 test('pressing harder sounds sharper, as the model says (within 1.5 ¢), and lighter flatter', () => {
   for (const [k, press] of [[48, 2], [60, 0.35], [72, 2], [84, 0.35]]) {
-    const f = keyFreq(k) * 2 ** (M.cents(k, P(), press) / 1200), { L } = hold(k, 0.6, 1.2, P({ detune: 0, press }));
-    const got = cents(peakFreq(L, 0.4 * FS, 1.2 * FS, keyFreq(k)), keyFreq(k));
+    // (from the note as the default touch sounds it)
+    const f = partialAt(k, 1), at = (o) => peakFreq(hold(k, 0.6, 1.2, P({ detune: 0, ...o })).L, 0.4 * FS, 1.2 * FS, f);
+    const got = cents(at({ press }), at({}));
     near(got, M.cents(k, P(), press), 1.5, `${k} at ${press} N`);
     assert.ok(press > 1 ? got > 2 : got < -1, `${k}: ${got.toFixed(2)} ¢`);
   }
@@ -244,7 +313,7 @@ test('fretted: the upper key of a pair stops the lower note and sounds its own; 
   const { L } = run(fr, [[0, 'on', 60, 0.6], [0.6, 'on', 61, 0.6], [1.6, 'off', 61]], 2.6);
   assert.ok(tone(L, f0, 0.1 * FS, 0.6 * FS) > 30 * tone(L, f1, 0.1 * FS, 0.6 * FS), 'C4 first');
   assert.ok(tone(L, f1, 0.8 * FS, 1.6 * FS) > 100 * tone(L, f0, 0.8 * FS, 1.6 * FS), 'C♯4 alone once its tangent is down');
-  assert.ok(Math.abs(cents(peakFreq(L, 0.8 * FS, 1.6 * FS, f1), f1)) < 2, 'C♯4 in tune on the shared string');
+  assert.ok(Math.abs(cents(peakFreq(L, 0.8 * FS, 1.6 * FS, f1), f1)) < 3, 'C♯4 in tune on the shared string');
   assert.ok(tone(L, f0, 1.7 * FS, 2.6 * FS) > 30 * tone(L, f1, 1.7 * FS, 2.6 * FS), 'C4 again');
   // unfretted, both sound together
   const both = run(P({ detune: 0 }), [[0, 'on', 60, 0.6], [0.6, 'on', 61, 0.6]], 1.6).L;
@@ -253,9 +322,18 @@ test('fretted: the upper key of a pair stops the lower note and sounds its own; 
   const de = run(fr, [[0, 'on', 62, 0.6], [0.3, 'on', 63, 0.6]], 1).L;
   assert.ok(tone(de, keyFreq(62), 0.4 * FS, FS) > 0.2 * tone(de, keyFreq(63), 0.4 * FS, FS), 'D4 with E♭4');
 });
-test('4′ strings in the bass: the octave (2nd partial) grows; none above e', () => {
-  const k = 36, f = keyFreq(k), ratio = (o) => { const { L } = hold(k, 0.6, 0.8, P({ octave: o, detune: 0 })); return tone(L, 2 * f, 0.1 * FS, 0.8 * FS) / tone(L, f, 0.1 * FS, 0.8 * FS); };
-  assert.ok(ratio(true) > 1.5 * ratio(false), `${ratio(true).toFixed(2)} vs ${ratio(false).toFixed(2)}`);
+test('4′ strings in the bass: one line with the pair\'s at each even partial, the 4th and 8th stronger, the 2nd weaker (a half wave and a whole one reach the bridge opposed); none above e', () => {
+  // levels against the 3rd partial, which a 4′ has no part in
+  const k = 36, levels = (octave) => {
+    const p = P({ octave, detune: 0 }), { L } = hold(k, 0.6, 1.3, p);
+    const at = (n) => { const want = partialAt(k, n, p), got = peakFreq(L, 0.3 * FS, 1.3 * FS, want, 20); return { n, level: tone(L, got, 0.3 * FS, 1.3 * FS), off: cents(got, want) }; };
+    const third = at(3).level;
+    return [2, 4, 8].map((n) => { const h = at(n); return { ...h, level: h.level / third }; });
+  };
+  const [w2, w4, w8] = levels(true), [o2, o4, o8] = levels(false);
+  for (const h of [w2, w4]) assert.ok(Math.abs(h.off) < 0.5, `partial ${h.n} with the 4′: ${h.off.toFixed(2)} ¢ from the model`);
+  assert.ok(w4.level > 1.15 * o4.level && w8.level > 1.15 * o8.level, `4th × ${(w4.level / o4.level).toFixed(2)}, 8th × ${(w8.level / o8.level).toFixed(2)}`);
+  assert.ok(w2.level < 0.6 * o2.level, `2nd × ${(w2.level / o2.level).toFixed(2)}`);
   assert.equal(M.course(36, P({ octave: true })).strings.length, 3);
   assert.equal(M.course(M.OCTAVE_TOP + 1, P({ octave: true })).strings.length, 2);
   near(M.course(36, P({ octave: true })).strings[2].f0 / M.course(36, P({ octave: true })).strings[0].f0, 2, 0.01, 'an octave up');
@@ -270,12 +348,12 @@ test('the pair: two strings, the detune apart', () => {
 test('without the soundboard: the bridge force, still the note, its board resonances gone', () => {
   const k = 60, f = keyFreq(k), on = hold(k, 0.6, 0.8).L, off = hold(k, 0.6, 0.8, P({ soundboard: false })).L;
   assert.ok(rms(off, 0, 0.8 * FS) > 0.1 * rms(on, 0, 0.8 * FS), 'audible');
-  assert.ok(Math.abs(cents(peakFreq(off, 0.3 * FS, 0.8 * FS, f), f)) < 2, 'on pitch');
+  assert.ok(Math.abs(cents(peakFreq(off, 0.3 * FS, 0.8 * FS, f), peakFreq(on, 0.3 * FS, 0.8 * FS, f))) < 0.5, 'at the same pitch');
 });
-test('every key from A0 to C8 plays, with no NaN; in tune (within 3 ¢) from FF up', () => {
+test('every key from A0 to C8 plays, with no NaN; its fundamental where the tangent\'s give leaves it (within 3 ¢) from FF up', () => {
   for (let k = 21; k <= 108; k += 3) {
     // the deep bass over a longer window, to resolve its fundamental from the 2nd partial's leakage
-    const f = keyFreq(k), sec = k < 36 ? 2 : 0.7, { L } = hold(k, 0.6, sec, P({ detune: 0 }));
+    const f = partialAt(k, 1), sec = k < 36 ? 2 : 0.7, { L } = hold(k, 0.6, sec, P({ detune: 0 }));
     assert.ok(L.every(Number.isFinite), `${k}: NaN`);
     assert.ok(rms(L, 0.1 * FS, sec * FS) > 1e-4, `${k}: sounds (${rms(L, 0.1 * FS, sec * FS).toExponential(1)})`);
     // below FF the tangent's give takes the fundamental (the tangent bounces on the strings near it)

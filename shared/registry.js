@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.50.0';
+export const FORTE_VERSION = '0.50.1';
 
 // Where each instrument's page keeps its settings in the browser (the Combinations page reads an
 // instrument's settings from there, as it was left on its own page).
@@ -91,7 +91,7 @@ export const INSTRUMENTS = [
     accent: '#ff9fb0',
   },
   {
-    id: 'vibraphone', name: 'Vibraphone', section: 'traditional', ready: true, version: '0.11.0', trim: 3,
+    id: 'vibraphone', name: 'Vibraphone', section: 'traditional', ready: true, version: '0.11.1', trim: 3,
     plugin: { code: 'Vibe', ready: true },
     after: 'the Deagan vibraharp (1927)',
     tagline: 'Undercut aluminium bars over tuned tubes, with motor-driven discs that open and close the resonators.',
@@ -154,7 +154,7 @@ export const INSTRUMENTS = [
     accent: '#d9a441',
   },
   {
-    id: 'clavichord', name: 'Clavichord', section: 'traditional', ready: true, version: '0.2.0', trim: 3.5,
+    id: 'clavichord', name: 'Clavichord', section: 'traditional', ready: true, version: '0.3.0', trim: 3.5,
     vibrates: 'strings', notes: 'ring',
     plugin: { code: 'Clvd', ready: true },
     after: 'the German clavichord of C. P. E. Bach’s day (18th century)',
@@ -180,7 +180,7 @@ export const INSTRUMENTS = [
     accent: '#d9874a',
   },
   {
-    id: 'marimba', name: 'Marimba and Xylophone', section: 'traditional', ready: true, version: '0.2.0', trim: 4.5,
+    id: 'marimba', name: 'Marimba and Xylophone', section: 'traditional', ready: true, version: '0.2.1', trim: 4.5,
     plugin: { code: 'Mrmb', ready: true },
     after: 'the concert marimba and the orchestral xylophone',
     tagline: 'Rosewood bars, undercut so their partials land on a chord (1 : 4 : 10 for the marimba, a twelfth for the xylophone), over stopped tubes that drink the sound out of them. Roll a held note to sustain it.',
@@ -524,7 +524,7 @@ export const INSTRUMENTS = [
     accent: '#7fd8c4',
   },
   {
-    id: 'tess', name: 'TESS', section: 'devices', ready: true, version: '0.4.0', trim: 7,
+    id: 'tess', name: 'TESS', section: 'devices', ready: true, version: '0.4.1', trim: 7,
     plugin: { code: 'Tess', ready: true },
     tagline: 'Every key a planet crossing its star, its light played as NASA\'s Transiting Exoplanet Survey Satellite records it, sped up until each year is a note: the dips are the waveform, the star\'s limb darkening rounds them, and the photon noise hisses under faint stars.',
     physics: 'Exoplanet transits · Kepler\'s third law · limb darkening · photon-counting noise',
@@ -556,7 +556,7 @@ export const INSTRUMENTS = [
     accent: '#e0b65a',
   },
   {
-    id: 'birdsong', name: 'Birdsong', section: 'phenomena', ready: true, version: '0.2.0', trim: -2,
+    id: 'birdsong', name: 'Birdsong', section: 'phenomena', ready: true, version: '0.2.1', trim: -2,
     plugin: { code: 'Bird', ready: true },
     tagline: 'Every key a songbird: air from its air sacs sets the labia of its syrinx swinging, one nonlinear oscillator whose pure Hopf whistles and buzzy saddle-node calls are a canary\'s and a zebra finch\'s, sung through its trachea and a mouth it tunes to the note.',
     physics: 'Nonlinear dynamics · the normal form of the syrinx · Hopf and saddle-node bifurcations · the vocal tract',
@@ -573,7 +573,7 @@ export const INSTRUMENTS = [
     accent: '#5fb3a1',
   },
   {
-    id: 'pulsars', name: 'Pulsars', section: 'phenomena', ready: true, version: '0.2.0', trim: -0.5,
+    id: 'pulsars', name: 'Pulsars', section: 'phenomena', ready: true, version: '0.2.1', trim: -0.5,
     plugin: { code: 'Puls', ready: true },
     tagline: 'Every key a spinning neutron star whose radio beam sweeps past the Earth at the note, as fast as the millisecond pulsars spin: the shape of the beam and where our sightline cuts it set the tone, and the Galaxy\'s plasma smears and sweeps each pulse on its way.',
     physics: 'Neutron stars · the rotating vector model · interstellar dispersion and scattering · dedispersion',
@@ -581,7 +581,7 @@ export const INSTRUMENTS = [
     accent: '#7fc7ff',
   },
   {
-    id: 'dunes', name: 'Singing Dunes', section: 'phenomena', ready: true, version: '0.2.0', trim: -7,
+    id: 'dunes', name: 'Singing Dunes', section: 'phenomena', ready: true, version: '0.2.1', trim: -7,
     plugin: { code: 'Dune', ready: true },
     tagline: 'Every key an avalanche down a desert dune\'s slip face, booming as the dunes of Morocco, Chile and Nevada do: the sheared grains fall into step, their note set by their size, or a buried layer rings as a waveguide. How dunes sing is still argued over, so it plays both.',
     physics: 'Granular flow · synchronisation (Kuramoto) · seismic waveguides',

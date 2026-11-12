@@ -87,6 +87,10 @@ export async function wasmModel() {
       const m = new Float64Array(x.memory.buffer, out, 3 * n);
       return Array.from({ length: n }, (_, i) => ({ f: m[3 * i], sigma: m[3 * i + 1], sigB: m[3 * i + 2] }));
     },
+    // give(key, P, n, choir): the cents the tangent's give raises a string's partial n by, with the key and
+    // finger P gives; heard(key, P, choir): the same as the tuner hears it, the partials weighed by their sound
+    give(key, P, n, choir = 0) { put(P); return x.clavichord_give(key, choir, n, s.at); },
+    heard(key, P, choir = 0) { put(P); return x.clavichord_give(key, choir, 0, s.at); },
     courseOf: (key, fretted) => x.clavichord_course_of(key, fretted ? 1 : 0),
     tangentPoint(key, P) { put(P); return x.clavichord_tangent_point(key, s.at); },
     scaleLength: (key) => x.clavichord_scale_length(key),
@@ -95,6 +99,7 @@ export async function wasmModel() {
     sinSin: (a, phi, b, psi, x0, x1) => x.clavichord_sin_sin(a, phi, b, psi, x0, x1),
     linSin: (p, r, b, psi, x0, x1) => x.clavichord_lin_sin(p, r, b, psi, x0, x1),
     boardModes() { const n = x.clavichord_board_modes(s.at), m = s.f64(2 * n); return Array.from({ length: n }, (_, i) => ({ f: m[2 * i], sigma: m[2 * i + 1] })); },
+    boardResponse: (key, f) => x.clavichord_board_response(key, f),
     admittance(key, f) { x.clavichord_admittance(key, f, s.at); const a = s.f64(2); return { re: a[0], im: a[1] }; },
   };
 }

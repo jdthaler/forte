@@ -90,7 +90,10 @@ the sound:
   their low, buzzy syllables have more harmonics the lower their pitch, as a
   SNILC predicts and a Hopf onset does not.
 
-Between them, near tension ¼, the two lines meet (a Takens–Bogdanov point).
+At tension ¼ the two lines cross. They belong to different rest points there
+(the Hopf's at x = 0, the saddle-node's at x = ½); the point where one rest
+point loses its stability both ways at once, a Takens–Bogdanov point, is at
+zero tension.
 The view *Pressure and tension* draws the onset line, Hopf solid and
 saddle-node dashed, with the note's breath moving across it.
 

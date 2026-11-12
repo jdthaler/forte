@@ -260,6 +260,8 @@ export function createShell(cfg) {
   const kbVel = () => shell.P.velocity ?? cfg.keyVelocity ?? 0.75;
   const engineVelocity = (v) => (cfg.midiVelocity ? cfg.midiVelocity(v) : v);
   window.addEventListener('keydown', (e) => {
+    // macOS sends no keyup for a key let go while ⌘ is down, and its note would hang: ⌘ lets the keys go
+    if (e.key === 'Meta') letGo();
     if (e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
     // a control reached with Tab keeps its own keys (Space ticks a stop, arrows move a slider);
     // one last touched with the mouse or a finger hands them back (shared/focus.js)
@@ -363,7 +365,7 @@ export function createShell(cfg) {
   const controls = new Map();
   const toSlider = (p, v) => (p.log ? (1000 * Math.log(v / p.min)) / Math.log(p.max / p.min) : (1000 * (v - p.min)) / (p.max - p.min));
   // the widest values a slider shows, across its travel, ends and default included: shared/
-  // instrument.css keeps the room the widest takes (data-widest), so the value doesn't grow and
+  // layout.css keeps the room the widest takes (data-widest), so the value doesn't grow and
   // shrink, nor move what sits beside it. A few of the longest (digits counted alike: they are tabular)
   const widest = (p) => {
     const seen = new Set();
@@ -375,6 +377,19 @@ export function createShell(cfg) {
     const shape = (x) => x.replace(/[0-9]/g, '0');
     const longest = [...new Map([...seen].map((x) => [shape(x), x])).values()].sort((x, y) => y.length - x.length);
     return longest.slice(0, 12).join('\n');
+  };
+  // A readout's gloss, the brackets that end "600 Pa (61 mm of water)": above the keys of a phone
+  // held sideways there is no room for it (shared/layout.css leaves it to the control's twin in
+  // the Controls), so a strip control's value keeps it in a span of its own, with the room the
+  // widest value takes without it (data-widest-short).
+  const GLOSS = /^(.*\S)(\s+\([^()]*\))$/;
+  const unglossed = (list) => list.split('\n').map((x) => x.replace(GLOSS, '$1')).join('\n');
+  const readout = (c, text) => {
+    const m = c.p.strip ? GLOSS.exec(text) : null;
+    if (!m) { c.val.textContent = text; return; }
+    const gloss = document.createElement('span');
+    gloss.className = 'gloss'; gloss.textContent = m[2];
+    c.val.replaceChildren(m[1], gloss);
   };
   const fromSlider = (p, t) => {
     let v = p.log ? p.min * (p.max / p.min) ** (t / 1000) : p.min + ((p.max - p.min) * t) / 1000;
@@ -409,7 +424,8 @@ export function createShell(cfg) {
       } else {
         wrap.innerHTML = `<div class="row"><label for="p-${p.id}">${p.label}</label><span class="val"></span></div>`;
         val = wrap.querySelector('.val');
-        val.dataset.widest = widest(p); // its room for the widest value it shows (shared/instrument.css)
+        val.dataset.widest = widest(p); // its room for the widest value it shows (shared/layout.css)
+        if (p.strip && unglossed(val.dataset.widest) !== val.dataset.widest) val.dataset.widestShort = unglossed(val.dataset.widest);
         input = document.createElement('input');
         input.type = 'range'; input.min = 0; input.max = 1000; input.step = 1; input.id = `p-${p.id}`;
         input.addEventListener('input', () => shell.setParam(p.id, fromSlider(p, +input.value), true));
@@ -442,7 +458,7 @@ export function createShell(cfg) {
     else {
       if (!dragging) c.input.value = toSlider(c.p, v);
       c.face?.show();
-      c.val.textContent = c.p.fmt ? c.p.fmt(v) : String(v);
+      readout(c, c.p.fmt ? c.p.fmt(v) : String(v));
       c.input.setAttribute('aria-valuetext', c.val.textContent);
     }
   }

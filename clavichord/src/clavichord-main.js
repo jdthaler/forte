@@ -57,6 +57,13 @@ function update() {
   info();
 }
 
+// what the tangent's give does to the focused key's fundamental, 2nd and 4th partials (those it has)
+function gives(P) {
+  const names = { 1: 'the fundamental', 2: 'the 2nd partial', 4: 'the 4th' };
+  const list = [1, 2, 4].filter((n) => n <= modes.speaking.length).map((n) => `${names[n]} ${model.give(focus, P, n).toFixed(1)} ¢`);
+  return list.length > 1 ? `${list.slice(0, -1).join(', ')} and ${list.at(-1)}` : list[0];
+}
+
 function info() {
   const P = shell.P, c = course, s0 = c.strings[0];
   const names = c.keys > 1 ? `${noteName(c.key0)} and ${noteName(c.key1)}` : noteName(c.key0);
@@ -69,7 +76,7 @@ function info() {
     ['speaking length', `${cm(c.L)} from the bridge to this key’s tangent; afterlength ${cm(c.a)} to the hitchpin (sounds ${fa.toFixed(0)} Hz, if the listing lets it)`],
     ['tension', `${s0.Tnom.toFixed(1)} N a string with the key down (${(s0.T0).toFixed(1)} N at rest) · ${(s0.stress / 1e6).toFixed(0)} MPa · B = ${s0.B.toExponential(1)}`],
     ['the tangent', `${mm(c.z)} up under ${P.press.toFixed(2)} N; each 0.1 N more raises the note ${dc.toFixed(1)} ¢`],
-    ['tuned for its give', `on a rigid nut the note would be ${signed(c.centsNominal)} ¢; the tangent, riding the strings on the key and finger (${P.mass.toFixed(0)} g), makes up the rest`],
+    ['tuned for its give', `on a rigid nut the note would be ${signed(c.centsNominal)} ¢; the tangent, riding the strings on the key and finger (${P.mass.toFixed(0)} g), raises ${gives(P)}, and the strings are tuned for the partials that sound`],
     ['stroke', `the tangent meets the strings at ${(100 * tangentSpeed(P.velocity)).toFixed(0)} cm/s (computer keys)`],
   ];
   $('#info').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');

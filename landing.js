@@ -254,7 +254,8 @@ for (const id of SHEETS) {
   const d = $(`#${id}`);
   d.querySelector('.forte-notes-close').addEventListener('click', () => d.close());
   d.addEventListener('click', (e) => { if (e.target === d) d.close(); }); // the backdrop
-  d.addEventListener('close', () => { if (location.hash === `#${id}`) history.replaceState(null, '', location.pathname + location.search); });
+  // (the hash goes back to the tab's, or the next search would show every tab, and so would a reload)
+  d.addEventListener('close', () => { if (location.hash === `#${id}`) history.replaceState(null, '', location.pathname + location.search + (shown === ALL ? '' : `#${shown}`)); });
 }
 // anything marked data-sheet opens its overlay (a link still works in a new tab)
 document.addEventListener('click', (e) => {

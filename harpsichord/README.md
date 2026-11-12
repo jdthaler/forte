@@ -653,7 +653,7 @@ tools/render-harpsichord.mjs               node tools/render-harpsichord.mjs →
 
 ## Quality
 
-The Quality setting (in the controls, for phones and older computers) keeps High as described
+The Quality setting (for phones and older computers) keeps High as described
 here. Medium fades the quietest released key once 12 sound (16 at High) and the quietest of all
 once 16 do (24), makes each string with fewer partials, none above 7 kHz (but always the first
 sixteen) and none past the 64th, stops a fading top partial sooner, and gives each held key's

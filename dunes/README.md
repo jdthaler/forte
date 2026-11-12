@@ -62,7 +62,7 @@ over one another, set by the grain diameter d and gravity alone:
 | Sand Mountain, Nevada | 340 µm | 68 Hz | 63 ± 5 Hz |
 
 (Douady et al. 2006, Table I.) So each key here is a sand: its grains are
-d = g (0.4 / f)², 163 µm on G2 and 372 µm on C2. Real dunes sing between
+d = g (0.4 / f)², 163 µm on G2 and 367 µm on C2. Real dunes sing between
 about C2 and A♭2, the computer keys' lower row. Lower keys are coarser,
 past very coarse sand into granules at A0 (2.1 mm); higher keys are finer,
 past very fine sand (from about C3) into silt and, at the top, clay-sized

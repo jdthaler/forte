@@ -51,7 +51,7 @@ Geometry barGeometry(int k, double depth, double ratio) {
   k = std::min(KEY_MAX, std::max(KEY_MIN, k));
   const Blank bl = barBlank(k);
   const BarRow &row = BAR_TABLE[k - KEY_MIN];
-  const double A = row.A, D = row.D * depth;
+  const double A = row.A, D = std::min(row.D * depth, CUT_MAX); // (never reached: the deepest tuned cut is 0.61)
   auto cutFor = [&](double L) { return Cut{bl.h0, (A * L) / 2, (bl.cf * A * L) / 2, D * bl.h0}; };
   double L = row.L;
   if (depth != 1 || ratio != 1) {

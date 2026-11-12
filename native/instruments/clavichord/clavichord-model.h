@@ -71,8 +71,8 @@ double tangentPoint(int key, const Params &P); // L: where the key's tangent mee
 constexpr double PRESS_NOM = 0.8; // N: the touch the strings were tuned at (the slider's default)
 constexpr double MASS_NOM = 0.012; // kg: and the key and finger they were tuned with (the default)
 
-// One string of a course, as the tuner left it: in tune at its course's lowest key, at the
-// nominal touch.
+// One string of a course, as the tuner left it: in tune by ear (the partials that sound on pitch)
+// at its course's lowest key, at the nominal touch.
 struct StringDesign {
   int course = 0, choir = 0;
   const Wire *mat = nullptr;
@@ -88,6 +88,9 @@ void designCourse(int course, const Params &P, StringDesign *out, int n); // all
 // The tangent's give: string c's partial n sounds this many times its rigid-nut frequency, with a
 // key and finger of mass M and damping R on the tangent (the strings at their nominal tension).
 double tangentShift(const StringDesign *S, int nStr, int c, double L, double M, double R, const Params &P, int n);
+// And as the tuner hears it (¢): the partials' shifts, each weighed by its share of the sound
+// (1/n² from the stroke, times the board's response at its frequency).
+double heardShift(const StringDesign *S, int nStr, int c, double L, double M, double R, const Params &P);
 double stretchOf(double z, double L, double a); // Δl
 double tensionAt(const StringDesign &S, double z, double L); // L: the 8′'s speaking length (the string's is Lf·L)
 // The tangent's height at rest under force F on a course's strings (n of them) at L.
@@ -137,6 +140,10 @@ struct BoardModel {
   double shape(int k, double x, double y) const;
 };
 const BoardModel &boardModel();
+inline double hp100(double f) { return (f / 100) / std::hypot(1.0, f / 100); } // the acoustic short circuit round the case
+// The board as heard: |pressure at the microphones|² per (force on the bridge)² at key m's place
+// on the bridge, the resonances smoothed over two octaves.
+double boardResponse(int m, double f);
 // Driving-point admittance (s/kg) at (x, y): [Re, Im]; the modes' shapes there may be given.
 std::array<double, 2> boardAdmittance(double x, double y, double f, const double *shapes = nullptr);
 

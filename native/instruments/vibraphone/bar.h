@@ -31,6 +31,9 @@ double ebRatio(int n); // (βₙL/β₁L)², n from 0
 
 // The undercut: full thickness h0, a thin flat centre ±c at h0 − d, cosine sides out to ±a.
 struct Cut { double h0, a, c, d; };
+// The deepest a cut goes, as a share of h0: a twentieth of the bar is left under it. (A control that
+// deepens the tuned cuts stops here; at the whole thickness there is no bar left to solve.)
+inline constexpr double CUT_MAX = 0.95;
 double thickness(const Cut &cut, double X);
 double torsionJ(double b, double h);
 std::vector<double> halfMesh(const Cut &cut, double L, int fine = 3);
@@ -42,7 +45,8 @@ Bending assembleBending(const std::vector<double> &nodes, const Cut &cut, double
 struct Torsion { std::vector<double> K, M; int n; };
 Torsion assembleTorsion(const std::vector<double> &nodes, const Cut &cut, double b, const Elastic &mat = ALUMINIUM);
 
-// The idx-th (1-based) eigenvalue of K x = λ M x, and (with x) its M-normalised eigenvector.
+// The idx-th (1-based) eigenvalue of K x = λ M x, and (with x) its M-normalised eigenvector. NaN (and
+// x all zero) when there is none to find: K and M are not a bar's.
 double bandEig(const std::vector<double> &k, const std::vector<double> &m, int N, int idx, std::vector<double> *x = nullptr,
                double tol = 1e-13, double guess = 1e4);
 

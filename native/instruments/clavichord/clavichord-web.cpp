@@ -12,7 +12,7 @@ extern "C" {
 // A key's course for parameters P (indexed as in clavichord-params.h), flat in out: course,
 // strings, keys, key0, key1, L (this key's tangent, the 8′'s speaking length), a, l, the tangent's rest
 // height and the note's cents from its tuned pitch at the touch P gives, the rigid nut's cents from the
-// note (what the tuner allowed for the tangent's give), the listing's width; then
+// note (what the tuner allowed for the tangent's give, as it is heard), the listing's width; then
 // per string: choir, brass, d, μ, EA, T₀, T at nominal, its rest height, f₀, stress, B, Z.
 FORTE_EXPORT void clavichord_course(int key, const double *P, double *out) {
   const Params q = paramsOf(P);
@@ -67,6 +67,17 @@ FORTE_EXPORT int clavichord_partials(int key, int choir, const double *P, double
   for (int i = 0; i < m.N; i++) { out[3 * i] = m.f[i]; out[3 * i + 1] = m.sigma[i]; out[3 * i + 2] = m.sigB[i]; }
   return m.N;
 }
+// The tangent's give at key's tangent, with the key and finger P gives (¢): string choir's partial n
+// above its rigid-nut frequency (n ≥ 1), or (n = 0) the shift as the tuner hears it, each partial's
+// weighed by its share of the sound.
+FORTE_EXPORT double clavichord_give(int key, int choir, int n, const double *P) {
+  const Params q = paramsOf(P);
+  const int course = courseOf(key, q.fretted), ns = choirsOf(course, q), c = std::min(choir, ns - 1);
+  StringDesign S[CHOIRS];
+  designCourse(course, q, S, ns);
+  const double L = tangentPoint(key, q), M = q.mass * 1e-3;
+  return n > 0 ? 1200 * std::log2(tangentShift(S, ns, c, L, M, ACTION::damping, q, n)) : heardShift(S, ns, c, L, M, ACTION::damping, q);
+}
 FORTE_EXPORT int clavichord_course_of(int key, int fretted) { return courseOf(key, fretted != 0); }
 // where key's tangent meets the strings (m from the bridge), in the keyboard's tuning P gives
 FORTE_EXPORT double clavichord_tangent_point(int key, const double *P) { return tangentPoint(key, paramsOf(P)); }
@@ -86,6 +97,8 @@ FORTE_EXPORT void clavichord_admittance(int key, double f, double *out) {
   const auto Y = boardAdmittance(x, y, f);
   out[0] = Y[0]; out[1] = Y[1];
 }
+// the board as heard at key's place on the bridge: pressure² per force², smoothed over two octaves
+FORTE_EXPORT double clavichord_board_response(int key, double f) { return boardResponse(key, f); }
 // the constants the page needs: KEY_LO, KEY_HI, OCTAVE_TOP, PRESS_NOM, bed, N_MAX, M_AFTER, J_OPEN
 FORTE_EXPORT void clavichord_constants(double *out) {
   const double v[8] = {KEY_LO, KEY_HI, OCTAVE_TOP, PRESS_NOM, ACTION::bed, N_MAX, M_AFTER, J_OPEN};

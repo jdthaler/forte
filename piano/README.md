@@ -270,7 +270,7 @@ src/params.js             every parameter, with ranges, hints and presets
 
 ## Quality
 
-The Quality setting (in the controls, for phones and older computers) keeps High as described
+The Quality setting (for phones and older computers) keeps High as described
 here. Medium strikes each string with fewer modes, none above 7 kHz (but every family's first
 eight, which carry the treble's tone) and none past the 80th partial, the faint top of the bass; it
 holds a smaller share of the oscillator budget, lets a dying voice go a little sooner, and gives each

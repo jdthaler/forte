@@ -93,6 +93,24 @@ test('the cut makes the marimba bar shorter than a plain bar on the same pitch, 
     assert.ok(r > lo && r < hi, `${kind}: ${r.toFixed(3)}`);
   }
 });
+test('Undercut depth at its most (120 %) leaves every bar a bar: the cut stops with a twentieth of the wood under it, and each key still comes back on pitch', () => {
+  // (the top marimba bars' tuned cuts are 0.80 to 0.85 of the thickness, so 1.2 × that would cut through them: the model
+  // then had no bar to solve and never returned, freezing the page and the plugin)
+  const max = INSTRUMENT.groups.flatMap((g) => g.params).find((p) => p.id === 'depth').max;
+  for (const kind of ['marimba', 'xylophone']) {
+    for (let k = KEY_MIN; k <= KEY_MAX; k++) {
+      const B = M.barModel(kind, k, max), g = B.geom;
+      assert.ok(g.D <= 0.95 + 1e-12 && g.cut.d <= 0.95 * g.h0 * (1 + 1e-12), `${kind} ${k}: the cut is ${g.D} of the bar`);
+      assert.ok(Number.isFinite(g.L) && g.L > 0, `${kind} ${k}: length ${g.L}`);
+      assert.ok(Math.abs(cents(B.modes[0].f, keyFreq(k))) < 0.5, `${kind} ${k}: mode 1 ${cents(B.modes[0].f, keyFreq(k)).toFixed(2)} c`);
+      for (const m of B.modes) assert.ok(Number.isFinite(m.f) && m.f > 0 && m.w.every(Number.isFinite), `${kind} ${k}: a mode is not finite`);
+    }
+  }
+  // only the marimba's bars above its real compass get there: at C7 the cut is still the whole of what was asked
+  const c7 = M.barModel('marimba', 96, max).geom, c7tuned = M.barModel('marimba', 96).geom;
+  assert.ok(Math.abs(c7.D / c7tuned.D - max) < 1e-9, `C7: ${c7.D / c7tuned.D}`);
+  assert.equal(M.barModel('marimba', 108, max).geom.D, 0.95);
+});
 test('the cords hang at mode 1’s nodes, about 22 % from each end', () => {
   for (const k of [36, 60, 96]) {
     const B = M.barModel('marimba', k);

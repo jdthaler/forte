@@ -207,7 +207,7 @@ tests hold it to.
 
 ## Quality
 
-The Quality setting (in the controls, for phones and older computers) changes
+The Quality setting (for phones and older computers) changes
 nothing here: Medium and Low play exactly as High. Every lamp kicks every
 other, so leaving one out, or stepping them more coarsely, would move where
 they lock; and two dozen lamps cost little.

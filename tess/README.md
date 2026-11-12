@@ -140,7 +140,7 @@ latitude). σ_floor is the 60 ppm in an hour TESS was designed to reach on the
 brightest stars, everything else together. A sample of sound covers S / 48000
 seconds of the star's light (790 s at the default speed-up), so each voice
 adds white noise of that σ to its light curve. For the Sun-like default
-(T = 9) that is about 190 ppm a sample.
+(T = 9) that is about 260 ppm a sample at full velocity.
 
 Velocity is the star's brightness: a harder key is a star with more light
 (Γ ∝ velocity, the magnitude 2.5 log₁₀ of it brighter), its dips louder in

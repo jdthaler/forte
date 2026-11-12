@@ -439,7 +439,7 @@ tools/render-grand.mjs               node tools/render-grand.mjs → examples/gr
 
 ## Quality
 
-The Quality setting (in the controls, for phones and older computers) keeps High as described
+The Quality setting (for phones and older computers) keeps High as described
 here. Medium strikes each string with fewer partials, none above 6 kHz (but always the first eight)
 and none from the 80th on, stops integrating a fading top partial once it is 100 dB down (140 dB at
 High) and a dying voice a little sooner, holds the oscillators under 2400 (the page's own budget,
