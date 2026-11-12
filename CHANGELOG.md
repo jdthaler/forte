@@ -16,6 +16,19 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-11-12 — the Breit-Wigner Keyboard
+
+### Forte 0.51.0
+- New on the front page: Breit-Wigner Keyboard.
+
+### Breit-Wigner Keyboard 0.1.0
+- **The plainest resonance there is, as a keyboard.** Every key is one unstable particle with a mass, which is the note, and a width Γ, and nothing else. Struck, its amplitude turns at its mass and dies at half its width, so the note is a single decaying sine whose spectrum is the Breit–Wigner line and whose lifetime is ħ/Γ. The engine keeps one complex number for each key and turns it exactly, sample by sample.
+- **Real resonances as presets**, placed by their width over their mass (Particle Data Group, 2026): a ρ meson's thud (19 %), a Δ(1232), a Z boson's knock (2.7 %), an ω, a φ's soft mallet (0.42 %, the default), an η′ that rings for seconds, a J/ψ's needle (30 ppm), the Higgs boson and the Υ(1S).
+- **Width grows as Mⁿ** from key to key: the same Γ/M on every key, the same lifetime on every key, or Sargent's rule for weak decays (n = 5), a bass that rings under a treble of ticks. **Phase at birth** starts a note from nothing (a sine) or at its peak (a cosine, with a click that fills the line's far tails).
+- **Partial widths add.** Letting a key go opens a second decay channel (the pedal keeps it shut), and a firm press into a held key opens a third. A key struck again adds its amplitude to what still rings, so it may reinforce or cancel it.
+- **Pitch bend is a boost:** the state's energy is γ times its mass, and time dilation makes it live γ times longer (the wheel to γ = 1.12, an MPE note's own bend to γ = 4). The mod wheel and an MPE slide are the width; Lift opens the key-up channel half or twice as wide.
+- **Views:** every ringing key's line at its mass, with the last key's line under a glass; the decay law on a logarithmic scale, where a channel opening bends the line; the amplitude spiralling in the complex plane in slow motion; the spectrum and spectrogram. A guided tour in seven steps, eight demos, and the plugins and the Forte app have it too.
+
 ## 2026-11-12 — the clavichord's bass in tune; the marimba's deepest cut; fixes from a site audit
 
 ### Forte 0.50.1

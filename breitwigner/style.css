@@ -1,0 +1,7 @@
+/* The page's own palette and any layout beyond shared/instrument.css: the magenta of an event
+   display's tracks and the cyan of its calorimeter towers. */
+:root {
+  --accent: #ff6ad5;
+  --accent-2: #6ee0ff;
+  --accent-ink: #22041a;
+}

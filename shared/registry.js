@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.50.1';
+export const FORTE_VERSION = '0.51.0';
 
 // Where each instrument's page keeps its settings in the browser (the Combinations page reads an
 // instrument's settings from there, as it was left on its own page).
@@ -595,6 +595,14 @@ export const INSTRUMENTS = [
     physics: 'Nuclear magnetic resonance · chemical shifts and J couplings, solved exactly · Hahn echoes and CPMG trains · T₁ and T₂',
     vibrates: 'matter', notes: 'ring',
     accent: '#6fc3ff',
+  },
+  {
+    id: 'breitwigner', name: 'Breit-Wigner Keyboard', section: 'phenomena', ready: true, version: '0.1.0', trim: -2,
+    plugin: { code: 'Brei', ready: true },
+    tagline: 'Every key an unstable particle, the plainest resonance there is: one mass, the note, and one width. Struck, it rings at its mass and dies in its lifetime, so its spectrum is the Breit–Wigner line: a ρ meson\'s thud, a Z boson\'s knock, a J/ψ\'s needle that rings for minutes.',
+    physics: 'Unstable states · the Breit–Wigner line · exponential decay · Γτ = ħ · time dilation',
+    vibrates: 'matter', notes: 'ring',
+    accent: '#ff6ad5',
   },
 ];
 

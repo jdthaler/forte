@@ -1004,6 +1004,17 @@ data):
   electron beam by B. Buonomo et al., *Astropart. Phys.* **24**, 65 (2005),
   [arXiv:gr-qc/0505009](https://arxiv.org/abs/gr-qc/0505009)). *LHCsound*
   (L. Asquith and others, ATLAS, 2010) sonified ATLAS events as data.
+  The Breit-Wigner Keyboard plays no data at all, only a resonance's own
+  line: an unstable state's amplitude, turning at its mass and dying at half
+  its width, whose spectrum is the line of G. Breit and E. Wigner ("Capture
+  of Slow Neutrons", *Phys. Rev.* **49**, 519 (1936),
+  [doi:10.1103/PhysRev.49.519](https://doi.org/10.1103/PhysRev.49.519)),
+  with real particles' widths over their masses from the Particle Data
+  Group. As a sound it is the oldest unit of synthesis, one decaying
+  sinusoid (section 1's modal synthesis, and X. Rodet's formant wave
+  functions, *Computer Music Journal* **8**(3), 9 (1984),
+  [doi:10.2307/3679809](https://doi.org/10.2307/3679809)); its sources are
+  in `breitwigner/README.md`.
 * **Whistlers and the magnetosphere's radio.** Whistlers were heard before
   they were understood: H. Barkhausen's field telephones in 1919, T. L.
   Eckersley's D/√f law in 1935, and L. R. O. Storey's explanation in 1953,
