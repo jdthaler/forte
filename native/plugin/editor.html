@@ -9,9 +9,10 @@
      site's Combinations page (plugin.cpp, Suite): a card under the header for each gives its keys,
      octave, level and on/off, and picks whose controls the window shows. At the left, as on the
      site's pages (shared/layout.js), a drawer with what every instrument has alike: Presets (Morph's
-     switch, and while it is on To, the slider and Keep this mix; the Presets menu stays in the
-     header, and names the preset Morph starts from), Output, Tuning, Expression, MIDI and CPU, each
-     but Presets folding; its chevron folds it to a rail. The keys fold
+     switch, and while it is on the top's menu, the slider running down to the bottom's with Swap
+     beside it, and Keep this mix; the Presets menu stays in the header, names the preset the sound
+     is or says Custom configuration, and with Morph on names the top), Output, Tuning, Expression,
+     MIDI and CPU, each but Presets folding; its chevron folds it to a rail. The keys fold
      away from the button at the left of their bar. Above the controls, the instrument's views (the shown part's):
      its own page from the site, served from the plugin (editor.h), in a frame that shows only them
      (shared/in-plugin.js), fed by the plugin's sound and its engine's messages; the Views button
@@ -148,7 +149,7 @@
   #drawer-body > details:not([open]) > summary::after { content: "▸"; }
   #drawer-body .param select { width: 100%; }
   /* Presets: Morph's switch, a slide switch as on the site's pages (shared/layout.css), and while it
-     is on, To, the slider and Keep this mix */
+     is on, the top's menu, the slider running down to the bottom's with Swap beside it, and Keep this mix */
   #drawer-body > .presets { border-top: 1px solid var(--line); padding: 4px 0 8px; }
   .presets-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 0 3px; }
   .presets-head h3 { margin: 0; font-size: 13px; font-weight: 600; }
@@ -171,10 +172,18 @@
   }
   .slide[aria-checked="true"] > i { left: 50%; }
   .morph[hidden] { display: none; }
-  .morph .from { margin: 2px 0 2px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .morph .from b { color: var(--text); font-weight: 600; }
-  .morph .keep { width: 100%; margin-top: 6px; }
+  .morph select { width: 100%; }
+  .morph .fade { display: flex; align-items: center; gap: 12px; padding-left: 10px; }
+  .morph .swap { display: inline-flex; align-items: center; gap: 6px; }
+  .morph .swap svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .morph .keep { width: 100%; margin-top: 8px; }
   .morph .keep:disabled { opacity: 0.45; cursor: default; }
+  /* the slider, standing up between the two menus: lit from the top (Morph from) down to its thumb */
+  .vfader { --t: 0; position: relative; flex: none; width: 28px; height: 104px; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .vfader::before { content: ""; position: absolute; left: 50%; top: 3px; bottom: 3px; width: 4px; margin-left: -2px; border-radius: 2px; background: linear-gradient(180deg, var(--accent) 0 calc(4px + var(--t) * (100% - 8px)), #34343c 0); }
+  .vfader > i { position: absolute; left: 50%; top: calc(var(--t) * (100% - 14px)); width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: #f2f2f4; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4); }
+  .vfader:focus-visible { outline: none; }
+  .vfader:focus-visible > i { box-shadow: 0 0 0 3px var(--accent-2); }
   body.drawer-folded #drawer { width: 34px; overflow: hidden; cursor: pointer; }
   body.drawer-folded #drawer:hover { background: #1b1b20; }
   body.drawer-folded .drawer-head { flex-direction: column-reverse; justify-content: flex-end; gap: 12px; padding: 7px 4px; }
@@ -407,7 +416,7 @@ function show(i, x, text) {
   values[i] = x;
   if (D.compass && i === D.compass[2] && (was > 0.5) !== (x > 0.5)) rebound();
   if (D.params[i].id === 'temperament') temperamentShown();
-  if (i === D.presets || i === morph.from || i === morph.t) morphShown(i, was);
+  if (i === D.presets || i === morph.from || i === morph.to || i === morph.t) morphShown(i, was);
   for (const c of controls.get(i) || []) {
     if (c.el.type === 'checkbox') c.el.checked = x > 0.5;
     else if (c.el.tagName === 'SELECT') c.el.value = String(Math.round(x));
@@ -426,6 +435,8 @@ async function set(i, x) {
   unnamed(i);
   const r = await forte('set', i, x);
   if (r) show(i, r.x, r.text);
+  // one of the instrument's own moved by hand, with Morph on: the top is the sound as it is
+  if (morph.on && i !== D.presets && ![morph.from, morph.to, morph.t].includes(i) && !OWN.includes(D.params[i]?.id)) forte('morphHere', i);
 }
 
 function build() {
@@ -687,78 +698,147 @@ function buildDrawer() {
 }
 
 // ---- Morph, with the presets (plugin.cpp: Morph from, Morph to, Morph; shared/morph.js on the site's
-// pages): a switch at the top of the drawer. Off, the Presets menu plays one preset; on, it is the
-// one Morph starts from (Morph from, which choosing a preset sets), and To and the slider show.
-// Switched off, Morph goes back to 0, the sound the From preset's again; Keep this mix puts it at 0
-// leaving the sound as it is (keepMix). The switch is the window's (kept per instrument), and turns
-// on by itself when Morph moves from 0 (a song's automation).
-const morph = { from: -1, to: -1, t: -1, on: false, sw: null, body: null, keep: null };
+// pages): a switch at the top of the drawer. Off, the Presets menu plays one preset; on, it names the
+// top (Morph from, which choosing a preset sets), and the top's menu, the slider running down to the
+// bottom's (Morph to) with Swap beside it, and Keep this mix show. A control moved by hand makes the
+// top the sound as it is (morphHere: the preset it is, or a custom configuration), as does turning
+// Morph on; Swap trades the ends, Morph turned over so the sound stays (morphSwap). Switched off,
+// Morph goes back to 0, the sound the top's again; Keep this mix puts it at 0 leaving the sound as
+// it is (keepMix). The switch is the window's (kept per instrument), and turns on by itself when
+// Morph moves from 0 (a song's automation).
+const SWAP = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 13V3M2 6l3-3 3 3M11 3v10M8 10l3 3 3-3"/></svg>';
+const morph = { from: -1, to: -1, t: -1, on: false, sw: null, body: null, keep: null, fader: null, custom: -1 };
 function buildMorph(list) {
   for (const i of list) morph[{ morphFrom: 'from', morphTo: 'to', morph: 't' }[D.params[i].id] ?? 'x'] = i;
   if (morph.from < 0 || morph.to < 0 || morph.t < 0) return;
+  morph.custom = D.params[morph.from].choices.length - 1; // the last choice: a custom configuration
   const sec = document.createElement('div');
   sec.className = 'presets';
-  sec.innerHTML = `<div class="presets-head"><h3>Presets</h3><div class="morph-switch"><span id="morph-label">Morph</span><button type="button" class="slide" role="switch" aria-checked="false" aria-labelledby="morph-label" title="Morph from the preset in the Presets menu to another"><i></i></button></div></div><div class="morph" hidden><p class="from" title="The preset in the Presets menu">From <b></b></p></div>`;
+  sec.innerHTML = `<div class="presets-head"><h3>Presets</h3><div class="morph-switch"><span id="morph-label">Morph</span><button type="button" class="slide" role="switch" aria-checked="false" aria-labelledby="morph-label" title="Morph from the preset in the Presets menu to another"><i></i></button></div></div>
+    <div class="morph" hidden>
+      <select class="display top" aria-label="Morph from: the top" title="Morph from: the top"></select>
+      <div class="fade">
+        <div class="vfader" role="slider" tabindex="0" aria-label="Morph" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" title="Slide down from the top to the bottom: every setting the two give moves part of the way"><i></i></div>
+        <button type="button" class="swap" title="Swap the top and the bottom: the slider turns over with them, so the sound stays as it is">${SWAP}Swap</button>
+      </div>
+      <select class="display bottom" aria-label="Morph to: the bottom" title="Morph to: the bottom"></select>
+      <button type="button" class="keep">Keep this mix</button>
+    </div>`;
   morph.sw = sec.querySelector('.slide');
   morph.body = sec.querySelector('.morph');
-  for (const i of [morph.to, morph.t]) { const [box, c] = control(i); morph.body.appendChild(box); register(i, c); boxes.set(D.params[i].id, box); }
-  morph.body.querySelector('label').textContent = 'To';
-  morph.keep = document.createElement('button');
-  morph.keep.className = 'keep';
-  morph.keep.textContent = 'Keep this mix';
-  morph.body.appendChild(morph.keep);
+  morph.keep = sec.querySelector('.keep');
+  morph.fader = sec.querySelector('.vfader');
+  // the two menus: the top plays a preset, as the Presets menu does; the bottom sets Morph to. Each
+  // offers its custom configuration only while it is one
+  const top = sec.querySelector('.top'), bottom = sec.querySelector('.bottom');
+  for (const el of [top, bottom]) D.params[morph.from].choices.forEach((c, k) => el.appendChild(option(c, k)));
+  for (const el of [top, bottom]) el.options[morph.custom].disabled = true;
+  top.addEventListener('change', () => { top.blur(); if (+top.value !== morph.custom) { played = ''; set(D.presets, +top.value); } });
+  bottom.addEventListener('change', () => { bottom.blur(); set(morph.to, +bottom.value); });
+  register(morph.from, { el: top });
+  register(morph.to, { el: bottom });
+  // the slider runs down, from the top (Morph 0) to the bottom (1): dragged by its thumb or touched
+  // where it should go, with the host told of the gesture; the arrows (Shift: finer), Page Up and
+  // Down, Home and End; a double click goes back to the top
+  const f = morph.fader, thumb = f.querySelector('i');
+  const along = (y) => { const r = f.getBoundingClientRect(); return Math.min(1, Math.max(0, Math.round(((y - r.top - 7) / Math.max(1, r.height - 14)) * 1000) / 1000)); };
+  let grab = null, held = false;
+  const hold = (on) => { if (on !== held) { held = on; forte('gesture', morph.t, on ? 1 : 0); } };
+  const slide = (x) => { if (x !== values[morph.t]) set(morph.t, x); };
+  f.addEventListener('pointerdown', (e) => {
+    if (e.button > 0) return;
+    e.preventDefault();
+    f.setPointerCapture?.(e.pointerId);
+    const r = thumb.getBoundingClientRect();
+    grab = { id: e.pointerId, off: e.target === thumb ? e.clientY - (r.top + r.height / 2) : 0 };
+    hold(true);
+    slide(along(e.clientY - grab.off));
+  });
+  f.addEventListener('pointermove', (e) => { if (grab?.id === e.pointerId) slide(along(e.clientY - grab.off)); });
+  const letGo = (e) => { if (grab?.id === e.pointerId) { grab = null; hold(false); } };
+  f.addEventListener('pointerup', letGo);
+  f.addEventListener('pointercancel', letGo);
+  f.addEventListener('keydown', (e) => {
+    const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1, PageDown: 10, PageUp: -10 }[e.key];
+    const t = e.key === 'Home' ? 0 : e.key === 'End' ? 1 : step ? values[morph.t] + (step * (e.shiftKey ? 0.1 : 1)) / 100 : null;
+    if (t === null) return;
+    e.preventDefault();
+    hold(true);
+    slide(Math.min(1, Math.max(0, Math.round(t * 1000) / 1000)));
+  });
+  f.addEventListener('keyup', () => hold(false));
+  f.addEventListener('blur', () => hold(false));
+  f.addEventListener('dblclick', () => { hold(true); slide(0); hold(false); });
   place(sec, 'Presets');
   const switched = () => {
     morph.sw.setAttribute('aria-checked', String(morph.on));
     sec.querySelector('.morph-switch').classList.toggle('on', morph.on);
     morph.body.hidden = !morph.on;
-    menu.title = morph.on ? 'Morph from' : 'Preset';
+    menu.title = morph.on ? 'Morph from: the top' : 'Preset';
     (prefs.morph ??= {})[D.slug] = morph.on; keep();
     morphShown(morph.t);
   };
-  morph.turn = (on) => {
+  // on: the top is the sound as it is (not when a song's automation turns it on: Morph is its)
+  morph.turn = (on, here = true) => {
     if (on === morph.on) return;
     morph.on = on;
-    if (!on && values[morph.t] > 0) set(morph.t, 0); // back to the From preset
+    if (on && here) forte('morphHere', -1);
+    if (!on && values[morph.t] > 0) set(morph.t, 0); // back to the top
     switched();
   };
   morph.sw.addEventListener('click', () => { morph.turn(!morph.on); morph.sw.blur(); });
   sec.querySelector('.morph-switch span').addEventListener('click', () => morph.turn(!morph.on));
+  sec.querySelector('.swap').addEventListener('click', (e) => { e.currentTarget.blur(); forte('morphSwap'); });
   morph.keep.addEventListener('click', () => {
     morph.keep.blur();
     if (!(values[morph.t] > 0)) return;
+    const whole = values[morph.t] >= 1 && Math.round(values[morph.to]) !== morph.custom ? D.params[morph.to].choices[Math.round(values[morph.to])] : '';
     forte('keepMix');
     morph.on = false;
     switched();
-    toast(values[morph.t] >= 1 ? `Playing “${D.params[morph.to].choices[Math.round(values[morph.to])] ?? ''}”` : 'Kept the mix. Save it from the Presets menu to play it again later.');
+    toast(whole ? `Playing “${whole}”` : 'Kept the mix. Save it from the Presets menu to play it again later.');
   });
   morph.on = !!prefs.morph?.[D.slug];
   switched();
 }
-// a change of Preset, Morph from or Morph: the menu names From while Morph is on; Morph moving from
-// 0 (automation) switches it on
+// a change of Preset, Morph from, Morph to or Morph: Morph moving from 0 (automation) switches it on
 function morphShown(i, was) {
-  if (i === morph.t && morph.sw) {
-    if (!morph.on && values[i] > 0 && was !== undefined && !(was > 0)) morph.turn(true);
-    morph.keep.disabled = !(values[i] > 0);
-    morph.keep.title = values[i] > 0 ? 'Switch Morph off, keeping the sound as it is now' : 'At 0 % the sound is the From preset: move the slider to make a mix';
+  if (morph.sw) {
+    if (i === morph.t) {
+      if (!morph.on && values[i] > 0 && was !== undefined && !(was > 0)) morph.turn(true, false);
+      morph.keep.disabled = !(values[i] > 0);
+      morph.keep.title = values[i] > 0 ? 'Switch Morph off, keeping the sound as it is now' : 'At the top the sound is the top preset’s: move the slider down to make a mix';
+    }
+    const name = (j) => D.params[j].choices[Math.round(values[j])] ?? '', t = values[morph.t] ?? 0, pct = Math.round(t * 100);
+    morph.fader.style.setProperty('--t', String(t));
+    morph.fader.setAttribute('aria-valuenow', String(pct));
+    morph.fader.setAttribute('aria-valuetext', t <= 0 ? `At the top, ${name(morph.from)}` : t >= 1 ? `At the bottom, ${name(morph.to)}` : `${pct} % of the way down from ${name(morph.from)} to ${name(morph.to)}`);
+    for (const [j, cls] of [[morph.from, '.top'], [morph.to, '.bottom']]) morph.body.querySelector(cls).options[morph.custom].hidden = Math.round(values[j]) !== morph.custom;
   }
-  if (i === morph.from && morph.sw) morph.body.querySelector('.from b').textContent = D.params[i].choices[Math.round(values[i])] ?? '';
+  menuShown();
+}
+// The Presets menu: with Morph on, the top; off, the preset of yours played last while the sound is
+// still its, or the preset the sound is (plugin.cpp named()), or else Custom configuration
+let named = -1, yours = false, played = ''; // played: the preset of yours played last (its menu value)
+function menuShown() {
   if (D.presets < 0) return;
-  const k = morph.on ? values[morph.from] : values[D.presets];
-  if (i !== morph.t || morph.on) menu.value = String(Math.round(k));
+  const k = morph.on && morph.sw ? Math.round(values[morph.from]) : null;
+  const v = k !== null ? (k === morph.custom ? '' : String(k)) : played && yours ? played : named >= 0 ? String(named) : '';
+  menu.value = [...menu.options].some((o) => o.value === v) ? v : '';
+  custom.hidden = menu.value !== '';
+  before = menu.value;
 }
 
-// ---- presets: the instrument's (its Preset parameter), then your own, then saving them -----------
-const menu = $('#preset');
+// ---- presets: Custom configuration, the instrument's (its Preset parameter), then your own, then saving them
+const menu = $('#preset'), custom = document.createElement('option');
 const mineGroup = document.createElement('optgroup'), saveGroup = document.createElement('optgroup');
 let mine = [], folder = '', before = '';
 const option = (text, value) => { const o = document.createElement('option'); o.value = value; o.textContent = text; return o; };
 const mineValue = (u) => `u${u[2]}:${u[1]}`; // a preset of yours: its place in its file, and the file
 function buildPresets() {
-  if (D.presets >= 0) {
-    D.params[D.presets].choices.forEach((c, k) => menu.appendChild(option(c, k)));
-  } else menu.appendChild(option('Presets…', ''));
+  custom.value = ''; custom.textContent = 'Custom configuration'; custom.disabled = true; // the settings are no preset's
+  menu.appendChild(custom);
+  if (D.presets >= 0) D.params[D.presets].choices.forEach((c, k) => menu.appendChild(option(c, k)));
   mineGroup.label = 'Your presets';
   saveGroup.label = 'Save';
   saveGroup.append(option('Save these settings…', 'save'), option('Open the presets folder', 'folder'));
@@ -774,10 +854,15 @@ function buildPresets() {
     if (v.startsWith('u')) {
       const u = mine.find((x) => mineValue(x) === v), r = u && await forte('loadPreset', u[1], u[2]);
       if (r?.ok) unnamed();
-      if (r?.ok) { before = v; toast(`Playing “${u[0]}”`); } else { menu.value = before; toast(r?.error || 'That preset is gone.'); refreshMine(); }
+      if (r?.ok) {
+        played = v; yours = true;
+        if (morph.on) forte('morphHere', -1); // the top is it now: a custom configuration of its values
+        toast(`Playing “${u[0]}”`);
+      } else { toast(r?.error || 'That preset is gone.'); refreshMine(); }
+      menuShown();
       return;
     }
-    if (v !== '' && D.presets >= 0) { before = v; set(D.presets, +v); }
+    if (v !== '' && D.presets >= 0) { played = ''; before = v; set(D.presets, +v); }
   });
   window.addEventListener('focus', refreshMine); // back from the folder, perhaps with a file put in it
   refreshMine();
@@ -786,13 +871,11 @@ async function refreshMine() {
   const r = await forte('presets');
   if (!r) return;
   folder = r.folder;
-  const was = menu.value;
   mine = r.list;
   mineGroup.replaceChildren(...mine.map((u) => option(u[0], mineValue(u))));
   if (mine.length) menu.insertBefore(mineGroup, saveGroup); else mineGroup.remove();
-  if ([...menu.options].some((o) => o.value === was)) menu.value = was;
-  else if (D.presets >= 0) menu.value = String(Math.round(values[morph.on ? morph.from : D.presets]));
-  if (menu.value !== 'save' && menu.value !== 'folder') before = menu.value;
+  if (!mine.some((u) => mineValue(u) === played)) played = '';
+  menuShown();
 }
 
 // ---- the tuning: the root only for a temperament, the custom cents only for custom, and Scala
@@ -934,7 +1017,7 @@ saveBox.querySelector('form').addEventListener('submit', async (e) => {
   closeSave();
   await refreshMine();
   const u = mine.find((x) => x[1] === r.file && x[2] === 0);
-  if (u) { menu.value = before = mineValue(u); }
+  if (u) { played = mineValue(u); yours = true; menuShown(); }
   toast(`Saved “${name}”`);
 });
 let toastTimer = 0;
@@ -1149,6 +1232,7 @@ async function poll() {
     const r = await forte('poll');
     if (r) {
       for (const [i, x, text, v] of r.p) { show(i, x, text); texts[i] = text; naturals[i] = v; }
+      if (r.named !== undefined) { named = r.named; yours = !!r.mine; menuShown(); } // which preset the sound is (plugin.cpp named())
       last = r;
       for (const f of listeners) try { f(r); } catch { /* the views' trouble, not the window's */ }
       // the keys sounding: the part shown's, or with more parts each one's, where it was pressed
@@ -1287,13 +1371,14 @@ function mockForte() {
     { id: 'tuningRoot', label: 'Temperament root', group: 'Tuning', kind: 'choice', perform: false, def: 0, choices: ['C', 'C♯', 'D'] },
     { id: 'cents1', label: 'Minor 2nd (custom)', group: 'Tuning', kind: 'continuous', perform: false, def: 0.5, choices: [] },
     { id: 'cents2', label: 'Major 2nd (custom)', group: 'Tuning', kind: 'continuous', perform: false, def: 0.5, choices: [] },
-    { id: 'morphFrom', label: 'Morph from', group: 'Morph', kind: 'choice', perform: false, def: 0, choices: ['Default settings', 'Bright', 'Dark'] },
-    { id: 'morphTo', label: 'Morph to', group: 'Morph', kind: 'choice', perform: false, def: 1, choices: ['Default settings', 'Bright', 'Dark'] },
+    { id: 'morphFrom', label: 'Morph from', group: 'Morph', kind: 'choice', perform: false, def: 0, choices: ['Default settings', 'Bright', 'Dark', 'Custom configuration'] },
+    { id: 'morphTo', label: 'Morph to', group: 'Morph', kind: 'choice', perform: false, def: 1, choices: ['Default settings', 'Bright', 'Dark', 'Custom configuration'] },
     { id: 'morph', label: 'Morph', group: 'Morph', kind: 'continuous', perform: false, def: 0, choices: [] },
     { id: 'preset', label: 'Preset', group: '', kind: 'choice', perform: false, def: 0, choices: ['Default settings', 'Bright', 'Dark'] },
   ];
-  const at = (id) => params.findIndex((p) => p.id === id), [FROM, TO, T] = ['morphFrom', 'morphTo', 'morph'].map(at);
+  const at = (id) => params.findIndex((p) => p.id === id), [FROM, TO, T] = ['morphFrom', 'morphTo', 'morph'].map(at), CUSTOM = 3;
   const v = params.map((p) => p.def), keys = new Set(), P = params.findIndex((p) => p.id === 'preset');
+  let moved = false, played = false; // a value moved since the preset (plugin.cpp named()), and the sound one of yours
   let mine = [{ name: 'Soft glass', file: 'Soft glass.json', v: params.map((p) => p.def) }];
   let pedal = false, miss = [0, -1, 0, 127, false, 0, 0];
   const text = (i) => (params[i].kind === 'choice' ? params[i].choices[v[i]] : params[i].kind === 'toggle' ? (v[i] ? 'on' : 'off') : `${(100 * v[i]).toFixed(1)} %`);
@@ -1354,11 +1439,14 @@ function mockForte() {
     }
     if (m === 'set') {
       v[a[0]] = a[1]; sent[a[0]] = a[1];
-      if (a[0] === P) { v[FROM] = a[1]; v[T] = 0; } // where Morph starts now, as plugin.cpp has it
-      if (a[0] === T && (a[1] <= 0 || a[1] >= 1)) v[P] = a[1] <= 0 ? v[FROM] : v[TO];
+      if (a[0] < FROM && params[a[0]].group !== 'Output') moved = true, played = false; // (the Output group stands for the kept ones)
+      if (a[0] === P) { v[FROM] = a[1]; v[T] = 0; moved = false; } // where Morph starts now, as plugin.cpp has it
+      if (a[0] === T || a[0] === TO) { const end = v[T] <= 0 ? v[FROM] : v[T] >= 1 ? v[TO] : CUSTOM; moved = end === CUSTOM; if (!moved) v[P] = end; }
       return { x: a[1], text: text(a[0]) };
     }
     if (m === 'keepMix') { if (v[T] >= 1) v[FROM] = v[TO]; v[T] = 0; return null; }
+    if (m === 'morphHere') { if (!(a[0] >= 0 && params[a[0]].group === 'Output')) { v[FROM] = moved ? CUSTOM : v[P]; v[T] = 0; } return null; }
+    if (m === 'morphSwap') { [v[FROM], v[TO]] = [v[TO], v[FROM]]; v[T] = 1 - v[T]; return null; }
     if (m === 'note') {
       // the part shown's keys, as the plugin's noteOn has them: past them, a miss (missValue)
       const shown = INSTRUMENTS.find((x) => x.slug === suite.parts[suite.focus].slug), closed = shown.slug === 'mock' && !v[4];
@@ -1375,7 +1463,7 @@ function mockForte() {
     }
     if (m === 'loadPreset') {
       const u = mine.find((x) => x.file === a[0]);
-      if (u) u.v.forEach((x, i) => { if (i !== P) v[i] = x; });
+      if (u) { u.v.forEach((x, i) => { if (i !== P) v[i] = x; }); moved = played = true; }
       return { ok: !!u, error: u ? '' : 'There is no such preset.' };
     }
     if (m === 'showPresets') return false;
@@ -1387,10 +1475,11 @@ function mockForte() {
     if (m === 'poll') {
       const p = [];
       v.forEach((x, i) => { if (x !== sent[i]) { sent[i] = x; p.push([i, x, text(i)]); } });
-      if (suite.parts.length < 2) return { p, keys: [...keys], pedal, miss };
+      const named = moved ? -1 : v[P], mine = played;
+      if (suite.parts.length < 2) return { p, keys: [...keys], pedal, miss, named, mine };
       const of = (q) => [...keys].filter((k) => q.on && k >= q.lo && k <= q.hi); // where they were pressed
       const shown = suite.parts[suite.focus];
-      return { p, keys: of(shown).map((k) => k + 12 * shown.oct), parts: suite.parts.map(of), pedal, misses: suite.parts.map((q) => (q === shown ? miss : [0, -1, 0, 127, false, 0, 0])) };
+      return { p, keys: of(shown).map((k) => k + 12 * shown.oct), parts: suite.parts.map(of), pedal, misses: suite.parts.map((q) => (q === shown ? miss : [0, -1, 0, 127, false, 0, 0])), named, mine };
     }
     return null;
   };

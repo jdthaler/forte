@@ -162,7 +162,7 @@ await test('a foot controller (a Roland FC-300 as it comes): its switches are th
   assert.ok(Math.abs(levelGain(64, 64) - (64 / 127) ** 4) < 1e-12, '(v/127)² each, General MIDI\'s 40·log10');
   // a page: its preset menu (shared/user-presets.js and layout.js add theirs), one MIDI input
   const picked = [];
-  const options = [['', 'Presets…'], ['__default', 'Default settings'], ['0', 'Bright'], ['1', 'Dark'], ['__user:0', 'Mine'], ['__save', 'Save these settings…']].map(([value, text]) => ({ value, text }));
+  const options = [['', 'Custom configuration'], ['__default', 'Default settings'], ['0', 'Bright'], ['1', 'Dark'], ['__user:0', 'Mine'], ['__save', 'Save these settings…']].map(([value, text]) => ({ value, text }));
   const sel = { options, value: '', dispatchEvent: (e) => picked.push([e.type, sel.value]) };
   const input = { id: 'fc', name: 'UM-ONE', state: 'connected', onmidimessage: null };
   const acc = { inputs: new Map([['fc', input]]), onstatechange: null };
