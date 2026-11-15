@@ -2,6 +2,8 @@
 
 #include "celesta-engine.h"
 
+#include <complex>
+
 #include <algorithm>
 #include <cmath>
 #include <numbers>
@@ -19,6 +21,9 @@ constexpr double YOUNG = 0.05;      // s: a voice this young is never stolen
 constexpr double HAMMER_MAX = 0.03; // s: the longest a hammer may stay in flight
 constexpr double GLIDE[] = {0.03, 0.03, 0.05}; // s: knobs glide (gap, detune, boxes)
 constexpr double DAMP_RAMP = 0.008; // s: the damper felt lands (and lifts) over this
+// Press: a sustainer at the hammer's point (forte/press.h Sustainer): a full press holds the bar's
+// fundamental at HOLD times the swing the hammer gave it
+constexpr double HOLD = 0.5;
 constexpr int POST_BLOCKS = 4;      // live view messages every few blocks
 constexpr double NYQUIST = 0.45;    // × fs: modes from here up are left out (they would alias)
 
@@ -90,6 +95,7 @@ void CelestaEngine::Voice::strike(const CelestaEngine &eng, double velocity) {
   dPrev = -1; dPrev2 = -1; hammerOn = true; contact = false; inFlight = 0;
   contactSamples = 0; Fmax = 0;
   released = false; fading = false; fade = 1; age = 0; liftK = 1;
+  sus = Sustainer{}; tuneNow = false;
 }
 
 // Felt force for a compression D at the next step: the discrete gradient of V = Kδ^(p+1)/(p+1)
@@ -120,6 +126,25 @@ double CelestaEngine::Voice::contactForce(double dFree, double C) {
   return felt(D);
 }
 
+// The decay rate (1/s) of the bar's fundamental coupled to its box: the root near the bar's own of
+// det(λ²M + λC + K) = 0, M = [m11 m12; m12 m22], C = diag(c11, r22), K = diag(k11, ka), by Newton's
+// method from −s1 + iω₁.
+static double coupledDecay(double m11, double m12, double m22, double k11, double ka, double c11, double r22, double s1) {
+  using C = std::complex<double>;
+  C l(-s1, std::sqrt(k11));
+  for (int it = 0; it < 30; it++) {
+    const C a = l * l * m11 + l * c11 * m11 + k11, b = l * l * m22 + l * r22 + ka, c = l * l * m12;
+    const C da = 2.0 * l * m11 + c11 * m11, db = 2.0 * l * m22 + r22, dc = 2.0 * l * m12;
+    const C f = a * b - c * c, df = da * b + a * db - 2.0 * c * dc;
+    if (std::abs(df) == 0) break;
+    const C step = f / df;
+    l -= step;
+    if (std::abs(step) < 1e-12 * std::abs(l)) break;
+  }
+  const double s = -l.real();
+  return std::isfinite(s) && s > s1 ? s : s1;
+}
+
 void CelestaEngine::Voice::render(float *L, float *Rt, int n, CelestaEngine &eng) {
   const double h = 1 / eng.fs, h2 = 0.5 * h * h, hq = 0.25 * h * h, inv = 1.0 / n;
   const double M11a = M11, dM11 = M11n - M11a, M12a = M12, dM12 = M12n - M12a, M22a = M22, dM22 = M22n - M22a;
@@ -128,6 +153,8 @@ void CelestaEngine::Voice::render(float *L, float *Rt, int n, CelestaEngine &eng
   const double fadeStep = fading ? 1 / (FADE * eng.fs) : 0;
   const double gl = bar.pan[0], gr = bar.pan[1];
   double qb_ = qb, vb_ = vb, X_ = X, vx_ = vx, fade_ = fade;
+  const bool drive = !released && press.on() && sus.ready(); // Press: the sustainer pushes the bar
+  if (!drive) sus.rest();
   for (int s = 0; s < n; s++) {
     const double t = (s + 1) * inv;
     const double m11 = M11a + dM11 * t, m12 = M12a + dM12 * t, m22 = M22a + dM22 * t, ka = Kaa + dKa * t, r22 = Ra + dR * t;
@@ -154,8 +181,13 @@ void CelestaEngine::Voice::render(float *L, float *Rt, int n, CelestaEngine &eng
         if (Fc > Fmax) Fmax = Fc;
       }
       if (++inFlight > eng.hammerMax || (contact && Fc == 0 && dPrev < -1e-4)) {
-        hammerOn = false; lastContactMs = (1000.0 * contactSamples) / eng.fs;
+        hammerOn = false; lastContactMs = (1000.0 * contactSamples) / eng.fs; tuneNow = true;
       }
+    } else if (drive) { // it hears the fundamental alone (the box drains it faster than the bar's overtones ring)
+      const double Fd = sus.force(ws0 * qb_, press.p, eng.fs);
+      for (int i = 1; i < N; i++) q[i] += bws[i] * Fd;
+      const double f0 = ws0 * Fd * h * id;
+      vmb += a22 * f0; vmx -= a12 * f0;
     }
     const double vbN = 2 * vmb - vb_, vxN = 2 * vmx - vx_;
     qb_ += h * vmb; X_ += h * vmx;
@@ -167,6 +199,13 @@ void CelestaEngine::Voice::render(float *L, float *Rt, int n, CelestaEngine &eng
     L[s] += (float)(gl * y); Rt[s] += (float)(gr * y);
   }
   qb = qb_; vb = vb_; X = X_; vx = vx_; fade = fade_;
+  // Press: the sustainer, tuned on the fundamental as the hammer has left, at the decay rate of the
+  // bar's fundamental with its box (the box takes its energy and radiates it: sigEff)
+  if (tuneNow) {
+    tuneNow = false;
+    sigEff = coupledDecay(M11, M12, M22, K11, Ka, 2 * sig1, R, sig1);
+    sus.tune(sigEff, ws0, std::sqrt(K11) / TAU, std::fabs(ws0) * std::sqrt(vb * vb + K11 * qb * qb), HOLD, eng.fs);
+  }
   M11 = M11n; M12 = M12n; M22 = M22n; Ka = Kan; R = Rn; boxGain = boxGainn;
   age += n / eng.fs;
   // energy: bar mode 1 and box (block), the other modes from two successive samples
@@ -288,8 +327,8 @@ void CelestaEngine::processBlock(float *L, float *R, int n) {
   for (int i = 0; i < nVoices; i++) {
     Voice *v = voices[i];
     // the damper felt: on every bar not held by a key, unless the pedal is down
-    double want = v->released && !sustain && !lock ? 1 / v->liftK : 0; // a slow lift lowers it gently
-    if (!v->released) want = std::max(want, presses.of(v->key)); // Press: damped as hard as the key is pressed
+    const double want = v->released && !sustain && !lock ? 1 / v->liftK : 0; // a slow lift lowers it gently
+    v->press.follow(v->released ? 0 : presses.of(v->key), n, fs); // Press: the sustainer (render)
     if (v->damp != want) v->damp = want > v->damp ? std::min(want, v->damp + dStep) : std::max(want, v->damp - dStep);
     const double to = expr.bendOf(v->key), was = v->bent; // Glide: a finger on the bar
     if (was != to) v->bent = glideTo(was, to, n / fs, BEND_T);

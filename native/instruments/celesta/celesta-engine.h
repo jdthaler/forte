@@ -50,7 +50,7 @@ class CelestaEngine : public Engine {
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's hammer felt, at its next strike
   // Glide: a finger resting on the bar, loading it: a few cents flat, and duller
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
-  void pressure(double value, int key) override { presses.set(value, key); } // a felt pressed on the bar, damping it while its key is held
+  void pressure(double value, int key) override { presses.set(value, key); } // a sustainer on the bar: the note swells and holds
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
@@ -74,6 +74,13 @@ class CelestaEngine : public Engine {
     double Fmax = 0, lastContactMs = 0;
     bool released = false;
     double damp = 0, dampSet = -1;
+    // Press (forte/press.h): a sustainer, a driver coil at the hammer's point on the steel bar,
+    // tuned on the fundamental as the hammer leaves (tuneNow), at its decay with its box (sigEff:
+    // the box takes the fundamental's energy and radiates it)
+    Press press;
+    Sustainer sus;
+    bool tuneNow = false;
+    double sigEff = 0;
     double bent = 1; // its modes × this (a note's own bend: a finger on the bar)
     double liftK = 1; // how many times longer than usual its damper takes to stop it (forte/lift.h)
     double fade = 1;

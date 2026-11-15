@@ -8,6 +8,8 @@ namespace forte::kalimba {
 namespace {
 // Sound pressure (Pa at 1 m) to the engine's output, and a cap's click (Pa at 1 m) per m/s
 // it lands at.
+// Press: a full press holds the fundamental at HOLD times the swing the thumb gave it
+constexpr double HOLD = 1.6;
 constexpr double OUT = 0.5;
 constexpr double BEND_T = 0.02; // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double CAP_PA = 0.8;
@@ -204,6 +206,14 @@ void KalimbaEngine::noteOn(int key, double velocity) {
     F0 += A; v.start += std::fabs(A);
   }
   v.count = km.count;
+  // Press: the sustainer, on the fundamental (the lowest mode), each mode's y its swing
+  for (int i = 1; i < km.count; i++) if (km.m[i].f < km.m[v.fund].f) v.fund = i;
+  {
+    const Mode &m = km.m[v.fund];
+    const double f = m.f * v.bent, w = TAU * f;
+    v.bf = std::sin(w * k) / (w * fs);
+    v.sus.tune(m.sigma, 1, f, w * std::fabs(m.amp * velocity), HOLD, fs);
+  }
   const double x = bridgeX(key);
   const int mn[PLATE_MODES][2] = {{1, 1}, {3, 1}, {1, 3}, {3, 3}, {5, 1}, {1, 5}, {5, 3}, {3, 5}};
   for (int j = 0; j < PLATE_MODES; j++) v.w[j] = plateShape({mn[j][0], mn[j][1], 0, 0, 0}, x, BRIDGE_Y);
@@ -233,8 +243,9 @@ void KalimbaEngine::process(float *L, float *R, int n) {
     if (std::fabs(cover - builtCover) > 1e-4 || cover == coverTarget) rebuildBody();
   }
   const double finger = std::exp(-std::log(1000.0) / (FINGER_T60 * fs)), grab = std::exp(-std::log(1000.0) / (GRAB_T60 * fs));
-  for (Voice &v : voices) { // Press: a fingertip resting on the tine, as hard as its key is pressed
-    if (v.press.follow(v.released ? 0 : presses.of(v.key), n, fs)) v.pf = v.press.on() ? std::exp(v.press.p * std::log(finger)) : 1;
+  for (Voice &v : voices) { // Press: the sustainer, as hard as its key is pressed
+    v.press.follow(v.released || v.grabbed ? 0 : presses.of(v.key), n, fs);
+    if (!v.press.on()) v.sus.rest();
     if (const double to = own.bendOf(v.key); v.bent != to) { // Glide: a fingernail on the tine at the bridge
       v.bent = glideTo(v.bent, to, n / fs, BEND_T);
       for (int m = 0; m < v.count; m++) { const ModeCoeffs c = modeCoeffs(v.f[m] * v.bent, v.sg[m], fs); v.modes[m].a1 = c.a1; v.modes[m].a2 = c.a2; }
@@ -249,10 +260,10 @@ void KalimbaEngine::process(float *L, float *R, int n) {
         const double y = r.a1 * r.y1 - r.a2 * r.y2;
         r.y2 = r.y1; r.y1 = y; s += y;
       }
+      if (v.press.on() && !v.damped && !v.grabbed) { Resonator &r = v.modes[v.fund]; r.y1 += v.bf * v.sus.force(r.y1, v.press.p, fs); }
       if (v.grabbed) v.level *= grab;
       else if (v.damped) v.level *= v.fing ? v.fing : finger;
       else if (v.touch > 0) { v.touch--; v.level *= finger; }
-      else if (v.press.on()) v.level *= v.pf;
       s *= v.level;
       for (int j = 0; j < PLATE_MODES; j++) F[j] += s * v.w[j];
     }

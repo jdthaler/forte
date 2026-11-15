@@ -13,10 +13,10 @@ constexpr double OUT_SCALE = 24;  // bridge velocity → full-scale audio
 constexpr double SMOOTH_T = 0.01; // s: one-pole glide of live gains and pan (no zipper noise)
 constexpr double KILL_SIGMA = 250;
 constexpr double BEND_T = 0.02; // s: a note's own bend glides as the instruments that bend glide theirs
-// Press: a palm on the strings by the bridge, fully pressed, adds PALM·g(f) to a partial's decay
-// rate (1/s), g = (0.15 + x²)/(1 + x²), x = f/PALM_F: the treble partials go in a fifth of a second,
-// the fundamental rings on for a second or so
-constexpr double PALM = 35, PALM_F = 1500;
+// Press: a sustainer over the strings at the hammer's point (an EBow: forte/press.h Sustainer),
+// tuned on the fundamental as the hammer leaves, so a full press holds it at HOLD times the swing
+// the blow gave it; it drives the modes below DRIVE_TOP times the fundamental
+constexpr double HOLD = 1.6, DRIVE_TOP = 6;
 // longitudinal modes: none above LONG_FMAX (Hz); pairs summing below LONG_BELOW × the mode's
 // frequency left out (≥ 24 dB down); the share of the longitudinal force the board takes up,
 // set so that a forte A1's strongest phantom partials stand about 15 dB under the partials beside
@@ -32,7 +32,7 @@ void PianoEngine::Voice::start(PianoEngine &eng, int key_, const VoiceData &d, i
   const int nu = d.unisons > 0 ? d.unisons : 1;
   const double una = nu > 1 ? (double)nu / (nu - 1) : 1;
   double *base = eng.arena.data() + (size_t)at * ARRAYS;
-  double **arrays[ARRAYS] = {&q, &q1, &a1, &a2, &a1d, &a2d, &wN, &bwN, &wU, &bwU, &fbv, &fbh, &cvk, &chk, &ctk, &om, &sig, &perm, &gw, &eps, &us, &a1p, &a2p};
+  double **arrays[ARRAYS] = {&q, &q1, &a1, &a2, &a1d, &a2d, &wN, &bwN, &wU, &bwU, &fbv, &fbh, &cvk, &chk, &ctk, &om, &sig, &perm, &gw, &eps, &us};
   for (int a = 0; a < ARRAYS; a++) { *arrays[a] = base + (size_t)a * N; std::fill(*arrays[a], *arrays[a] + N, 0.0); }
 
   // order modes by segment, and within one by string; perm[i] = index in the incoming data
@@ -145,16 +145,24 @@ void PianoEngine::Voice::computeDamped() {
   }
 }
 
-// Its recursion with a palm on the strings, as hard as press.p (render uses it while the key is up
-// under no damper's felt).
-void PianoEngine::Voice::computePressed() {
-  for (int i = 0; i < N; i++) {
-    const double o = om[i] * bent, x = o / (TWO_PI * PALM_F), s = sig[i] + PALM * press.p * (0.15 + x * x) / (1 + x * x);
-    const double r = std::exp(-s * k);
-    const double od = std::sqrt(std::max(o * o - s * s, 1e-6));
-    a1p[i] = 2 * r * std::cos(od * k);
-    a2p[i] = r * r;
-  }
+// Press: tune the sustainer on the fundamental as the hammer leaves (its state: qn now, q0 a step
+// before), the lowest mode the hammer's point moves, and pick the modes it drives.
+void PianoEngine::Voice::tuneSustainer(const double *qn, const double *q0) {
+  double top = 0;
+  for (int i = 0; i < N; i++) top = std::max(top, std::fabs(w[i]));
+  int f = -1;
+  for (int i = 0; i < N; i++) if (std::fabs(w[i]) >= 0.1 * top && (f < 0 || om[i] < om[f])) f = i;
+  nd = 0;
+  if (f < 0) return;
+  for (int i = 0; i < N && nd < DRIVEN; i++) if (w[i] != 0 && om[i] < DRIVE_TOP * om[f]) drv[nd++] = i;
+  // the unison's fundamentals, which it pushes alike: their in-phase motion is what it feeds, which
+  // the bridge damps nu times as hard as one string's (c²/2 each: see start)
+  int nu = 0;
+  for (int i = 0; i < N; i++) nu += w[i] != 0 && std::fabs(om[i] - om[f]) < 0.01 * om[f];
+  nu = std::max(nu, 1);
+  const double c2 = std::pow(cvk[f] * k, 2) + std::pow(chk[f] * k, 2), sigma = sig[f] + 0.5 * c2 * (nu - 1);
+  const double o = om[f] * bent, B = twoPoleAmplitude(qn[f], q0[f], a1[f], a2[f]);
+  sus.tune(sigma, w[f] * std::sqrt(nu), o / TWO_PI, nu * std::fabs(w[f]) * o * B, HOLD, 1 / k);
 }
 
 // Its strings tightened (or let go) to sound × r: each mode's recursion at its frequency × r, its
@@ -166,7 +174,6 @@ void PianoEngine::Voice::retune(double r) {
     a1[i] = 2 * e * std::cos(std::sqrt(std::max(o * o - sig[i] * sig[i], 1e-6)) * k);
   }
   computeDamped();
-  if (press.on()) computePressed();
 }
 
 // A new voice starts at its pan; a width change glides there (see render).
@@ -241,7 +248,9 @@ double PianoEngine::Voice::contactForce(double dFree) {
 void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
   // qa holds q[n], qb q[n−1]; each step writes q[n+1] over q[n−1], then they swap
   double *qa = q, *qb = q1;
-  const double *A1 = damped ? a1d : press.on() ? a1p : a1, *A2 = damped ? a2d : press.on() ? a2p : a2;
+  const double *A1 = damped ? a1d : a1, *A2 = damped ? a2d : a2;
+  const bool drive = !damped && press.on() && sus.ready() && nd > 0; // Press: the sustainer
+  if (!drive) sus.rest();
   const double *FBV = fbv, *FBH = fbh, *CV = cvk, *CH = chk, *CT = ctk;
   const double *GV = eng.gV.data(), *GH = eng.gH.data(), *GT = eng.gT.data();
   const double oV = outV, oH = outH;
@@ -348,11 +357,18 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
       hammerSamples++;
       if (hammerSamples > eng.hammerMaxSamples || (contact && F == 0 && dPrev < -2e-3)) {
         hammerOn = false;
+        tuneSustainer(qb, qa);
         Message m;
         m.type = msg::hammer; m.key = (int16_t)key; m.count = 2;
         m.values[0] = (float)((contactSamples / eng.fs) * 1000); m.values[1] = (float)Fmax;
         eng.post(m);
       }
+    }
+    if (drive && !hammerOn) { // Press: the sustainer pushes the strings at the hammer's point
+      double u = 0;
+      for (int j = 0; j < nd; j++) u += w[drv[j]] * qb[drv[j]];
+      const double F = sus.force(u, press.p, eng.fs);
+      for (int j = 0; j < nd; j++) qb[drv[j]] += bw[drv[j]] * F;
     }
     double yl = 0;
     if (lg != 0) { yl = lg * lon.step(qb); lMax = std::max(lMax, std::fabs(yl)); }
@@ -628,7 +644,7 @@ void PianoEngine::process(float *L, float *R, int n) {
     for (int i = 0; i < nVoices; i++) {
       Voice &v = *voices[i];
       if (v.dead) continue;
-      if (v.press.follow(v.keyDown ? presses.of(v.key) : 0, m, fs)) v.computePressed(); // Press: a palm, while the key is held
+      v.press.follow(v.keyDown ? presses.of(v.key) : 0, m, fs); // Press: the sustainer, while the key is held (render)
       if (const double to = expr.bendOf(v.key); v.bent != to) v.retune(glideTo(v.bent, to, m / fs, BEND_T)); // Glide
       v.render(L + off, R + off, m, *this);
     }

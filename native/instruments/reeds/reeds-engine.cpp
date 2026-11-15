@@ -47,7 +47,7 @@ void ReedEngine::Voice::start(const ReedEngine &eng, int key_, const VoiceData &
   hits = 0;
   hammer = d.hammer;
   liftK = 1;
-  press = Press{};
+  press = Press{}; sus = Sustainer{};
   setDamper(eng.damperSigma);
 }
 
@@ -80,7 +80,6 @@ void ReedEngine::Voice::setDamper(double sd) {
     const double r = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
     a1d[i] = 2 * r * std::cos(od * k); a2d[i] = r * r;
   }
-  if (press.on()) setPressed();
 }
 
 // Strike the reed at `at` of its length from now on (NaN: where the data was built for), its
@@ -92,14 +91,18 @@ void ReedEngine::Voice::aim(double at) {
   tune(bend);
 }
 
-// A finger on the reed's tip: every mode loses up to FINGER/s, the upper ones a little more
-constexpr double FINGER = 30, FINGER_F = 2000;
-void ReedEngine::Voice::setPressed() {
-  for (int i = 0; i < Nall; i++) {
-    const double o = om[i], s = sig[i] + press.loss(o * (0.5 / std::numbers::pi), FINGER, FINGER_F, 0.6);
-    const double r = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
-    a1p[i] = 2 * r * std::cos(od * k); a2p[i] = r * r;
-  }
+// Press: a sustainer, a driver coil under the reed's tip fed from the pickup. Tuned on the reed's
+// fundamental (its lowest mode the slot hears) as the hammer leaves: a full press holds the tip's
+// swing there at HOLD times what the blow gave it (forte/press.h Sustainer).
+constexpr double HOLD = 1.6;
+void ReedEngine::Voice::tuneSustainer() {
+  double top = 0;
+  for (int i = 0; i < N; i++) top = std::max(top, std::fabs(pk[i]));
+  int f = -1;
+  for (int i = 0; i < N; i++) if (std::fabs(pk[i]) >= 0.1 * top && (f < 0 || om[i] < om[f])) f = i;
+  if (f < 0) return;
+  const double B = twoPoleAmplitude(q[f], q1[f], a1[f], a2[f]);
+  sus.tune(sig[f], pk[f], om[f] / TAU, std::fabs(pk[f]) * om[f] * B, HOLD, 1 / k);
 }
 
 void ReedEngine::Voice::kill(const ReedEngine &eng) {
@@ -157,8 +160,10 @@ double ReedEngine::Voice::felt(double D) const {
 void ReedEngine::Voice::render(double *buf, int n, const ReedEngine &eng) {
   double *Q = q.data(), *Q1 = q1.data();
   const double *PK = pk.data(), *BP = bp.data();
-  const bool pr = !damped && press.on();
-  const double *A1 = damped ? a1d.data() : pr ? a1p.data() : a1.data(), *A2 = damped ? a2d.data() : pr ? a2p.data() : a2.data();
+  const double *A1 = damped ? a1d.data() : a1.data(), *A2 = damped ? a2d.data() : a2.data();
+  const bool drive = !damped && press.on() && sus.ready(); // Press: the sustainer pushes the tip
+  if (!drive) sus.rest();
+  const double rate = 1 / k;
   const double *c = eng.capA, *cB = eng.capB, ty0 = SLOT_Y.min, idy = 1 / SLOT_Y.step, xmax = XMAX;
   const bool bl = eng.blend, two = eng.twoTables;
   const double inv = 1.0 / n, kF = eng.kF, yS = STOP.y, kS = STOP.K, sDen = stopDen, cS = cStop;
@@ -171,6 +176,10 @@ void ReedEngine::Voice::render(double *buf, int n, const ReedEngine &eng) {
       for (int i = 0; i < N; i++) {
         const double q0 = Q[i], qn = A1[i] * q0 - A2[i] * Q1[i];
         Q1[i] = q0; Q[i] = qn; y += PK[i] * qn;
+      }
+      if (drive) {
+        const double F = sus.force(y, press.p, rate);
+        for (int i = 0; i < N; i++) Q[i] += BP[i] * F;
       }
     } else {
       const double *W = w.data(), *BW = bw.data();
@@ -188,7 +197,7 @@ void ReedEngine::Voice::render(double *buf, int n, const ReedEngine &eng) {
         if (F > Fmax) Fmax = F;
       }
       for (int i = 0; i < N; i++) y += PK[i] * Q[i];
-      if (++hammerSamples > hMax || (contact && F == 0 && dPrev < -2e-4)) hammerOn = false;
+      if (++hammerSamples > hMax || (contact && F == 0 && dPrev < -2e-4)) { hammerOn = false; tuneSustainer(); }
     }
     if (bl) { t = (s + 1) * inv; y0 = y0a + t * dy0; cRest = cRa + t * dcR; dRest = dRa + t * ddR; }
     // the frame: a stiff elastic stop at |y₀ + y| = H − h/2, solved implicitly
@@ -488,7 +497,7 @@ void ReedEngine::processBlock(float *L, float *R, int n) {
     Voice &v = *voices[i];
     v.own = glideTo(v.own, expr.bendOf(v.key), n / fs, GLIDE);
     if (v.bend != bendNow * v.own) { v.tune(bendNow * v.own); v.setDamper(damperSigma); }
-    if (v.press.follow(v.keyDown ? presses.of(v.key) : 0, n, fs)) v.setPressed();
+    v.press.follow(v.keyDown ? presses.of(v.key) : 0, n, fs); // Press: the sustainer (render)
   }
   if (hasParams) {
     bool low = false; // Medium's and Low's reeds, at the output rate: summed apart, then each sample held twice
