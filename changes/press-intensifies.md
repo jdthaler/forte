@@ -49,4 +49,4 @@
 - **Press rolls:** a firm press rolls the held note, as hard as it is pressed, instead of the player's hand damping it.
 
 ### Breit-Wigner Keyboard (minor)
-- **Press keeps making the state:** a firm press drives the held note's state at its own energy, as a beam would, so it swells and holds, instead of opening a third decay channel. **Press channel Γ₃** is now **Press production**, how many times the struck amplitude a full press builds to (1.5× by default).
+- **Press keeps making the state:** a firm press drives the held note's state at its own energy, as a beam would, so it swells and holds, instead of opening a third decay channel. **Press channel Γ₃** is now **Press production**, how many times the struck amplitude a full press builds to (1.5× by default). A song saved with 0.1.0 opens with it at its most, 3×.
