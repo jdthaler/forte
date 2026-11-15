@@ -176,7 +176,7 @@ void OndesEngine::buildDiffuseurs() {
 void OndesEngine::start(Voice &v, int key, double velocity) {
   v.alive = true; v.held = true; v.stolen = false;
   v.key = key; v.born = t;
-  v.vel = std::clamp(velocity, 0.0, 1.0); v.after = 0; v.F = 0; v.g0 = v.g1 = 0;
+  v.vel = std::clamp(velocity, 0.0, 1.0); v.after = 0; v.F = 0; v.g0 = v.g1 = 0; v.hold.start();
   v.u = v.uTo = std::log2(keyTarget[key]); v.uRate = 0;
   v.bend = expr.bendOf(key);
   v.vib = expr.slideOr(key, P[p::vibrato]);
@@ -215,7 +215,7 @@ void OndesEngine::noteOn(int key, double velocity) {
     }
     if (w) { // still dying away: the ring lands on the new key and the intensity key presses again
       w->held = true; w->key = key; w->u = w->uTo = std::log2(keyTarget[key]); w->uRate = 0;
-      w->vel = std::clamp(velocity, 0.0, 1.0);
+      w->vel = std::clamp(velocity, 0.0, 1.0); w->hold.start();
       w->bend = expr.bendOf(key);
       w->aPress = 1 - exp(-1 / (fs * P[p::press]));
       newest = w;
@@ -223,7 +223,7 @@ void OndesEngine::noteOn(int key, double velocity) {
     }
   } else {
     for (Voice &v : voices) if (v.alive && !v.stolen && v.key == key) { // pressed again while it sounds
-      v.held = true; v.vel = std::clamp(velocity, 0.0, 1.0);
+      v.held = true; v.vel = std::clamp(velocity, 0.0, 1.0); v.hold.start();
       newest = &v;
       return;
     }
@@ -274,7 +274,7 @@ void OndesEngine::allNotesOff() {
 }
 
 void OndesEngine::pressure(double value, int key) {
-  for (Voice &v : voices) if (v.alive && v.held && (key < 0 || v.key == key)) v.after = std::clamp(value, 0.0, 1.0);
+  for (Voice &v : voices) if (v.alive && v.held && (key < 0 || v.key == key)) { v.after = std::clamp(value, 0.0, 1.0); v.hold.pressed(key, v.key, ownPressure); }
 }
 
 void OndesEngine::bend(double value) {
@@ -302,7 +302,8 @@ void OndesEngine::update(Voice &v, double dt, int m) {
   v.f = f;
   v.delta = std::max(1.0, trimFor(f, K) + driftHz);
   v.step = adlerStep(2 * PI * v.delta, 2 * PI * K, 1 / fs);
-  const double target = v.held ? keyForce(v.vel, v.after) : 0;
+  v.hold.step(dt);
+  const double target = v.held ? keyForce(v.hold.vel(v.vel, v.after), v.after) : 0;
   v.F = target + (v.F - target) * pow(1 - (v.held ? v.aPress : v.aLift), (double)m);
   v.g0 = v.g1;
   v.g1 = keyGain(v.F);

@@ -334,7 +334,7 @@ test('attacks (Guettler): a quick key settles within 30 periods; a lazy one take
   assert.ok(med(quick) < 30, `quick keys: ${quick.map((x) => x.toFixed(0)).join(', ')} periods`);
   assert.ok(med(lazy) > med(quick), `lazy: ${lazy.map((x) => x.toFixed(0)).join(', ')} periods`);
 });
-test('aftertouch raises the bow force of its key (poly) or of all held keys (channel)', () => {
+test('aftertouch raises the bow force of its key (poly) or of all held keys (channel); a key\'s own (MPE) takes its force over from the strike, as a strike as hard, pressed as hard, would make it', () => {
   const e = new OrganistaEngine(FS); e.setParams(P());
   renderEngine(e, 0.3, [[0, 'on', 48, 0.7], [0, 'on', 55, 0.7]], FS);
   const f0 = e.S[48].FN, g0 = e.S[55].FN;
@@ -344,6 +344,13 @@ test('aftertouch raises the bow force of its key (poly) or of all held keys (cha
   e.handle({ type: 'pressure', value: 0.5, key: null });
   renderEngine(e, 0.2, [], FS);
   assert.ok(Math.abs(e.S[48].FN / f0 - 1.75) < 0.01 && Math.abs(e.S[55].FN / g0 - 1.75) < 0.01, 'channel');
+  // a note's own: as if struck as hard as it is pressed (touch(v) = 0.75 + 0.36 v, bowed-model.h)
+  const touch = (v) => 0.75 + 0.36 * v, x = new OrganistaEngine(FS); x.setParams(P());
+  renderEngine(x, 0.3, [[0, 'on', 48, 0.7]], FS);
+  x.handle({ type: 'pressure', value: 0.5, key: 48, own: true });
+  renderEngine(x, 1, [], FS);
+  const own = (touch(0.5) / touch(0.7)) * 1.75;
+  assert.ok(Math.abs(x.S[48].FN / f0 / own - 1) < 0.01, `its own: ${(x.S[48].FN / f0).toFixed(3)}× (${own.toFixed(3)}×)`);
 });
 test('sympathy: with the dampers lifted, C3 sets its octave ringing, not its neighbour', () => {
   // The attack's transient rings every string a little, so compare one string

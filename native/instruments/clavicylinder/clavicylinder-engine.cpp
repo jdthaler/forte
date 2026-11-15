@@ -65,7 +65,7 @@ void ClavicylinderEngine::start(Voice &v, int key) {
 
 void ClavicylinderEngine::pressure(double value, int key) { // MIDI aftertouch: channel (key −1) or polyphonic
   if (key < 0) { pressureAll = value; for (int i = 0; i < count; i++) voices[i]->after = value; }
-  else for (int i = 0; i < count; i++) if (voices[i]->key == key) voices[i]->after = value;
+  else for (int i = 0; i < count; i++) if (voices[i]->key == key) { voices[i]->after = value; if (ownPressure) voices[i]->hold.came(); }
 }
 
 void ClavicylinderEngine::noteOn(int key, double velocity) {
@@ -83,7 +83,7 @@ void ClavicylinderEngine::noteOn(int key, double velocity) {
       if (q) q->dead = true;
     }
   }
-  v->touch = true; v->vel = velocity; v->lamOff = 0;
+  v->touch = true; v->vel = velocity; v->lamOff = 0; v->hold.start();
   // The bar meets the glass at the speed the key went down: a knock, a pulse of normal force
   // lasting longer through more cloth. It sounds the modes that move toward the glass, and
   // its friction gives the note its first push: a firm key speaks at once, a gentle one swells.
@@ -102,7 +102,7 @@ void ClavicylinderEngine::noteOff(int key, double velocity) {
 
 // The cloth's force on the glass (N): the slider (at middle C) through the key's regulation,
 // velocity for how firmly the key goes down, aftertouch for pressing harder.
-double ClavicylinderEngine::force(const Voice &v) const { return v.touch ? P[p::press] * v.b.reg * (0.5 + v.vel) * (1 + v.after) : 0; }
+double ClavicylinderEngine::force(const Voice &v) const { return v.touch ? P[p::press] * v.b.reg * (0.5 + v.hold.vel(v.vel, v.after)) * (1 + v.after) : 0; }
 
 void ClavicylinderEngine::process(float *L, float *R, int n) {
   for (int at = 0; at < n; at += 128) run(L + at, R + at, std::min(128, n - at));
@@ -145,6 +145,7 @@ void ClavicylinderEngine::run(float *L, float *R, int n) {
     const double mud = v.fr.mud, dmu = v.fr.dmu, v0 = v.fr.v0, beta = v.fr.beta, noise = v.fr.noise;
     const double pk_ = pd.k, pc = pd.c();
     const double D = pk_ * k + pc, g = D / (1 + D * v.Yb), km = k / pd.m, Yp = km / (1 + km * g);
+    v.hold.step(n * k);
     const double Nt = force(v);
     const bool tr = focus == v.key;
     double pk = 0, sticks = 0, fsum = 0;

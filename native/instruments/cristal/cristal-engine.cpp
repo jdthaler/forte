@@ -138,7 +138,7 @@ void CristalEngine::build(Voice &v, const Stem &s, uint64_t ver) {
 
 void CristalEngine::pressure(double value, int key) { // MIDI aftertouch: channel (key −1) or polyphonic
   if (key < 0) { pressureAll = value; for (int i = 0; i < count; i++) voices[i]->after = value; }
-  else for (int i = 0; i < count; i++) if (voices[i]->key == key) voices[i]->after = value;
+  else for (int i = 0; i < count; i++) if (voices[i]->key == key) { voices[i]->after = value; if (ownPressure) voices[i]->hold.came(); }
 }
 
 void CristalEngine::slide(double value, int key) { expr.setSlide(value, key); }
@@ -162,7 +162,7 @@ void CristalEngine::noteOn(int key, double velocity) {
       if (q) q->dead = true;
     }
   }
-  v->touch = true; v->vel = velocity; v->lamOff = 0;
+  v->touch = true; v->vel = velocity; v->lamOff = 0; v->hold.start();
   v->phase = 0; v->pos = 0; v->dir = 1; v->t = 0; v->firm = LAND_PRESS; // a new stroke, from the rod's far end, landing firmly
   focus = key;
 }
@@ -177,7 +177,7 @@ void CristalEngine::noteOff(int key, double velocity) {
 void CristalEngine::allNotesOff() { count = 0; }
 
 // The finger's stroke speed: the slider (or this note's MPE slide), scaled 0.4–1.4× by velocity.
-double CristalEngine::speedOf(const Voice &v) const { return expr.slideOr(v.key, P[p::stroke]) * (0.4 + v.vel); }
+double CristalEngine::speedOf(const Voice &v) const { return expr.slideOr(v.key, P[p::stroke]) * (0.4 + v.hold.vel(v.vel, v.after)); }
 
 // Normal force (N): the key's regulated threshold, scaled to the stroke's speed as the threshold
 // scales, × the slider × aftertouch.
@@ -212,6 +212,7 @@ void CristalEngine::run(float *L, float *R, int n) {
     const int NM = v.N;
     double *q = v.q.data(), *q1 = v.q1.data();
     const double *a1 = v.a1.data(), *a2 = v.a2.data(), *b = v.b.data(), *tip = v.tip.data(), *col = v.col.data();
+    v.hold.step(n * k);
     const double U = speedOf(v), Nhold = force(v, U), Y = v.Y, ease = std::exp(-k / T_EASE);
     const double Nfirm = std::min(Nhold, (Nhold / (P[p::press] * (1 + v.after))) * LAND_FIRM);
     const double gr = 1 - std::exp((-TAU * U) / (RIDGE * fsd));

@@ -19,7 +19,8 @@ export const INSTRUMENT = {
   // MPE: a note's own bend stiffens or softens its reed, ±12 semitones (the pad's forces don't
   // scale with it); its own slide moves where its pad grabs the reed, toward the clamp, at the touch
   mpe: { bend: 12, slide: { param: 'grab', max: 0.55 } },
-  aftertouch: 'a firm press drives a sustainer on the reed: the note swells and holds', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
+  aftertouch: 'a firm press: a sustainer on the reed holds the note as loud as the press', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'the pad\'s return: a slow lift lets the reed ring on, a fast one slaps the pad back onto it', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['tack', 'gap', 'padC', 'tone', 'drive'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/pianet), built as WebAssembly

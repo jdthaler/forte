@@ -19,7 +19,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/pianet/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity (key speed at the pad, 3–40 cm/s) |
 | `Space` | sustain: a catch keeps lifted pads up |
-| MIDI | notes, velocity, sustain pedal (CC64); MPE slide = where the pad grabs the reed; a firm press (aftertouch, past half way) drives a sustainer on the held note's reed: it swells and holds |
+| MIDI | notes, velocity, sustain pedal (CC64); MPE slide = where the pad grabs the reed; a firm press (aftertouch, past half way) drives a sustainer on the held note's reed: it holds the note as loud as the press, however hard it was struck |
 
 The real Pianet spans F1–F6. Here it spans C2–C7 like the other Forte
 keyboards. No Pianet had more than 61 keys; *Full range* (under Reed) opens

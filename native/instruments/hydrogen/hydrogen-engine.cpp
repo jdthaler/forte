@@ -219,6 +219,7 @@ void HydrogenEngine::noteOn(int key, double velocity) {
   if (!slot) return;
   Voice &v = *slot;
   v.active = true; v.held = true; v.lit = true; v.current = 1; press.reset(key);
+  v.vel = velocity; v.lv = 1; v.hold.start();
   v.key = key; v.age = clock++; v.glow = live;
   v.t = 0; v.tOff = -1; v.shut = 1; v.liftK = 1;
   v.bendNow = wheel * expr.bendOf(key);
@@ -250,6 +251,12 @@ void HydrogenEngine::update(Voice &v) {
   // Press: the lamp's discharge current, up to four times: as many more excitations (each line's
   // power with it) and ions
   v.current = glideTo(v.current, 1 + 3 * press.of(v.key), SUB / fs, PRESS_GLIDE);
+  // and once the key's own pressure comes, it sets the lamp's level in place of the strike
+  if (v.held) {
+    if (press.came(v.key)) v.hold.came();
+    v.hold.step(SUB / fs);
+    if (v.hold.own && v.vel > 0) v.lv = v.hold.vel(v.vel, (v.current - 1) / 3) / v.vel;
+  }
   widths(v);
   const double nyq = 0.48 * fs;
   // each grid's row now, since the key and since its release (the slow ladder's clock runs
@@ -264,7 +271,7 @@ void HydrogenEngine::update(Voice &v) {
     const double S = g.powerAtRow(o.kept, on[o.clock]) - g.powerAtRow(o.kept, off[o.clock]);
     const double Pw = std::max(0.0, S) * o.weight * o.win;
     sum += Pw;
-    const double amp = v.fKey * o.ratio * b < nyq ? v.gain * v.shut * std::sqrt(Pw * v.current) : 0;
+    const double amp = v.fKey * o.ratio * b < nyq ? v.gain * v.lv * v.shut * std::sqrt(Pw * v.current) : 0;
     const double s = std::sqrt(std::max(0.0, 1 - o.rho * o.rho) / 2);
     o.ar = o.rho * o.ar + s * rng.gauss();
     o.ai = o.rho * o.ai + s * rng.gauss();

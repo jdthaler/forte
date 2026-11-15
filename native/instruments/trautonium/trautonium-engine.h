@@ -21,6 +21,7 @@
 
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "forte/tuning.h"
 #include "trautonium-model.h"
@@ -48,6 +49,8 @@ struct Voice {
   int key = 0;
   int64_t born = 0;
   double vel = 0, after = 0, p = 0, aPress = 0, aLift = 0;
+  Held hold;      // Strike its attack, Press the wire once its own pressure comes (forte/press.h)
+  double vh = 0;  // the velocity its held pressure is made from (hold.vel, a chunk at a time)
   double liftK = 1; // how many times longer than usual its finger takes to let go (forte/lift.h)
   bool stolen = false;
   double u = 0, uTo = 0, uRate = 0; // the wire: 1/f of the finger's place (f ∝ 1/R), sliding to uTo at uRate per second

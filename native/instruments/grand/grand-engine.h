@@ -155,6 +155,8 @@ class GrandEngine : public Engine {
     // modes its amplifier's band reaches (drv: up to DRIVEN, below DRIVE_TOP times the fundamental)
     Press press;
     Sustainer sus;
+    double struckAt = 0; // m/s: its last strike's hammer speed
+    Blow blow;           // its force on the fundamental, as the hammer strikes (forte/press.h)
     static constexpr int DRIVEN = 48;
     std::array<int, DRIVEN> drv{};
     int nd = 0;

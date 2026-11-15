@@ -469,12 +469,14 @@ struct Plugin : Instance, MpeDecoder::Sink {
     expressed[key] = true;
     engine->slide(value == value ? wheelValue(value, I.slide, I.slideMax) : NAN, key);
   }
-  void notePressure(int key, double value) override { pressure(value, key); }
-  // aftertouch (key −1: the channel's), unless Press is off
-  void pressure(double value, int key) {
+  void notePressure(int key, double value) override { pressure(value, key, true); }
+  // aftertouch (key −1: the channel's), unless Press is off; own: a note's own (MPE, a host's note
+  // expression), which on the instruments whose notes hold sets the level a note holds at
+  void pressure(double value, int key, bool own = false) {
     if (!engine || !on(kPress) || key < -1 || key > 127) return;
     pressed[key < 0 ? 128 : key] = value > 0;
-    engine->pressure(value, key);
+    if (own && key >= 0) engine->notePressure(value, key);
+    else engine->pressure(value, key);
   }
   // a switch turned off since the engine last had them: what it let through lets go (as the
   // worklet's gate does, shared/expression.js)

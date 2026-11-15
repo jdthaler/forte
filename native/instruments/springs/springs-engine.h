@@ -97,6 +97,7 @@ class SpringEngine : public Engine {
     // −1: none), tuned once the mallet has left (drvTune)
     Press press;
     std::array<Sustainer, 3> sus{};
+    double struckAt = 0; // its last strike's velocity (0 … 1)
     std::array<int, 3> drvMode{-1, -1, -1};
     bool drvTune = false;
     void tuneSustainers(const SpringEngine &eng);

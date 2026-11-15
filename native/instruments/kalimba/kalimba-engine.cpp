@@ -8,8 +8,9 @@ namespace forte::kalimba {
 namespace {
 // Sound pressure (Pa at 1 m) to the engine's output, and a cap's click (Pa at 1 m) per m/s
 // it lands at.
-// Press: a full press holds the fundamental at HOLD times the swing the thumb gave it
-constexpr double HOLD = 1.6;
+// Press: a full press holds the fundamental at HOLD times the swing the hardest pluck gives it (the
+// tine swings in proportion to the velocity), however hard it was plucked
+constexpr double HOLD = 1;
 constexpr double OUT = 0.5;
 constexpr double BEND_T = 0.02; // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double CAP_PA = 0.8;
@@ -212,7 +213,7 @@ void KalimbaEngine::noteOn(int key, double velocity) {
     const Mode &m = km.m[v.fund];
     const double f = m.f * v.bent, w = TAU * f;
     v.bf = std::sin(w * k) / (w * fs);
-    v.sus.tune(m.sigma, 1, f, w * std::fabs(m.amp * velocity), HOLD, fs);
+    v.sus.tune(m.sigma, 1, f, w * std::fabs(m.amp), HOLD, fs);
   }
   const double x = bridgeX(key);
   const int mn[PLATE_MODES][2] = {{1, 1}, {3, 1}, {1, 3}, {3, 3}, {5, 1}, {1, 5}, {5, 3}, {3, 5}};

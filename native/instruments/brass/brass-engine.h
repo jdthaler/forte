@@ -22,6 +22,7 @@
 
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "brass-model.h"
 #include "brass-params.h"
@@ -79,6 +80,7 @@ class BrassEngine : public Engine {
     double gain = 1;     // regulation (brass-model.h)
     // lips, cup, breath
     double y = 0, v = 0, pc = 0, U = 0, pm = 0, pTarget = 0, vel = 0, age = 0, attack = 0.01;
+    Held hold; // Strike its attack, Press its breath once its own pressure comes (forte/press.h)
     double fl = 0;
     // the bell's radiation and its sound
     double ra = 0, rb = 0, Uo = 0, out = 0, env = 0, gl = 0, gr = 0, plunger = 0, plungerTo = 0;

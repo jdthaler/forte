@@ -14,8 +14,9 @@ constexpr double KILL_SIGMA = 250;  // s⁻¹, fast fade for stolen / panicked /
 constexpr double BEND_T = 0.02;     // s: a note's own bend glides as the instruments that bend glide theirs
 // Press: a sustainer over the strings at the hammer's point (an EBow: forte/press.h Sustainer),
 // tuned on the fundamental as the hammer leaves, so a full press holds it at HOLD times the swing
-// the blow gave it; it drives the modes below DRIVE_TOP times the fundamental
-constexpr double HOLD = 1.6, DRIVE_TOP = 6;
+// the hardest blow (MIDI's 127: hammerSpeed(1)) gives it, however hard it was struck; it drives the
+// modes below DRIVE_TOP times the fundamental
+constexpr double HOLD = 1, DRIVE_TOP = 6;
 // longitudinal modes: none above LONG_FMAX (Hz); pairs summing below LONG_BELOW × a mode's
 // frequency left out; Q; the share of the longitudinal force the piezo and the board take up, set
 // so that a forte G1's strongest longitudinal component between 1 and 2 kHz is about as loud as
@@ -171,11 +172,13 @@ void GrandEngine::Voice::tuneSustainer() {
   const double a2s = std::exp(-2 * sig[0] * k), R2 = (a2s - beta[0]) / (1 + beta[0]);
   const double sb = -0.5 * std::log(R2) / k - sig[0], sigma = sig[0] + ns * sb;
   const double o = om[0] * bent, B = twoPoleAmplitude(q[0], q1[0], a1[0], a2[0]);
-  sus.tune(sigma, h[0] * std::sqrt(ns), o / TAU, ns * std::fabs(h[0]) * o * B, HOLD, 1 / k);
+  sus.tune(sigma, h[0] * std::sqrt(ns), o / TAU, hardest(ns * std::fabs(h[0]) * o * B, struckAt, hammerSpeed(1)) * blow.ratio(), HOLD, 1 / k);
 }
 
 // Launch the hammer at speed v (m/s) from where the string is now (re-strikes work).
 void GrandEngine::Voice::strike(double v) {
+  struckAt = v;
+  blow.start(om[0] * bent / TAU, 1 / k, v, hammerSpeed(1)); // Press: the blow on the fundamental
   double uu = 0;
   for (int i = 0; i < N; i++) uu += h[i] * q[i];
   if (nVa < nVq || nHa < nHq) { nVa = nVq; nHa = nHq; bridgeSums(); }
@@ -224,6 +227,7 @@ void GrandEngine::Voice::hammerStep(const double *A1, const double *A2, const Gr
   const double sV0 = aV * invV, sH0 = aH * invH;
   const double etaF = 2 * eta - etaPrev;
   const double Fc = contactForce(etaF - (uf - swV * sV0 - swH * sH0));
+  blow.add(Fc);
   etaPrev = eta; eta = etaF - kOverM * Fc;
   const double sV = sV0 + Fc * rhoV * invV, sH = sH0 + Fc * rhoH * invH;
   hsV = sV; hsH = sH;

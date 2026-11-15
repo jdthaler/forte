@@ -46,6 +46,12 @@ class Engine {
   virtual void setSustain(bool) {}
   virtual void allNotesOff() {}
   virtual void pressure(double /*value*/, int /*key*/) {} // aftertouch 0..1; key −1 for the channel
+  // A note's own pressure, as MPE sends it from the first touch (a Seaboard's Press) or a host as a
+  // note's expression: pressure(), with ownPressure set while it runs. On the engines whose notes
+  // hold it takes a note's level over from the strike (forte/press.h Held), where a keyboard's
+  // polyphonic aftertouch, or a finger leaning on a page's key, presses on top of it.
+  void notePressure(double value, int key) { ownPressure = true; pressure(value, key); ownPressure = false; }
+  bool ownPressure = false;
   virtual void bend(double /*value*/) {}                  // pitch bend −1..1 (±kBendSemitones, where it bends pitch)
   // One note's own expression (MPE, or a host's per-note expressions: forte/mpe.h). Either may come
   // before the key's noteOn: the engine keeps it per key, and the key's next note starts with it.

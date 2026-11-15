@@ -83,7 +83,7 @@ export class Player {
     if (C && !paramsOf(this.I).some((p) => p.id === set[0])) this.setParams({ ...this.P, ...C.put({ ...C.get(this.P), [set[0]]: set[1] }, this.P) });
     else this.set(...set);
   }
-  pressure(value, key = null) { this.engine.handle?.({ type: 'pressure', value, key }); }
+  pressure(value, key = null, own = false) { this.engine.handle?.({ type: 'pressure', value, key, ...(own ? { own } : {}) }); }
   bend(value) { this.engine.handle?.({ type: 'bend', value }); }
   // one note's own (MPE, as shared/shell.js sends it): its bend in semitones along the tuning, and
   // its slide 0..1 (NaN: none) as its own mod wheel
@@ -97,7 +97,8 @@ export class Player {
   panic() { this.latched.clear(); this.sustained = false; this.engine.allNotesOff?.(); }
 
   // Play `events` for `seconds`: [t, 'on', key, vel] | [t, 'off', key] | [t, 'pedal', bool] |
-  // [t, 'wheel', 0..127] | [t, 'cc', n, 0..127] | [t, 'pressure', value, key?] | [t, 'bend', value] |
+  // [t, 'wheel', 0..127] | [t, 'cc', n, 0..127] | [t, 'pressure', value, key?] | [t, 'notePressure', value, key]
+  // (a note's own, as MPE sends it) | [t, 'bend', value] |
   // [t, 'noteBend', key, semitones] | [t, 'slide', key, 0..1] | [t, 'param', id, value] | [t, 'preset', i]
   render(seconds, events = []) {
     const n = Math.round(seconds * this.fs), L = new Float64Array(n), Rr = new Float64Array(n);
@@ -118,6 +119,7 @@ export class Player {
     else if (type === 'pedal') this.pedal(a);
     else if (type === 'wheel') this.modWheel(a);
     else if (type === 'pressure') this.pressure(a, b ?? null);
+    else if (type === 'notePressure') this.pressure(a, b, true); // a note's own (MPE)
     else if (type === 'bend') this.bend(a);
     else if (type === 'noteBend') this.noteBend(a, b);
     else if (type === 'slide') this.slide(a, b);

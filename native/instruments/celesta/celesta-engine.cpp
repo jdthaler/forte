@@ -21,8 +21,9 @@ constexpr double HAMMER_MAX = 0.03; // s: the longest a hammer may stay in fligh
 constexpr double GLIDE[] = {0.03, 0.03, 0.05}; // s: knobs glide (gap, detune, boxes)
 constexpr double DAMP_RAMP = 0.008; // s: the damper felt lands (and lifts) over this
 // Press: a sustainer at the hammer's point (forte/press.h Sustainer): a full press holds the bar's
-// fundamental at HOLD times the swing the hammer gave it
-constexpr double HOLD = 0.5;
+// fundamental at HOLD times the swing the hardest blow gives it, however hard it was struck (the
+// hammer's speed is in proportion to the velocity)
+constexpr double HOLD = 1;
 constexpr int POST_BLOCKS = 4;      // live view messages every few blocks
 constexpr double NYQUIST = 0.45;    // × fs: modes from here up are left out (they would alias)
 
@@ -74,6 +75,7 @@ void CelestaEngine::Voice::box(const CelestaEngine &eng) {
 // The hammer lands at x (fraction of the length from the end) and y (fraction of the half-width).
 void CelestaEngine::Voice::strike(const CelestaEngine &eng, double velocity) {
   const double *P = eng.P.data();
+  struckAt = std::max(0.0, std::min(1.0, velocity));
   const double yb = P[p::across] * (bar.geom.b / 2);
   coefs(eng);
   double comp = 0;
@@ -204,7 +206,7 @@ void CelestaEngine::Voice::render(float *L, float *Rt, int n, CelestaEngine &eng
   if (tuneNow) {
     tuneNow = false;
     sigEff = coupledDecay(M11, M12, M22, K11, Ka, 2 * sig1, R, sig1);
-    sus.tune(sigEff, ws0, std::sqrt(K11) / TAU, std::fabs(ws0) * std::sqrt(vb * vb + K11 * qb * qb), HOLD, eng.fs);
+    sus.tune(sigEff, ws0, std::sqrt(K11) / TAU, hardest(std::fabs(ws0) * std::sqrt(vb * vb + K11 * qb * qb), struckAt, 1), HOLD, eng.fs);
   }
   M11 = M11n; M12 = M12n; M22 = M22n; Ka = Kan; R = Rn; boxGain = boxGainn;
   age += n / eng.fs;

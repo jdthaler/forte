@@ -19,7 +19,8 @@ constexpr double FADE = 1.0 / 480; // per-sample fade for retired voices (5 ms a
 constexpr double GLIDE = 0.015;    // s: the pickup follows its knobs through two such lags (critically damped)
 constexpr double XFADE = 0.02;     // s: switching the valve combo in or out crossfades over this
 constexpr double DUCK = 0.01;      // s: a pickup switch fades out over this, then back in
-constexpr double HOLD = 1.6;      // Press: a full press holds the fundamental at this times the swing its pluck gave it
+constexpr double HOLD = 1;        // Press: a full press holds the fundamental at this times the swing its pluck gave it (the pad
+                                  // lets the reed go where its bond gives, so a quick key's pluck is only a few dB more than a slow one's)
 constexpr double RETACK = 0.95;    // a re-pressed key fires once its dropped pad has re-tacked this much of its disc …
 constexpr double RETACK_MAX = 0.15; // s … or after this long at most
 constexpr double BEND_T = 0.02;    // s: the pitch wheel's glide, and a note's own bend's

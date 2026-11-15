@@ -20,6 +20,7 @@ export const INSTRUMENT = {
   // MPE: a note slides as far as the controller bends it, as a singer's can, CC74 moves that note's own vowel,
   // and its pressure pushes that singer's lungs harder
   mpe: { bend: 48, slide: true },
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
   aftertouch: 'the lungs push harder', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how fast the breath falls: a slow lift is a sighing release, a fast one a clean stop', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['pressure', 'gap', 'vibrato', 'larynx', 'vowel'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

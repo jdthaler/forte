@@ -108,7 +108,7 @@ void BirdsongEngine::oec(Voice &v) {
 void BirdsongEngine::start(Voice &v, int key, double velocity) {
   v.alive = true; v.held = true; v.stolen = false;
   v.key = key; v.born = t;
-  v.vel = std::clamp(velocity, 0.0, 1.0); v.after = 0;
+  v.vel = std::clamp(velocity, 0.0, 1.0); v.after = 0; v.hold.start();
   v.env = 0; v.phase = 0;
   v.rate = expr.slideOr(key, P[p::rate]);
   v.bend = expr.bendOf(key);
@@ -144,7 +144,7 @@ void BirdsongEngine::steal(const Voice *keep) {
 void BirdsongEngine::noteOn(int key, double velocity) {
   if (!hasP || key < 0 || key > 127) return;
   for (Voice &v : voices) if (v.alive && !v.stolen && v.key == key) { // sung again while it sounds
-    v.held = true; v.vel = std::clamp(velocity, 0.0, 1.0); v.phase = 0;
+    v.held = true; v.vel = std::clamp(velocity, 0.0, 1.0); v.phase = 0; v.hold.start();
     v.aIn = 1 - exp(-1 / (fi * P[p::inhale] * (1.5 - v.vel)));
     v.liftK = 1;
     v.aOut = 1 - exp(-1 / (fi * P[p::exhale]));
@@ -181,7 +181,7 @@ void BirdsongEngine::allNotesOff() {
 }
 
 void BirdsongEngine::pressure(double value, int key) { // aftertouch: one key (poly) or every held key (channel, −1)
-  for (Voice &v : voices) if (v.alive && v.held && (key < 0 || v.key == key)) v.after = std::clamp(value, 0.0, 1.0);
+  for (Voice &v : voices) if (v.alive && v.held && (key < 0 || v.key == key)) { v.after = std::clamp(value, 0.0, 1.0); v.hold.pressed(key, v.key, ownPressure); }
 }
 
 void BirdsongEngine::bend(double value) {
@@ -224,7 +224,9 @@ void BirdsongEngine::run(Voice &v, double *mix, int n) {
   const double T = 2 * L / C_AIR * fi, Th = 0.5 * T;
   const int Ti = (int)T, Thi = (int)Th;
   const double Tf = T - Ti, Thf = Th - Thi;
-  const double dNow = v.d * (1 + AFTER * v.after);
+  // the drive tune() made from the strike, or from the note's own press once it comes (Held)
+  v.hold.step(n / fi);
+  const double dNow = v.d * (0.25 + 0.75 * v.hold.vel(v.vel, v.after)) / (0.25 + 0.75 * v.vel) * (1 + AFTER * v.after);
   const double gain = OUT * v.gainNow;
   const bool isNewest = &v == newest;
   const double dPhase = v.rate / fi;

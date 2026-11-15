@@ -26,6 +26,7 @@
 #include "forte/background.h"
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "glass-model.h"
 #include "glass-params.h"
@@ -65,6 +66,7 @@ class ArmonicaEngine : public Engine {
   struct Voice {
     int key = 0;
     double Nreg = 0, after = 0;
+    Held hold; // Strike its attack, Press its level once its own pressure comes (forte/press.h)
     bool touch = false, stick = false, dead = false, built = false;
     double vel = 0, Nn = 0, x = 0, u = 0, F = 0, slip = 0, s = 0, wdot = 0, peak = 0, nz = 0, Nlift = 0;
     int quiet = 0;

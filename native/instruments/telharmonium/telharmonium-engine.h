@@ -27,6 +27,7 @@
 #include "forte/engine.h"
 #include "forte/expression.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/tuning.h"
 #include "telharmonium-model.h"
 #include "telharmonium-params.h"
@@ -63,6 +64,7 @@ struct Key {
   int key = 0, shaft = 0, teeth = 0, manual = 0, root = -1;
   int64_t born = 0;
   double vel = 0, after = 0, gain = 0, gainNow = 0;
+  Held hold;                  // its own pressure, once it comes, sets its gain in place of the strike (forte/press.h)
   int count = 0;              // its windings on the buses (closing, closed or opening)
   int reach = HARMONICS;      // how many of its harmonics its relay draws (Slide)
   std::array<Source, HARMONICS> src;

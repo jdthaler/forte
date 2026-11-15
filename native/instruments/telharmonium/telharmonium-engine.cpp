@@ -190,7 +190,7 @@ double TelharmoniumEngine::busSum(int b) const {
 }
 
 double TelharmoniumEngine::keyGain(const Key &k) const {
-  const double g = 1 - touch + touch * k.vel;
+  const double g = 1 - touch + touch * k.hold.vel(k.vel, k.after); // its own pressure, once it comes, stands in for the strike
   return g + (1 - g) * k.after;
 }
 
@@ -330,7 +330,7 @@ void TelharmoniumEngine::start(Key &k) {
 
 void TelharmoniumEngine::noteOn(int key, double velocity) {
   if (!hasP || key < 0 || key > 127) return;
-  for (Key &k : keys) if (k.on && k.key == key) { k.vel = std::clamp(velocity, 0.0, 1.0); return; } // its relay is already closed
+  for (Key &k : keys) if (k.on && k.key == key) { k.vel = std::clamp(velocity, 0.0, 1.0); k.hold.start(); return; } // its relay is already closed
   for (Key &k : keys) if (!k.on && k.count > 0 && k.key == key) drop(k); // still opening: struck again
   Key *slot = nullptr;
   for (Key &k : keys) if (!k.alive()) { slot = &k; break; }
@@ -339,7 +339,7 @@ void TelharmoniumEngine::noteOn(int key, double velocity) {
   drop(*slot);
   Key &k = *slot;
   k.on = true; k.key = key; k.born = t;
-  k.vel = std::clamp(velocity, 0.0, 1.0); k.after = 0;
+  k.vel = std::clamp(velocity, 0.0, 1.0); k.after = 0; k.hold.start();
   k.manual = key >= split ? 1 : 0;
   newest.down(key);
   start(k);
@@ -381,7 +381,7 @@ void TelharmoniumEngine::allNotesOff() {
 }
 
 void TelharmoniumEngine::pressure(double value, int key) { // aftertouch: one key (poly) or every held key (channel, −1)
-  for (Key &k : keys) if (k.on && (key < 0 || k.key == key)) k.after = std::clamp(value, 0.0, 1.0);
+  for (Key &k : keys) if (k.on && (key < 0 || k.key == key)) { k.after = std::clamp(value, 0.0, 1.0); k.hold.pressed(key, k.key, ownPressure); }
 }
 
 void TelharmoniumEngine::bend(double value) { bendCents = std::clamp(value, -1.0, 1.0) * kBendSemitones * 100; }
@@ -511,7 +511,7 @@ void TelharmoniumEngine::process(float *L, float *R, int n) {
     speed = fdlibm::pow(2.0, cents / 1200);
     swellNow = glideTo(swellNow, swell, dt, GAIN_T);
     for (Alternator &a : alts) if (a.refs > 0) place(a);
-    for (Key &k : keys) if (k.count) k.gainNow = glideTo(k.gainNow, keyGain(k), dt, GAIN_T);
+    for (Key &k : keys) if (k.count) { k.hold.step(dt); k.gainNow = glideTo(k.gainNow, keyGain(k), dt, GAIN_T); }
     run(L + at, R + at, m);
     // the load: every winding's share of its bus's current, in units of its own full current (the
     // voicing's fields set how much each alternator can give, not how hard it pulls on the motor)

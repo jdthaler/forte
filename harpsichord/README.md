@@ -31,7 +31,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/harpsichord
 | `←` `→` | octave |
 | `↑` `↓` | velocity: how fast the key lifts the jacks (it changes little) |
 | `Space` | hold: keys stay down while it is held (a harpsichord has no damper pedal) |
-| MIDI | notes, velocity, **release velocity** (how fast the key comes up), hold pedal (CC64); a firm press (aftertouch, past half way) drives a sustainer over the held note's strings where they were plucked, as an EBow would: it swells and holds |
+| MIDI | notes, velocity, **release velocity** (how fast the key comes up), hold pedal (CC64); a firm press (aftertouch, past half way) drives a sustainer over the held note's strings where they were plucked, as an EBow would: it holds the note as loud as the press, however hard it was struck |
 
 ## The physics
 

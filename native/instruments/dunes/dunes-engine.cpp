@@ -75,7 +75,7 @@ void DunesEngine::setParams(const double *p) {
 }
 
 void DunesEngine::setTarget(Voice &v) {
-  const double vv = v.vel * v.vel;
+  const double h = v.hold.vel(v.vel, v.after), vv = h * h; // the strike's, or its own pressure once that comes
   v.target = speed * (vv + (1 - vv) * std::max(v.push, v.after));
 }
 
@@ -126,7 +126,7 @@ void DunesEngine::noteOn(int key, double velocity) {
   v.key = key;
   if (!v.on) { v.U = 0; v.after = 0; v.bent = expr.bendOf(key); start(v); }
   v.on = v.held = true; v.dying = false;
-  v.vel = std::clamp(velocity, 0.0, 1.0);
+  v.vel = std::clamp(velocity, 0.0, 1.0); v.hold.start();
   v.push = std::clamp(expr.slideOr(key, push), 0.0, 1.0);
   setTarget(v);
   v.born = t;
@@ -164,7 +164,7 @@ void DunesEngine::allNotesOff() {
 
 void DunesEngine::pressure(double value, int key) {
   const double a = std::clamp(value, 0.0, 1.0);
-  for (Voice &v : voices) if (v.on && (key < 0 || v.key == key)) { v.after = a; if (v.held) setTarget(v); }
+  for (Voice &v : voices) if (v.on && (key < 0 || v.key == key)) { v.after = a; v.hold.pressed(key, v.key, ownPressure); if (v.held) setTarget(v); }
 }
 
 void DunesEngine::slide(double value, int key) {
@@ -196,6 +196,7 @@ void DunesEngine::process(float *L, float *R, int n) {
     if (const double to = expr.bendOf(v.key); v.bent != to) { v.bent = glideTo(v.bent, to, dt, BEND_T); retune(v); }
     // the avalanche's speed over this block: running up, pushed, or braking to rest
     const double U0 = v.U;
+    if (v.held) { v.hold.step(dt); if (v.hold.own) setTarget(v); }
     if (v.held) v.U = glideTo(v.U, v.target, dt, v.target > v.U && v.U < 0.5 * v.target ? RISE_T : PUSH_T);
     else v.U = std::max(0.0, v.U - v.brake * dt);
     flow0 += pow(U0, 1.5); flow += pow(v.U, 1.5);

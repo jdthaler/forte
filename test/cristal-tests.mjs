@@ -202,16 +202,17 @@ test('a rod rings on after the finger lifts, its T60 the stem\'s 6.91/ζω (with
   const got = (60 / 20) * (2 / Math.log10(at(2) / at(4)));
   assert.ok(Math.abs(got / t60 - 1) < 0.1, `T60 ${got.toFixed(2)} s against ${t60.toFixed(2)}`);
 });
-test('aftertouch presses harder; an MPE slide strokes one finger faster', () => {
+test('aftertouch presses harder; a key\'s own (MPE) strokes as fast as a strike as hard would, in place of the strike; an MPE slide strokes one finger faster', () => {
   const e = new CristalEngine(FS);
-  e.setParams(P()); e.noteOn(60, 0.6); e.noteOn(67, 0.6);
+  e.setParams(P()); e.noteOn(60, 0.6); e.noteOn(64, 0.6); e.noteOn(67, 0.6);
   for (let i = 0; i < 400; i++) e.process(bL, bR, bl); // past the landing
   const n0 = e.voices[0].Nn;
-  e.handle({ type: 'pressure', value: 1, key: 60 }); e.handle({ type: 'slide', value: 0.2, key: 67 });
+  e.handle({ type: 'pressure', value: 1, key: 60 }); e.handle({ type: 'pressure', value: 1, key: 64, own: true }); e.handle({ type: 'slide', value: 0.2, key: 67 });
   for (let i = 0; i < 200; i++) e.process(bL, bR, bl);
-  const [a, b] = e.voices;
+  const [a, c, b] = e.voices;
   assert.ok(a.Nn > 1.5 * n0, `${n0} → ${a.Nn}`);
-  assert.ok(Math.abs(Math.abs(b.uf) / Math.abs(a.uf) - 2) < 1e-9, `${b.uf} against ${a.uf}`);
+  assert.ok(Math.abs(Math.abs(b.uf) / Math.abs(a.uf) - 2) < 1e-9, `its slide: ${b.uf} against ${a.uf}`);
+  assert.ok(Math.abs(Math.abs(c.uf) / Math.abs(a.uf) - 1.4) < 0.005, `its own press: ${c.uf} against ${a.uf} (0.4 + 1 over 0.4 + 0.6, in a tenth of a second)`);
 });
 test('the radiators: the bare collector is 10 dB quieter than cones and flame; the cones carry the bass', () => {
   const both = play(48, P(), { sec: 2 }), bare = play(48, P({ radiator: 'bare' }), { sec: 2 }), cones = play(48, P({ radiator: 'cones' }), { sec: 2 });

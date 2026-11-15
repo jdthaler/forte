@@ -161,7 +161,7 @@ double StarEngine::Voice::amp2(int i) const {
 // Key-down: the convection drives the star, and a flare kicks every mode at once (a point on the
 // star, random and seeded; each mode pushed by its spherical harmonic there, in sine phase).
 void StarEngine::Voice::press(const StarEngine &eng, double velocity) {
-  vel = velocity; held = true; fading = false; fade = 1; dead = false; age = 0; tail = 0;
+  vel = velocity; held = true; fading = false; fade = 1; dead = false; age = 0; tail = 0; hold.start();
   if (nAct < nOn) { for (int i = 0; i < N; i++) act[i] = on[i]; compact(); }
   const double F = eng.S[kFlare] * velocity * (dscuti ? 0.3 : 1);
   if (!(F > 0)) return;
@@ -214,13 +214,14 @@ void StarEngine::Voice::render(float *Lo, float *Ro, int n, StarEngine &eng) {
   const bool driving = held || eng.sustain || tail > 0;
   const double drive = held || eng.sustain ? 1 : tail;
   if (!held && !eng.sustain && tail > 0) { tail *= fd::exp(-n / (tailT * eng.fs)); if (tail < 1e-3) tail = 0; }
+  if (held) hold.step(n / eng.fs);
   if (turn(eng, n) || eng.freqMoved) { freqs(eng); coeffs(eng); }
   else if (eng.dampMoved) coeffs(eng);
   if (eng.inclMoved) gains(eng, false);
   if (dscuti) landau(eng, n, driving);
   else if (driving) {
     // the convection: one random push per mode per block, a force impulse of variance p·D²·(1 − ρ^2n)
-    const double D = eng.S[kDriving] * vel * pressure * drive;
+    const double D = eng.S[kDriving] * driven() * drive;
     const double *tab = eng.gauss.data();
     uint32_t st = eng.rs;
     for (int q = 0; q < nAct; q++) {
@@ -281,7 +282,7 @@ void StarEngine::Voice::landau(const StarEngine &eng, int n, bool driving) {
     const int i = idx[q];
     const double as = AS[i];
     double lam;
-    if (driving) { const double at = as * vel * pressure * eng.S[kDriving], a2 = amp2(i); lam = gam * (1 - a2 / (at * at + 1e-30)); }
+    if (driving) { const double at = as * driven() * eng.S[kDriving], a2 = amp2(i); lam = gam * (1 - a2 / (at * at + 1e-30)); }
     else lam = -rel;
     lam = jsMax(-200, jsMin(200, lam));
     const double r = fd::exp(lam / fs), old = RHO[i] != 0 && RHO[i] == RHO[i] ? RHO[i] : 1;
@@ -485,7 +486,7 @@ void StarEngine::allNotesOff() {
 // aftertouch: the convection drives harder, up to twice the amplitude
 void StarEngine::pressure(double value, int key) {
   const double pr = 1 + jsMax(0, jsMin(1, value));
-  for (int i = 0; i < nVoices; i++) if (key < 0 || voices[i]->key == key) voices[i]->pressure = pr;
+  for (int i = 0; i < nVoices; i++) if (key < 0 || voices[i]->key == key) { voices[i]->pressure = pr; voices[i]->hold.pressed(key, voices[i]->key, ownPressure); }
 }
 
 void StarEngine::process(float *L, float *R, int n) {
@@ -536,7 +537,7 @@ void StarEngine::postFocus() {
     post(m);
   }
   m.type = msg::amps; m.key = (int16_t)v.key; m.count = 4;
-  m.values[0] = (float)v.N; m.values[1] = (float)(S[kDriving] * v.vel * v.pressure); m.values[2] = v.held || sustain ? 1.0f : 0.0f;
+  m.values[0] = (float)v.N; m.values[1] = (float)(S[kDriving] * v.driven()); m.values[2] = v.held || sustain ? 1.0f : 0.0f;
   m.values[3] = (float)(v.gen & 0xffffff);
   post(m);
 }

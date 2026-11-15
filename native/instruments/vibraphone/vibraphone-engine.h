@@ -88,6 +88,7 @@ class VibraphoneEngine : public Engine {
     // weight at the bow (the end's middle, where the torsion modes are still)
     Press press;
     Sustainer sus;
+    double struckAt = 0; // its last strike's velocity (0 … 1)
     bool tuneNow = false;
     double sigEff = 0, we0 = 0;
     std::array<double, MAX_MODES> we{};

@@ -247,11 +247,21 @@ an Osmose) bends, slides and presses each note alone. `shared/mpe.js` and the pl
   `Sustainer` (an EBow over a string, a driver coil by a tine's, reed's or spring's pickup, a
   bow on a bar) senses the velocity at its point through a band-pass on the note and pushes in
   step through an amplifier that saturates at p·F, tuned as the strike leaves so that a full
-  press holds the fundamental at a few times its swing then (it swells or decays there over its
-  own decay time); the mallet instruments `Roll`, striking again as hard as the key is pressed.
+  press holds the fundamental at the swing the hardest strike gives it (`hardest()`), however
+  hard this one was struck (it swells or decays there over its own decay time): Strike shapes the
+  attack, and Press alone the level the note holds at; the mallet instruments `Roll`, striking
+  again as hard as the key is pressed.
   Unpressed, a note plays bit for bit as before. An engine whose press shapes a held note (a
   brighter beam, a stronger field, a deeper trap) keeps
-  `Pressures` instead, the pressure as it comes, and glides toward `1 + k·p` over `PRESS_GLIDE`;
+  `Pressures` instead, the pressure as it comes, and glides toward `1 + k·p` over `PRESS_GLIDE`.
+  Strike sets a note's attack and Press the level it holds at, so on an engine whose notes hold
+  (a bow, a breath, a current) a note's own pressure takes that level over from the strike:
+  `notePressure(value, key)`, which the hosts call for MPE's per-note pressure and a host's note
+  expression (not a keyboard's polyphonic aftertouch, nor a finger leaning on a page's key, which
+  rest at none), is `pressure` with `ownPressure` set while it runs, and each voice's `Held`
+  marks it (`hold.pressed(key, v.key, ownPressure)`, or `Pressures::came(key)`) and gives
+  `vel(strike, p)`, the velocity to make the held level from: the strike's until then, giving way
+  to the press's over `ATTACK_T` (0.1 s) from its first message;
   one whose press sets something off (an echo train, aftershocks, matter falling in) uses
   `Presses`, so a finger at rest fires nothing. Both `reset(key)` on a new note.
 

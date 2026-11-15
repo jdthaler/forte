@@ -16,7 +16,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/piano/>.
 | `↑` `↓` | hammer velocity (m/s) |
 | hold `Space` | sustain pedal |
 | mouse on the on-screen keys | play; click lower on a key = harder |
-| **Enable MIDI** button | any connected MIDI keyboard: velocity → hammer speed, CC64 = sustain, CC67 = una corda (soft pedal); a firm press (aftertouch, past half way) drives a sustainer over the held note's strings where the hammer struck, as an EBow would: it swells and holds |
+| **Enable MIDI** button | any connected MIDI keyboard: velocity → hammer speed, CC64 = sustain, CC67 = una corda (soft pedal); a firm press (aftertouch, past half way) drives a sustainer over the held note's strings where the hammer struck, as an EBow would: it holds the note as loud as the press, however hard it was struck |
 
 Settings persist in the browser (localStorage). Double-click a slider to reset it.
 The string, hammer and damping sliders rebuild a key's modes, so you hear

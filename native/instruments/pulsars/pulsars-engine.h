@@ -33,7 +33,7 @@ class PulsarsEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void slide(double value, int key) override;
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // its binary orbit: a Doppler shift
-  void pressure(double value, int key) override { press.set(value, key); }   // its beam's brightness, up to twice
+  void pressure(double value, int key) override { press.set(value, key, ownPressure); }   // its beam's brightness, up to twice
   void allNotesOff() override;
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
@@ -56,6 +56,7 @@ class PulsarsEngine : public Engine {
     bool held = true, stolen = false;
     double lg = 1, lgStep = 0;              // a lift's fade (forte/lift.h): the gain, and its step a sample
     double br = 1;                          // its beam's brightness (Press: up to twice)
+    Held hold;                              // its own pressure, once it comes, sets its level in place of the strike (forte/press.h)
   };
   void fill(Voice &v, int which);            // (re)build one of the voice's tables from its setup
   void startXf(Voice &v);
