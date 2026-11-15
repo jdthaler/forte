@@ -13,7 +13,8 @@
 //   wheelValue(p, cc, max?) maps the mod wheel onto a parameter: at rest (0) its default, fully up
 //   its maximum, so a wheel at rest never drags the instrument to the bottom of its range.
 //   touch() is the velocity curve the player chose (every page shares it, from the MIDI settings:
-//   midiSettings, in the page's drawer, which the #midi status opens once startMIDI turns MIDI on),
+//   midiSettings, in the page's MIDI devices drawer, which the #midi status opens once startMIDI
+//   turns MIDI on; midiDevices, at its top, lists the devices plugged in, each with a lamp),
 //   touched(v) a MIDI velocity (0..1) through it; SOFT_PEDAL
 //   scales the velocity of keys struck under CC67; createSostenuto() keeps the keys CC66 holds.
 //   mpeMode() is MPE's mode the player chose (shared/mpe.js: 'auto', 'on' or 'off'; every page
@@ -27,7 +28,7 @@
 //   controllersOf(I) is the descriptor's controllers with its `faders` among them, controlled(…)
 //   what one of them sets, ccValue(p, v) a controller across a parameter's whole range.
 //   A Seaboard plays as MPE from the start: startMIDI announces its zone for it, and shows its
-//   panel at the left of the page while it is plugged in (shared/rise.js: its faders, its pad and
+//   panel in the MIDI devices drawer while it is plugged in (shared/rise.js: its faders, its pad and
 //   each finger's Strike, Glide, Slide, Press and Lift, with what each does on the instrument).
 //   A foot controller (a Roland FC-300 as it comes) works on every page, in startMIDI:
 //   - SWITCHES: its general-purpose switches CC80, 81 and 82 are the sustain, sostenuto and soft
@@ -40,7 +41,7 @@
 //   - a program change n plays the menu's preset n + 1 (pedal 1 the first preset, then your own
 //     after the instrument's): choosePreset; a Seaboard's, from its preset arrows, steps from
 //     the preset playing instead (riseProgram), so it keeps in step with the pedals and the menu;
-//   - it gets a section of the page's drawer (shared/fc300.js) once its switches (CC80–83) are
+//   - it gets a section of the page's MIDI devices drawer (shared/fc300.js) once its switches (CC80–83) are
 //     heard, or its interface's name is the one it came by before, which can drive it over SysEx.
 //   The plugins do the same, but for CC7, which stays a gain after the limiter there (the host has a
 //   volume of its own to show it on) (native/plugin/plugin.cpp: kTouchGamma, kSoftPedal, sostenutoPedal,
@@ -249,7 +250,10 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
     const seaboards = new Set(), feet = new Set();
     const PROGRAM_KEY = 'forte/rise-program/v1'; // a Seaboard's last program change (riseProgram)
     let program; try { program = JSON.parse(localStorage.getItem(PROGRAM_KEY)); } catch { /* none, or storage blocked */ }
-    const footed = (inp) => { if (feet.has(inp.id)) return; feet.add(inp.id); foot((f) => f.input(inp.id, inp.name, true)); };
+    // the devices plugged in, for the drawer's list (midiDevices), each said what it is here
+    const tell = () => setDevices('on', [...acc.inputs.values()].filter((inp) => inp.state !== 'disconnected')
+      .map((inp) => ({ id: inp.id, name: inp.name, what: feet.has(inp.id) ? 'Roland FC-300' : seaboards.has(inp.id) ? 'MPE' : '' })));
+    const footed = (inp) => { if (feet.has(inp.id)) return; feet.add(inp.id); foot((f) => f.input(inp.id, inp.name, true)); tell(); };
     const bind = () => {
       const names = [];
       for (const inp of acc.inputs.values()) {
@@ -264,6 +268,7 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
         if (inp.name && inp.name === footName()) footed(inp); // the FC-300 came by this interface before
         inp.onmidimessage = (ev) => {
           const d = ev.data;
+          lamp(inp.id, d);
           if (board) rise((r) => r.midi(inp.id, d));
           if (board && (d[0] & 0xf0) === 0xc0) { // its preset arrows: a step from the preset playing
             const i = presetIndex(), to = riseProgram(program, d[1], i, presetChoices().length);
@@ -282,7 +287,7 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
         // MPE Configuration Message would (MPE on Auto then decodes it; Off still ignores it)
         if (board && !seaboards.has(inp.id)) {
           seaboards.add(inp.id);
-          rise((r) => r.input(inp.id, inp.name, true)); // its panel at the left of the page (shared/rise.js)
+          rise((r) => r.input(inp.id, inp.name, true)); // its panel in the MIDI devices drawer (shared/rise.js)
           for (const [d1, d2] of [[101, 0], [100, 6], [6, 15], [101, 127], [100, 127]]) send([0xb0, d1, d2]);
         }
       }
@@ -290,13 +295,14 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
       for (const id of [...seaboards]) if (!acc.inputs.has(id)) { seaboards.delete(id); rise((r) => r.input(id, '', false)); }
       for (const id of [...feet]) if (!acc.inputs.has(id)) { feet.delete(id); foot((f) => f.input(id, '', false)); }
       status(names.length ? `MIDI: ${names.join(', ')}` : 'MIDI: no devices');
+      tell();
     };
     bind();
     acc.onstatechange = bind;
     if (button) button.hidden = true;
     midiMenu();
     if (keyShift()) import('./shell.js').then(({ toast }) => toast(`MIDI keys play ${shiftText()}: Octave and Transpose are in the MIDI settings`), () => {});
-  }, () => status('MIDI: permission denied'));
+  }, () => { status('MIDI: permission denied'); setDevices('denied', []); });
 }
 
 /**
@@ -361,10 +367,64 @@ export function createInput(send, controllers = {}, { shift = false, device = sh
 let page = null;
 export function pageMIDI(handler) { if (handler) page = handler; return page; }
 
+// The MIDI devices plugged in, at the top of the page's MIDI devices drawer (shared/layout.js): each
+// one's name, what it is here (a Seaboard sends MPE; an FC-300 has its panel), and a lamp that
+// lights as it sends (but for the clock and active sensing, which some send all the time); with
+// none, why: MIDI off (with a button to turn it on), not allowed, or nothing plugged in. startMIDI
+// keeps it up to date, and says how many there are with a forte-midi-devices event on document.
+const plugged = { box: null, state: 'off', devices: [], lamps: new Map() };
+function setDevices(state, devices) {
+  plugged.state = state; plugged.devices = devices;
+  drawDevices();
+  if (typeof document !== 'undefined' && document.dispatchEvent) document.dispatchEvent(new CustomEvent('forte-midi-devices', { detail: devices.length }));
+}
+function lamp(id, d) {
+  const l = plugged.lamps.get(id);
+  if (!l || d[0] >= 0xf8) return;
+  if (!l.lit) { l.lit = true; l.el.classList.add('on'); }
+  clearTimeout(l.t);
+  l.t = setTimeout(() => { l.lit = false; l.el.classList.remove('on'); }, 120);
+}
+export function midiDevices() {
+  if (plugged.box) return plugged.box;
+  const make = (tag, cls, text) => Object.assign(document.createElement(tag), cls ? { className: cls } : {}, text ? { textContent: text } : {});
+  const box = plugged.box = make('div', 'forte-midi-devices');
+  const list = make('ul');
+  list.setAttribute('aria-label', 'MIDI devices plugged in');
+  const note = make('p'), on = make('button', '', 'Enable MIDI');
+  on.type = 'button';
+  on.title = 'Let this page hear your MIDI devices (the browser asks first)';
+  on.addEventListener('click', () => { document.querySelector('#midi-btn')?.click(); unfocus(on); });
+  box.append(make('h3', '', 'Plugged in'), list, note, on);
+  plugged.parts = { list, note, on, make };
+  drawDevices();
+  return box;
+}
+function drawDevices() {
+  if (!plugged.box) return;
+  const { list, note, on, make } = plugged.parts, { state, devices } = plugged;
+  for (const l of plugged.lamps.values()) clearTimeout(l.t);
+  plugged.lamps.clear();
+  list.replaceChildren(...devices.map((d) => {
+    const li = make('li'), light = make('i', 'forte-midi-lamp'), name = make('span', '', d.name || 'A MIDI device');
+    name.title = d.name || '';
+    li.append(light, name);
+    if (d.what) li.append(make('small', '', d.what));
+    plugged.lamps.set(d.id, { el: light, lit: false, t: 0 });
+    return li;
+  }));
+  list.hidden = !devices.length;
+  note.textContent = state === 'off' ? 'MIDI is off. Turn it on to play this page from a keyboard, a Seaboard or a foot controller.'
+    : state === 'denied' ? 'The browser didn\'t let this page use MIDI. Allow MIDI for this site in the browser\'s settings, then turn it on again.'
+    : devices.length ? '' : 'Nothing plugged in. A MIDI device shows here as soon as it is plugged in, and plays at once.';
+  note.hidden = !note.textContent;
+  on.hidden = state === 'on';
+}
+
 // The MIDI settings: the velocity curve, MPE, Octave and Transpose, each a labelled dropdown
-// (midiSettings, which the page's drawer shows, shared/layout.js). Once MIDI is on, the MIDI status
-// opens them: in the drawer, where the page has one, else in a menu under it. The status says how
-// far the keys are moved, in the accent, while they are.
+// (midiSettings, which the page's MIDI devices drawer shows, shared/layout.js). Once MIDI is on, the
+// MIDI status opens that drawer, where the page has one, else these in a menu under it. The status
+// says how far the keys are moved, in the accent, while they are.
 export function midiSettings() {
   const box = document.createElement('div');
   box.className = 'forte-midi-settings';
@@ -397,11 +457,11 @@ function midiMenu() {
   if (!pill || pill.classList.contains('forte-midi-pill')) return;
   pill.classList.add('forte-midi-pill');
   pill.setAttribute('role', 'button'); pill.tabIndex = 0;
-  pill.title = 'MIDI settings: touch, MPE, octave and transpose';
-  const drawer = document.querySelector('#forte-drawer');
-  if (drawer) { // the drawer's MIDI section, opened (shared/layout.js)
+  const drawer = document.querySelector('#forte-midi');
+  pill.title = drawer ? 'MIDI devices, and the settings: touch, MPE, octave and transpose' : 'MIDI settings: touch, MPE, octave and transpose';
+  if (drawer) { // the MIDI devices drawer, opened (shared/layout.js)
     pill.setAttribute('aria-controls', drawer.id);
-    const go = () => document.dispatchEvent(new CustomEvent('forte-drawer', { detail: 'midi' }));
+    const go = () => document.dispatchEvent(new CustomEvent('forte-drawer', { detail: 'devices' }));
     pill.addEventListener('click', go);
     pill.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); go(); } });
     showShift();
