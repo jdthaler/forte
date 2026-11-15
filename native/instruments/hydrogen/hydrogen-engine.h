@@ -32,7 +32,7 @@ class HydrogenEngine : public Engine {
   void bend(double value) override;
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
   void slide(double value, int key) override { expr.setSlide(value, key); }
-  void pressure(double value, int key) override { press.set(value, key); } // its lamp's discharge current, up to four times
+  void pressure(double value, int key) override { press.set(value, key, ownPressure); } // its lamp's discharge current, up to four times
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
   // what the tests read
@@ -70,6 +70,8 @@ class HydrogenEngine : public Engine {
     double liftK = 1;           // how many times longer than usual its afterglow lasts after this lift (forte/lift.h)
     double bendNow = 1, density = 0, fKey = 0;
     double current = 1;         // its discharge current over the usual (Press: up to four times)
+    double vel = 0, lv = 1;     // its strike, and its level over the strike's (Held: once its own pressure comes)
+    Held hold;                  // (forte/press.h)
     double peak = 0;            // the steady power its lines sum to (for when it has faded)
     double peakNorm = 0;        // the steady power its gain is normalised to
     double shut = 1;            // the shutter's gain: 1 while lit, closing after the release

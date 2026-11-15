@@ -17,7 +17,8 @@ export const INSTRUMENT = {
   lift: 'a fast lift brushes the thumb back over the tine; with the tines damped on release, a slow lift lets the fingertip settle gently', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   mpe: { bend: 1, way: 'up', slide: { param: 'pluck', max: 0.5 } }, // MPE: a note's own bend presses its tine on the bridge (up only, a semitone at most); its slide moves the thumb from the tip towards the bridge, at the pluck
   glide: 'a fingernail pressing the tine on the bridge: up to a semitone sharp', // what a note's own bend does
-  aftertouch: 'a firm press drives a sustainer on the tine: the note swells and holds', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
+  aftertouch: 'a firm press: a sustainer on the tine holds the note as loud as the press', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   compass: { keys: [60, 88], param: 'fullRange' }, // C4–E6, a 17-tine kalimba's span, until Full range opens the rest
   space: 'sustain',                     // Space and CC64: holds fingers off released tines (when they don't ring anyway)
   modWheel: 'cover',                    // CC1: a finger over the sound hole, from open to shut (the wah)

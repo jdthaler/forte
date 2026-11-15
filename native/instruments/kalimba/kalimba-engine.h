@@ -70,7 +70,7 @@ class KalimbaEngine : public Engine {
     double fing = 0;   // the fingertip's damping per sample after this lift (0: the usual; forte/lift.h)
     Press press;       // how hard its key is pressed (forte/press.h)
     // Press: a sustainer, a driver coil under the steel tine fed from a pickup that hears its
-    // fundamental (mode fund), holding it at up to HOLD times the swing the thumb gave it
+    // fundamental (mode fund), holding it at up to HOLD times the swing the hardest pluck gives it
     Sustainer sus;
     int fund = 0;
     double bf = 0; // the fundamental's input gain (a unit force's step, the mode mass-normalised)

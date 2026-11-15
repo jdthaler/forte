@@ -17,7 +17,8 @@ export const INSTRUMENT = {
   lift: 'how fast the jack falls back: a slow lift lets the damper settle softly', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   mpe: { bend: 1, way: 'up', slide: { param: 'xFront', max: 15 } }, // MPE: a note's own bend tightens its strings (up only, a semitone at most); its slide moves its quills towards the nut, nasal as the lute row, at the pluck
   glide: 'a finger pressing the strings\' back length: up to a semitone sharp', // what a note's own bend does
-  aftertouch: 'a firm press drives a sustainer over the strings: the note swells and holds', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
+  aftertouch: 'a firm press: a sustainer on the strings holds the note as loud as the press', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // FF–f³, 29–89, until Full range opens the rest
   space: 'hold',                        // Space and CC64 latch the keys down; the host sends the noteOffs on release
   faders: ['front8', 'back8', 'four', 'xFront', 'xBack'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

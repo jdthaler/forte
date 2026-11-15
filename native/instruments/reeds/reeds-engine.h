@@ -83,6 +83,7 @@ class ReedEngine : public Engine {
     void updateDamping(const ReedEngine &eng) { damped = killing || (!keyDown && !eng.sustain); }
     Press press;   // how hard its key is pressed (forte/press.h)
     Sustainer sus; // Press: a driver coil under the reed's tip, fed from the pickup, pushing the tip (bp)
+    double struckAt = 0; // m/s: its last strike's hammer speed
     void tuneSustainer();
     // a note's own slide: where its hammer strikes (a fraction of the reed; NaN: the knob's, as built)
     std::array<double, STRIKES * MAX_MODES> ws{};

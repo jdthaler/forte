@@ -22,8 +22,9 @@ constexpr double DROP = 1e-6;           // N: top partials below this stop being
 constexpr double RAMP = 0.02;           // s: the buff's leather and the soundboard switch glide over this
 constexpr double KNOCK_COUPLING = 0.04; // share of a knock's impulse that reaches the board at the bridge
 // Press: a full press holds a string's fundamental at HOLD times the swing its pluck gave it
-// (plucked-string.h, forte/press.h Sustainer)
-constexpr double HOLD = 1.6;
+// (plucked-string.h, forte/press.h Sustainer): a quill lets the string go where it bends past it,
+// however fast the key goes down, so that is the swing of any pluck, the hardest too
+constexpr double HOLD = 1;
 static const double FAST_FALL = fallSpeed(1);
 constexpr int CHOIRS[3] = {FRONT, BACK, FOUR};
 

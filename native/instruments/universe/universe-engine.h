@@ -34,7 +34,7 @@ class EarlyUniverseEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override;
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the plasma's sound speed: every wave faster or slower
-  void pressure(double value, int key) override { press.set(value, key); }   // its primordial amplitude, up to twice
+  void pressure(double value, int key) override { press.set(value, key, ownPressure); }   // its primordial amplitude, up to twice
   void allNotesOff() override;
   int voiceCount() const override { return (int)voices.size(); }
   void process(float *L, float *R, int n) override;
@@ -55,6 +55,7 @@ class EarlyUniverseEngine : public Engine {
     double gl = 1, gr = 1;  // its place across the keyboard
     double velocity = 0;
     double amp = 1;         // its primordial amplitude over the usual (Press: up to twice)
+    forte::Held hold;       // its own pressure, once it comes, sets its level in place of the strike (forte/press.h)
     int count = 0;          // harmonics played
     std::array<double, MAX_HARMONICS> c{}, s{}, rc{}, rs{}; // each harmonic's phasor, and its turn a sample
     std::array<double, MAX_HARMONICS> e{}, q{};            // the amplitudes now: cos and sin parts

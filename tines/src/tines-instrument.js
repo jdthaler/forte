@@ -18,7 +18,8 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine
   midiVelocity: hammerSpeed,            // MIDI velocity / 127 → hammer speed, 0.25 … 5 m/s
   mpe: { bend: 48, slide: { param: 'strike', max: 14 } }, // MPE: a note's own bend slides its fork's tuning spring, ±48 semitones; its slide moves its hammer out along the tine, at the strike: a fuller blow
-  aftertouch: 'a firm press drives a sustainer on the tine: the note swells and holds', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
+  aftertouch: 'a firm press: a sustainer on the tine holds the note as loud as the press', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how fast the damper falls: a slow lift leaves a longer tail, a fast one stops the tine sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   modWheel: 'tremDepth',                // MIDI CC1, the mod wheel (an FC-300's EXP 2): the tremolo, off at rest, full depth fully up
   faders: ['drive', 'tone', 'hardness', 'tremRate', 'tremDepth'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

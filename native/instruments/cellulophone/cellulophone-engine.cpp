@@ -111,7 +111,7 @@ void CellulophoneEngine::setParams(const double *p) {
     if (v.slot >= v.slots) v.slot = -1;
     v.screen = screen == screen_::octaves ? OCTAVE_SCREEN[v.octave] : screen;
     v.push = expr.slideOr(v.key, push);
-    v.depth = 1 - touch + touch * v.vel; v.depth += (1 - v.depth) * v.after;
+    v.depth = depthOf(v);
   }
   hasP = true;
 }
@@ -147,7 +147,8 @@ void CellulophoneEngine::noteOn(int key, double velocity) {
   v.held = true; v.dying = false;
   newest.down(key);
   v.vel = std::clamp(velocity, 0.0, 1.0);
-  v.depth = 1 - touch + touch * v.vel; v.depth += (1 - v.depth) * v.after;
+  v.hold.start();
+  v.depth = depthOf(v);
   v.push = expr.slideOr(key, push);
   if (fresh) { v.depthNow = v.depth; v.pushNow = v.push; }
   v.rise = 1 / (mirrorT * (1.25 - 0.75 * v.vel) * fs); // a quick key tilts its mirror faster
@@ -192,7 +193,8 @@ void CellulophoneEngine::pressure(double value, int key) { // aftertouch: one ke
   const double a = std::clamp(value, 0.0, 1.0);
   for (Voice &v : voices) if (v.on && (key < 0 || v.key == key)) {
     v.after = a;
-    v.depth = 1 - touch + touch * v.vel; v.depth += (1 - v.depth) * a;
+    v.hold.pressed(key, v.key, ownPressure);
+    v.depth = depthOf(v);
   }
 }
 
@@ -221,6 +223,7 @@ void CellulophoneEngine::process(float *L, float *R, int n) {
   double dTheta[OCTAVES];
   for (int o = 0; o < OCTAVES; o++) dTheta[o] = turns4 * speed * pow(2.0, o - 4) / fs;
   const double glide = 1 - exp(-1 / (GLIDE_T * fs));
+  for (Voice &v : voices) if (v.on) { v.hold.step(n / fs); if (v.hold.own) v.depth = depthOf(v); }
   const bool errors = wear > 0 && quality != Quality::low; // Low: every slot cut true
   const double g = 1 + 12 * drive * drive;
   for (int i = 0; i < n; i++) {

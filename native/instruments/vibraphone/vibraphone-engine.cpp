@@ -23,10 +23,11 @@ constexpr double DAMP_RAMP = 0.008; // s: the damper felt lands (and lifts) over
 constexpr int POST_BLOCKS = 4;      // live view messages every few blocks
 constexpr double BEND_T = 0.02;    // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double NYQUIST = 0.45;    // × fs: modes from here up are left out (they would alias)
-// Press: a full press bows the bar's fundamental up to HOLD times the swing the mallet gave it; the
+// Press: a full press bows the bar's fundamental to HOLD times the swing the hardest stroke gives it
+// (the mallet's speed is in proportion to the velocity), however hard it was struck; the
 // fundamental's decay rate, which sets the bow's grip, is measured as it rings, over SIG_T (several
 // turns of the discs, which change it as they turn)
-constexpr double HOLD = 1.6, SIG_T = 0.5;
+constexpr double HOLD = 1, SIG_T = 0.5;
 
 // ---- a voice: one bar and its tube ---------------------------------------------------------
 
@@ -80,6 +81,7 @@ void VibraphoneEngine::Voice::tube(const VibraphoneEngine &eng) {
 // The mallet lands at x (fraction of the length from the end) and y (fraction of the half-width).
 void VibraphoneEngine::Voice::strike(const VibraphoneEngine &eng, double velocity) {
   const double *P = eng.P.data();
+  struckAt = std::max(0.0, std::min(1.0, velocity));
   const int nx = d->nx;
   const double at = eng.own.slideOr(key, P[p::strike]); // its own slide, or the mallets' point
   const double u = std::min(nx - 1 - 1e-9, std::max(0.0, at * (nx - 1))), j = std::floor(u), fr = u - j;
@@ -208,7 +210,7 @@ void VibraphoneEngine::Voice::render(float *L, float *Rt, int n, VibraphoneEngin
   if (tuneNow) {
     tuneNow = false;
     const double om = std::sqrt(K11 / M11n);
-    sus.tune(sigEff, we0, om / TAU, std::fabs(we0) * std::sqrt(vb * vb + om * om * qb * qb), HOLD, eng.fs);
+    sus.tune(sigEff, we0, om / TAU, hardest(std::fabs(we0) * std::sqrt(vb * vb + om * om * qb * qb), struckAt, 1), HOLD, eng.fs);
   } else if (sus.ready()) sus.decay(sigEff);
   M11 = M11n; M12 = M12n; M22 = M22n; Ka = Kan; R = Rn;
   lvS = lvSn; cdisc = cdiscn; tubeGain = tubeGainn; Rd = Rdn;

@@ -445,22 +445,32 @@ test('a lamp changed while keys sound: the sounding lamps carry on, the next key
   for (let b = 0; b < 100; b++) { e.process(bL, bR, 128); assert.ok(bL.every(Number.isFinite)); }
   assert.equal(e.voiceCount(), 2);
 });
-test('Press: a held lamp\'s discharge current rises with its key\'s press, up to four times: its lines twice as strong (√ of the current); before the press, or with none, as it was', () => {
-  // the key held, its press from the block at 0.5 s (188 blocks), measured from 0.6 s on
-  const run = (press, key = 60) => {
-    const e = new HydrogenEngine(FS); e.setParams(DEFAULTS); e.noteOn(60, 0.8);
+test('Press: a held lamp\'s discharge current rises with its key\'s press, up to four times: its lines twice as strong (√ of the current); a key\'s own press (MPE) takes its level over from the strike, as a strike as hard as the press would hold it; before the press, or with none, as it was', () => {
+  // the key held, its press from the block at 0.5 s (188 blocks), measured from 0.6 s on (a key's
+  // own, which takes over in a tenth of a second, from 1.2 s)
+  const run = (press, key = 60, vel = 0.8, own = false) => {
+    const e = new HydrogenEngine(FS); e.setParams(DEFAULTS); e.noteOn(60, vel);
     const n = 3 * FS, L = new Float32Array(n), b = new Float32Array(128), c = new Float32Array(128);
-    for (let s = 0; s < n; s += 128) { if (press !== undefined && s === 128 * 188) e.handle({ type: 'pressure', key, value: press }); e.process(b, c, 128); L.set(b.subarray(0, Math.min(128, n - s)), s); }
+    for (let s = 0; s < n; s += 128) { if (press !== undefined && s === 128 * 188) e.handle({ type: 'pressure', key, value: press, own }); e.process(b, c, 128); L.set(b.subarray(0, Math.min(128, n - s)), s); }
     return L;
   };
-  const level = (x) => { let s = 0; for (let i = 0.6 * FS; i < 2.9 * FS; i++) s += x[i] * x[i]; return Math.sqrt(s); };
+  const level = (x, from = 0.6) => { let s = 0; for (let i = from * FS; i < 2.9 * FS; i++) s += x[i] * x[i]; return Math.sqrt(s); };
+  const same = (x, y, what) => { const i = x.findIndex((v, j) => !Object.is(v, y[j])); assert.ok(i < 0, `${what}: differs from sample ${i}`); };
   const plain = run(), full = run(1), half = run(0.5);
-  assert.deepEqual(full.subarray(0, 128 * 188), plain.subarray(0, 128 * 188), 'before the press');
-  assert.deepEqual(run(0), plain, 'a press of none');
+  same(full.subarray(0, 128 * 188), plain.subarray(0, 128 * 188), 'before the press');
+  same(run(0), plain, 'a press of none');
   assert.ok(Math.abs(level(full) / level(plain) / 2.0 - 1) < 0.005, `pressed fully: ${(level(full) / level(plain)).toFixed(3)}×`);
   assert.ok(Math.abs(level(half) / level(plain) / 1.581 - 1) < 0.005, `pressed halfway: ${(level(half) / level(plain)).toFixed(3)}×`);
-  assert.deepEqual(run(1, -1), full, 'the channel\'s pressure as the key\'s');
-  assert.deepEqual(run(1, 61), plain, 'another key\'s');
+  same(run(1, -1), full, 'the channel\'s pressure as the key\'s');
+  same(run(1, 61), plain, 'another key\'s');
+  // its own press (MPE): the level a strike as hard as the press, pressed as hard, holds
+  same(run(1, 60, 0.8, true).subarray(0, 128 * 188), plain.subarray(0, 128 * 188), 'before its own press');
+  for (const p of [1, 0.5, 0.2]) {
+    const own = level(run(p, 60, 0.8, true), 1.2), as = level(run(p, -1, p), 1.2);
+    assert.ok(Math.abs(own / as - 1) < 0.01, `its own press of ${p}: ${(own / as).toFixed(4)} of a strike of ${p} pressed as hard`);
+    const soft = level(run(p, 60, 0.3, true), 1.2);
+    assert.ok(Math.abs(soft / own - 1) < 0.01, `its own press of ${p}: a soft strike's ${(soft / own).toFixed(4)} of a hard one's`);
+  }
 });
 test('CPU: ten lamps through the open window (96 lines each) render three times faster than real time', () => {
   const e = new HydrogenEngine(FS), bL = new Float32Array(128), bR = new Float32Array(128);

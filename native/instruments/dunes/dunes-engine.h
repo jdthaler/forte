@@ -23,6 +23,7 @@
 #include "forte/dsp.h"
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "forte/tuning.h"
 #include "dunes-model.h"
@@ -41,6 +42,7 @@ struct Voice {
   int key = 0, mip = 0, modes = 0, layer = 0; // layer: the theory it was struck in
   int64_t born = 0;
   double f0 = 0, vel = 0, after = 0, push = 0;
+  Held hold; // its own pressure, once it comes, sets its speed in place of the strike (forte/press.h)
   double bent = 1;                     // the shear rate over the key's own (a note's own bend)
   double U = 0, target = 0, brake = 0; // m/s, and its fall a second once let go
   double drive = 0;                    // K / K_c, for the views

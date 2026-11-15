@@ -49,7 +49,6 @@ class BreitWignerEngine : public Engine {
     double gamma = 1;         // its boost now
     double lift = 1;          // how wide its key-up channel opened, over the control's (Lift)
     Press press;              // how hard its key is pressed
-    double made = 0;          // |ψ| as its key last made it (a press keeps making it, up to Press × this)
     int form = 0;             // samples its source still runs (0: none, or made at once)
     double dr = 0, di = 0;    // its source's amplitude a second, turning with it (made real at the strike)
     double f = 0, fwhm = 0;   // in the lab, this block (Hz)

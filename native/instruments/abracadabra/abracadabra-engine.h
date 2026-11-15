@@ -31,7 +31,7 @@ class AbracadabraEngine : public Engine {
   void setSustain(bool on) override;
   void allNotesOff() override;
   void slide(double value, int key) override { expr.setSlide(value, key); }
-  void pressure(double value, int key) override { press.set(value, key); } // its own magnet's field, up to twice
+  void pressure(double value, int key) override { press.set(value, key, ownPressure); } // its own magnet's field, up to twice
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the Earth's speed through the halo: a Doppler shift
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
@@ -61,6 +61,7 @@ class AbracadabraEngine : public Engine {
     double cr = 1, ci = 0;            // the carrier, e^{iωt}
     double bent = 1;                  // its Doppler factor (a note's own bend)
     double boost = 1;                 // its magnet's field over the knob's (Press: up to twice)
+    Held hold;                        // its own pressure, once it comes, charges it in place of the strike (forte/press.h)
     double nx1 = 0, nx2 = 0, ny1 = 0, ny2 = 0; // the channel's band-pass
   };
   double faOf(int key) const;   // the key's axion frequency (Hz): SCALE × its tuned note

@@ -23,6 +23,7 @@ export const INSTRUMENT = {
   // MPE: each note's own bend retunes its bowl alone, as the wheel retunes them all (±4 octaves);
   // its slide moves its finger down the bowl's wall from the rim, as it sings.
   mpe: { bend: 48, slide: { param: 'rub', max: 5 } },
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
   aftertouch: 'the finger presses harder on the glass', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how fast the finger leaves the glass: a slow lift drags off it, damping the bowl; a fast one leaves it ringing', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['wet', 'treadle', 'water', 'press', 'speed'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

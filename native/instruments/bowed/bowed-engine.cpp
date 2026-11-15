@@ -79,7 +79,7 @@ void OrganistaEngine::setParams(const double *P) {
   kB = (2 * L0.G) / (1 + L0.G * L0.Zall);
   if (Pm.boardEta != etaBody) buildBody(Pm.boardEta);
   if (Pm.lifted && !(!first && old.lifted)) liftAll();
-  if (!first && old.force != Pm.force) for (int i = 0; i < nAct; i++) { Key &s = *act[i]; if (s.down) s.FT = keyForce(s.key, s.vel, Pm.force, s.after); }
+  if (!first && old.force != Pm.force) for (int i = 0; i < nAct; i++) { Key &s = *act[i]; if (s.down) s.FT = keyForce(s.key, s.hold.vel(s.vel, s.after), Pm.force, s.after); }
 }
 
 // The soundboard: plate modes driven at NSEG points along the bridge.
@@ -144,7 +144,7 @@ void OrganistaEngine::noteOn(int key, double velocity) {
   if (!s || !hasParams) return;
   activate(*s);
   if (s->nb != expr.bendOf(key)) { s->nb = expr.bendOf(key); s->bend(bendNow * s->nb); } // its own bend, at once
-  s->down = true; s->vel = velocity; s->after = 0;
+  s->down = true; s->vel = velocity; s->after = 0; s->hold.start();
   s->FT = keyForce(key, velocity, Pm.force);
   const double rise = riseTime(velocity, Pm.attack);
   s->up = s->FT / std::max(1.0, rise * fs);
@@ -173,7 +173,7 @@ void OrganistaEngine::allNotesOff() { // Panic: every string and the board to re
 void OrganistaEngine::pressure(double value, int key) { // MIDI aftertouch: one key (poly) or every held key (channel, −1)
   for (int i = 0; i < nAct; i++) {
     Key &s = *act[i];
-    if (s.down && (key < 0 || key == s.key)) { s.after = value; s.FT = keyForce(s.key, s.vel, Pm.force, s.after); }
+    if (s.down && (key < 0 || key == s.key)) { s.after = value; s.hold.pressed(key, s.key, ownPressure); s.FT = keyForce(s.key, s.hold.vel(s.vel, s.after), Pm.force, s.after); }
   }
 }
 
@@ -196,6 +196,12 @@ void OrganistaEngine::process(float *L, float *R, int n) {
       const double to = expr.bendOf(s->key), was = s->nb;
       if (was != to) s->nb = s->active ? glideTo(was, to, m / fs, BEND_T) : to;
       if (wheel || was != to) s->bend(bendNow * s->nb);
+    }
+    for (int i = 0; i < nAct; i++) { // a key's own pressure takes its force over from the strike
+      Key &s = *act[i];
+      if (!s.down) continue;
+      s.hold.step(m / fs);
+      if (s.hold.own) s.FT = keyForce(s.key, s.hold.vel(s.vel, s.after), Pm.force, s.after);
     }
     run(L + at, R + at, m);
   }

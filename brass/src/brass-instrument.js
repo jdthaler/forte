@@ -18,6 +18,7 @@ export const INSTRUMENT = {
   space: 'hold',                        // Space and CC64 latch the keys down (a horn has no damper: the note lasts as long as the breath)
   modWheel: 'plunger',                  // CC1: the plunger mute over the bell (wah)
   mpe: { bend: 12, slide: true },       // MPE: a note's own bend moves its slide (and the lips with it); CC74 its own plunger
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
   aftertouch: 'blows harder, up to half as hard again', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how the breath stops: a slow lift tapers the note, a fast one is a tongue stop', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['shock', 'lipTension', 'tongue', 'breath', 'plunger'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

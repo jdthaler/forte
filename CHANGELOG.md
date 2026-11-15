@@ -16,6 +16,116 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-11-15 — Custom configuration, and Morph's slider standing up with Swap; Strike sets the attack, Press the held level
+
+### Forte 0.53.0
+- **The Presets menu says “Custom configuration”** whenever the controls match no preset, on every page, in the plugins' window and in the Forte app; it names the preset the controls are set to however they got there (a link, a tour, a control moved back), and Default settings on a fresh page.
+- **Morph's slider stands up between the two menus:** the Presets menu is the top and the second menu the bottom, and the slider runs down between them in place of the percentage, as an FC-300's EXP 2 goes from heel (the top) to toe (the bottom).
+- **Moving a control with Morph on makes the top the sound as it is,** a Custom configuration unless it is a preset's, with the slider at the top; Morph then slides from it.
+- **Swap** trades the top and the bottom, the slider turning over with them, so the sound stays as it is.
+- In the plugins, Morph from and Morph to can be a custom configuration, whose values the project keeps.
+- **Strike sets how loud a note starts, Press the level it holds at:** a note's own pressure from an MPE controller (the RISE), or a host's per-note pressure, now reaches the engines as the note's own (`notePressure`), and on the instruments whose notes hold it takes the note's level over from the strike within a tenth of a second. A keyboard's aftertouch and a finger leaning on a key on the screen start from nothing, so they still press on top of the strike, as before.
+- The RISE panel says so on each of those instruments: Strike is how loud the note starts, and a press then sets the level it holds at.
+
+### Ribbon Piano 0.16.0
+- **A full press holds the note as loud as the hardest strike would, however hard it was struck:** the sustainer is tuned on the hardest strike's swing (a soft blow's share of the fundamental is measured from its own contact), so a soft note swells to the press's level and a hard one settles to it.
+
+### Harpsichord 0.12.0
+- **A full press holds a string at the swing of its pluck,** which a quill gives alike however fast the key goes down.
+
+### Vibraphone 0.13.0
+- **A full press bows the bar to the level of the hardest strike, however hard it was struck** (it gets there over the bar's own long ring).
+
+### Celesta 0.8.0
+- **A full press holds the bar as loud as the hardest strike would, however hard it was struck.**
+
+### Kalimba 0.7.0
+- **A full press holds the tine as loud as the hardest pluck would, however hard it was plucked.**
+
+### Brass 0.3.0
+- **A note's own press (MPE) sets how hard the player blows,** in place of the strike, once it comes.
+
+### Musical Saw 0.3.0
+- **A note's own press (MPE) sets the bow's force,** in place of the strike, once it comes.
+
+### Electric Grand 0.14.0
+- **A full press holds the note as loud as the hardest strike would, however hard it was struck** (it gets there over the note's own long ring).
+
+### Tine Piano 0.15.0
+- **A full press holds the note as loud as the hardest strike would, however hard it was struck.**
+
+### Reed Piano 0.14.0
+- **A full press holds the note as loud as the hardest strike would, however hard it was struck.**
+
+### Sticky-Pad Piano 0.13.0
+- **A full press holds the reed at the swing of its pluck,** which the pad gives nearly alike however fast the key goes down.
+
+### Trautonium 0.4.0
+- **A note's own press (MPE) sets how hard the finger presses the wire,** in place of the strike, once it comes.
+
+### Telharmonium 0.3.0
+- **A note's own press (MPE) sets how far the key goes in,** in place of the strike, once it comes.
+
+### Magnetic Resonator Piano 0.3.0
+- **A note's own press (MPE) sets the electromagnet's current,** in place of the strike, once it comes.
+
+### Ondes Martenot 0.3.0
+- **A note's own press (MPE) sets how far the intensity key goes down,** in place of the strike, once it comes.
+
+### Cellulophone 0.3.0
+- **A note's own press (MPE) sets how deep the key goes,** in place of the strike, once it comes.
+
+### Viola Organista 0.13.0
+- **A note's own press (MPE) sets how hard the string is pressed onto the wheel,** in place of the strike, once it comes.
+
+### Glass Armonica 0.12.0
+- **A note's own press (MPE) sets how hard the finger presses,** in place of the strike, once it comes.
+
+### Clavicylinder 0.5.0
+- **A note's own press (MPE) sets how hard the key presses on the cylinder,** in place of the strike, once it comes.
+
+### Pyrophone 0.12.0
+- **A note's own press (MPE) sets how far the flames part,** in place of the strike, once it comes.
+
+### Singing Voice 0.3.0
+- **A note's own press (MPE) sets how hard the lungs push,** in place of the strike, once it comes.
+
+### Cristal Baschet 0.3.0
+- **A note's own press (MPE) sets the finger's stroke,** in place of the strike, once it comes.
+
+### Spring Keyboard 0.10.0
+- **A full press holds the springs as loud as the hardest strike would, however hard they were struck.**
+
+### Star Keyboard 0.9.0
+- **A note's own press (MPE) sets how hard the convection drives the star,** in place of the strike, once it comes.
+
+### Early Universe 0.5.0
+- **A note's own press (MPE) sets the note's level,** in place of the strike, once it comes.
+
+### Hydrogen Lamp 0.6.0
+- **A note's own press (MPE) sets the lamp's level,** in place of the strike, once it comes.
+
+### ABRACADABRA 0.7.0
+- **A note's own press (MPE) sets how far its magnet charges,** in place of the strike, once it comes.
+
+### CUORE 0.5.0
+- **A note's own press (MPE) sets the heat in each pulse,** in place of the strike, once it comes.
+
+### Chladni Plate 0.3.0
+- **A note's own press (MPE) sets the bow's force,** in place of the strike, once it comes.
+
+### Birdsong 0.3.0
+- **A note's own press (MPE) sets the bird's breath,** in place of the strike, once it comes.
+
+### Pulsars 0.3.0
+- **A note's own press (MPE) sets the pulsar's level,** in place of the strike, once it comes.
+
+### Singing Dunes 0.3.0
+- **A note's own press (MPE) sets the avalanche's speed,** in place of the strike, once it comes.
+
+### Breit-Wigner Keyboard 0.3.0
+- **A press keeps making the state at Press production × a full strike's amplitude, however hard the key was struck** (it was × the velocity); Press production's default is 1 (it was 1.5).
+
 ## 2026-11-15 — the Breit-Wigner Keyboard's states formed, not struck; a drawer for the MIDI devices; Presets and Morph together; Press makes a note more, never less; a new version says so, and reloads itself when nobody is playing
 
 ### Forte 0.52.0

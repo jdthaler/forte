@@ -234,13 +234,13 @@ test('Formation time: no click at any length. The strike is the sharpest onset t
   const top = power(formed, f0);
   for (const d of [-5, -3, -1, -0.5, 0.5, 1, 3, 5]) near(power(formed, f0 + d * G) / top, M.heard(f0 + d * G, f0, G, 0.005) / M.heard(f0, f0, G, 0.005), 1e-3, `${d} Γ off`);
 });
-test('Formation time and Press: a press while the key\'s source runs changes nothing; once the source stops, the press keeps the state at Press production × the velocity', () => {
+test('Formation time and Press: a press while the key\'s source runs changes nothing; once the source stops, the press keeps the state at Press production × a full strike\'s amplitude, however hard it was struck', () => {
   const f = 440, T = 0.2, vel = 0.5, params = P({ width: 1e-2, formation: T, press: 1.6 }); // Γ = 4.4 Hz: settles in a few tenths of a second
   const env = (x, t0) => { const a = Math.round(t0 * FS), d = Math.round(FS / f) * 10; let s = 0; for (let n = a; n < a + d; n++) s += x[n] * x[n]; return Math.sqrt((2 * s) / d) / OUT; };
   const plain = play(params, [[0, 'on', 69, vel]], 1.2), pressed = play(params, [[0, 'on', 69, vel], [at(0.05), 'pressure', 1, 69]], 1.2);
   const n = Math.round(T * FS);
   assert.ok(pressed.subarray(0, n).every((v, i) => v === plain[i]), 'while its source runs');
-  near(env(pressed, 1.1), 1.6 * vel, 0.02, 'held by the press');
+  near(env(pressed, 1.1), 1.6, 0.04, 'held by the press');
   assert.ok(env(plain, 1.1) < 0.02 * vel, `left alone it has decayed: ${env(plain, 1.1)}`);
 });
 test('Formation time: the source runs while the key is held, for T at most. Let go early, the note decays from what it has made, at its own width and the key-up channel\'s; a ρ fed for a second holds steady, formation balancing decay, until its key comes up', () => {
@@ -293,20 +293,22 @@ test('Lift: a slow lift opens the key-up channel half as wide, a fast one twice 
   near(one(undefined), 10, 1e-3, 'no release velocity'); near(one(0.5), 10, 1e-3, 'middling');
   near(one(0), 5, 1e-3, 'slowest'); near(one(1), 20, 1e-3, 'fastest');
 });
-test('Press: a firm press into a held key keeps making its state, which builds to Press production × the amplitude it was made with, at the line\'s own rate and pitch, on one key or the channel; a finger at rest (under half) changes nothing at all', () => {
+test('Press: a firm press into a held key keeps making its state, which builds to Press production × the amplitude a key at full velocity makes, however hard it was struck, at the line\'s own rate and pitch, on one key or the channel; a finger at rest (under half) changes nothing at all', () => {
   const f = 440, t = at(0.1), params = P({ width: 1e-3, press: 2 }), G = 0.44; // Γ = 0.44 Hz: |ψ| moves as e^(−πΓt)
   // |ψ| from the heard part, by its envelope over whole periods (the state turns at its own pitch)
   const env = (x, t0) => { const a = Math.round(t0 * FS), d = Math.round(FS / f) * 10; let s = 0; for (let n = a; n < a + d; n++) s += x[n] * x[n]; return Math.sqrt((2 * s) / d) / 0.3; };
-  const still = play(params, [[0, 'on', 69, 1]], 0.5);
+  const still = play(params, [[0, 'on', 69, 0.4]], 0.5); // struck softly: the press builds it to the same
   for (const ev of [[t, 'pressure', 1, 69], [t, 'pressure', 1]]) {
-    const x = play(params, [[0, 'on', 69, 1], ev], 2.5), m0 = env(still, t), want = (u) => 2 + (m0 - 2) * Math.exp(-Math.PI * G * (u - t));
+    const x = play(params, [[0, 'on', 69, 0.4], ev], 2.5), m0 = env(still, t), want = (u) => 2 + (m0 - 2) * Math.exp(-Math.PI * G * (u - t));
     for (const u of [0.5, 1, 2]) near(env(x, u), want(u), 0.02, `${ev.length > 3 ? 'its key' : 'the channel'} pressed fully: |ψ| at ${u} s`);
     near(prony(x, f, 1, 1.5).f, f, 1e-6, 'at its own pitch');
   }
-  // half way past rest: toward half as much, from above it the line decays to it and holds
-  const h = play(P({ width: 1e-2, press: 0.5 }), [[0, 'on', 69, 1], [t, 'pressure', 0.75, 69]], 2);
-  near(env(h, 1.9), 0.25, 0.02, 'pressed half way: a quarter of the strike');
-  const rest = play(params, [[0, 'on', 69, 1], [t, 'pressure', 0.45, 69]], 0.5);
+  // half way past rest: toward half as much, from above it the line decays to it and holds, however hard it was struck
+  for (const v of [1, 0.5]) {
+    const h = play(P({ width: 1e-2, press: 0.5 }), [[0, 'on', 69, v], [t, 'pressure', 0.75, 69]], 2);
+    near(env(h, 1.9), 0.25, 0.02, `struck at ${v}, pressed half way: a quarter of a full-velocity key's`);
+  }
+  const rest = play(params, [[0, 'on', 69, 0.4], [t, 'pressure', 0.45, 69]], 0.5);
   assert.ok(rest.every((v, i) => v === still[i]), 'a finger at rest');
   // let go of the press, and the state decays at its own width again
   near(prony(play(params, [[0, 'on', 69, 1], [t, 'pressure', 1, 69], [at(0.2), 'pressure', 0, 69]], 0.6), f, at(0.2) + 0.1, 0.6).fwhm, G, 5e-3, 'the press let go');

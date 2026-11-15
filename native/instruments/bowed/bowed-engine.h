@@ -24,6 +24,7 @@
 #include "bowed-params.h"
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "bowed-string.h"
 
@@ -66,6 +67,7 @@ class OrganistaEngine : public Engine {
     Key(int key, double fs) : BowedString(key, fs) {}
     bool down = false, active = false;
     double vel = 0, after = 0, FN = 0, FT = 0, up = 0, dn = 0;
+    Held hold; // its own pressure, once it comes, stands in for the strike (forte/press.h)
     double nb = 1; // its key's own bend (MPE), where the glide is
     int idle = 0, seg = 0;
   };

@@ -19,6 +19,7 @@ export const INSTRUMENT = {
   // MPE: a note bends as the player bends the blade, four octaves; CC74 shakes its own vibrato;
   // its pressure presses the bow harder
   mpe: { bend: 48, slide: true },
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
   aftertouch: 'the bow presses harder', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how the bow leaves the blade: a fast lift springs it clear and the trapped note rings on, a slow one drags it off, damping the blade', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['bend', 'force', 'place', 'speed', 'vibrato'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

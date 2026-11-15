@@ -43,7 +43,7 @@ void CuoreEngine::bend(double value) { wheelTarget = fdlibm::pow(2.0, std::clamp
 void CuoreEngine::pressure(double value, int key) {
   value = std::clamp(value, 0.0, 1.0);
   if (key < 0) { chanPress = value; return; }
-  for (Voice &v : voices) if (v.active && v.key == key) v.press = value;
+  for (Voice &v : voices) if (v.active && v.key == key) { v.press = value; if (v.held && ownPressure) v.hold.came(); }
 }
 
 void CuoreEngine::setSustain(bool on) {
@@ -75,7 +75,7 @@ void CuoreEngine::noteOn(int key, double velocity) {
     std::tie(slot->gl, slot->gr) = keyPan(key);
   }
   Voice &v = *slot;
-  v.active = true; v.held = true; v.key = key; v.vel = velocity; v.age = clock++; v.quiet = 0;
+  v.active = true; v.held = true; v.key = key; v.vel = velocity; v.age = clock++; v.quiet = 0; v.hold.start();
   v.sinceEnd = -1; // the heater fires
   v.fadeLeft = 0; v.cut = 1; v.g = 1;
   v.phase = 1;     // at once: the first pulse is the attack
@@ -110,7 +110,9 @@ void CuoreEngine::process(float *L, float *R, int n) {
     if (!v.active) continue;
     v.bendNow = glideTo(v.bendNow, wheel * expr.bendOf(v.key), n / fs, BEND_T);
     v.inc = keyFreq(v.key) * tuning.ratio(v.key) * v.bendNow / fs;
-    v.E = P[p::energy] * MEV * v.vel * (1 + std::max(v.press, chanPress));
+    const double pr = std::max(v.press, chanPress);
+    if (v.held) v.hold.step(n / fs);
+    v.E = P[p::energy] * MEV * v.hold.vel(v.vel, pr) * (1 + pr); // the strike's, or its own pressure once that comes
     if (v.fadeLeft > 0) { // a slow lift: the pulses fade out
       v.E *= v.fadeLeft / v.fade;
       if ((v.fadeLeft -= n / fs) <= 0) { v.fadeLeft = 0; v.sinceEnd = 0; }

@@ -86,7 +86,7 @@ void TrautoniumEngine::circuits(Voice &v) {
 void TrautoniumEngine::start(Voice &v, int key, double velocity) {
   v.alive = true; v.held = true; v.stolen = false;
   v.key = key; v.born = t;
-  v.vel = std::clamp(velocity, 0.0, 1.0); v.after = 0; v.p = 0;
+  v.vel = v.vh = std::clamp(velocity, 0.0, 1.0); v.after = 0; v.p = 0; v.hold.start();
   v.u = v.uTo = 1 / baseFreq(key); v.uRate = 0;
   v.bend = expr.bendOf(key);
   v.f1 = expr.slideOr(key, P[p::f1]);
@@ -133,7 +133,7 @@ void TrautoniumEngine::noteOn(int key, double velocity) {
     }
     if (w) { // still letting go: it lands on the new place and presses again
       w->held = true; w->key = key; w->u = w->uTo = 1 / baseFreq(key); w->uRate = 0;
-      w->vel = std::clamp(velocity, 0.0, 1.0);
+      w->vel = w->vh = std::clamp(velocity, 0.0, 1.0); w->hold.start();
       w->bend = expr.bendOf(key);
       w->aPress = 1 - exp(-1 / (fs * P[p::press] * (1.5 - w->vel)));
       tune(*w);
@@ -142,7 +142,7 @@ void TrautoniumEngine::noteOn(int key, double velocity) {
     }
   } else {
     for (Voice &v : voices) if (v.alive && !v.stolen && v.key == key) { // pressed again while it sounds
-      v.held = true; v.vel = std::clamp(velocity, 0.0, 1.0);
+      v.held = true; v.vel = v.vh = std::clamp(velocity, 0.0, 1.0); v.hold.start();
       v.aPress = 1 - exp(-1 / (fs * P[p::press] * (1.5 - v.vel)));
       newest = &v;
       return;
@@ -194,7 +194,7 @@ void TrautoniumEngine::allNotesOff() {
 }
 
 void TrautoniumEngine::pressure(double value, int key) { // aftertouch: one key (poly) or every held key (channel, −1)
-  for (Voice &v : voices) if (v.alive && v.held && (key < 0 || v.key == key)) v.after = std::clamp(value, 0.0, 1.0);
+  for (Voice &v : voices) if (v.alive && v.held && (key < 0 || v.key == key)) { v.after = std::clamp(value, 0.0, 1.0); v.hold.pressed(key, v.key, ownPressure); }
 }
 
 void TrautoniumEngine::bend(double value) {
@@ -215,6 +215,8 @@ void TrautoniumEngine::update(Voice &v, double dt) {
     v.u = std::fabs(v.uTo - v.u) <= step ? v.uTo : v.u + (v.uTo > v.u ? step : -step);
   }
   v.bend = glideTo(v.bend, expr.bendOf(v.key), dt, BEND_T);
+  v.hold.step(dt);
+  v.vh = v.hold.vel(v.vel, v.after);
   const double f = std::clamp((bendNow * v.bend) / v.u, 1.0, TOP * fs);
   if (f != v.f) tune(v);
   const double f1 = glideTo(v.f1, expr.slideOr(v.key, P[p::f1]), dt, BEND_T);
@@ -223,7 +225,7 @@ void TrautoniumEngine::update(Voice &v, double dt) {
 
 // One sample of a voice: its pressure, its lamps, its circuits.
 inline void TrautoniumEngine::sample(Voice &v, double &out) {
-  const double target = v.held ? v.vel + (1 - v.vel) * v.after : 0;
+  const double target = v.held ? v.vh + (1 - v.vh) * v.after : 0;
   v.p += (target - v.p) * (v.held ? v.aPress : v.aLift);
   // where in this sample each lamp would strike on its own
   for (Lamp &l : v.lamp) {

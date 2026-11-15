@@ -117,6 +117,8 @@ class PianoEngine : public Engine {
     // Press: a sustainer over the strings where the hammer strikes (an EBow), on the modes its
     // amplifier's band reaches (drv: up to DRIVEN of them, below DRIVE_TOP times the fundamental)
     Sustainer sus;
+    double struckAt = 0; // m/s: its last strike's hammer speed
+    Blow blow;           // its force on the fundamental, as the hammer strikes (forte/press.h)
     static constexpr int DRIVEN = 48;
     std::array<int, DRIVEN> drv{};
     int nd = 0;

@@ -55,6 +55,7 @@ FORTE_EXPORT void forte_note_off(Handle *h, int key, double velocity) { h->engin
 FORTE_EXPORT void forte_set_sustain(Handle *h, int on) { h->engine->setSustain(on != 0); }
 FORTE_EXPORT void forte_all_notes_off(Handle *h) { h->engine->allNotesOff(); }
 FORTE_EXPORT void forte_pressure(Handle *h, double value, int key) { h->engine->pressure(value, key); }
+FORTE_EXPORT void forte_note_pressure(Handle *h, double value, int key) { h->engine->notePressure(value, key); } // a note's own (MPE)
 FORTE_EXPORT void forte_bend(Handle *h, double value) { h->engine->bend(value); }
 FORTE_EXPORT void forte_note_bend(Handle *h, double ratio, int key) { h->engine->noteBend(ratio, key); }
 FORTE_EXPORT void forte_slide(Handle *h, double value, int key) { h->engine->slide(value, key); }

@@ -107,8 +107,9 @@ void TinesEngine::Voice::aim(double mm) {
 
 // Press: a sustainer, a driver coil beside the pickup fed from it, holding the tine's tip. Tuned
 // on the fork's fundamental (its lowest mode the pickup hears) as the hammer leaves: a full press
-// holds the tip's swing there at HOLD times what the blow gave it (forte/press.h Sustainer).
-constexpr double HOLD = 1.6;
+// holds the tip's swing there at HOLD times what the hardest blow (HAMMER_TOP, MIDI's 127) gives it,
+// however hard it was struck (forte/press.h Sustainer).
+constexpr double HOLD = 1, HAMMER_TOP = 5;
 void TinesEngine::Voice::tuneSustainer() {
   double top = 0;
   for (int i = 0; i < N; i++) top = std::max(top, std::fabs(pk[i]));
@@ -116,11 +117,19 @@ void TinesEngine::Voice::tuneSustainer() {
   for (int i = 0; i < N; i++) if (std::fabs(pk[i]) >= 0.1 * top && (f < 0 || om[i] < om[f])) f = i;
   if (f < 0) return;
   const double B = twoPoleAmplitude(q[f], q1[f], a1[f], a2[f]);
-  sus.tune(sig[f], pk[f], om[f] / TAU, std::fabs(pk[f]) * om[f] * B, HOLD, 1 / k);
+  sus.tune(sig[f], pk[f], om[f] / TAU, hardest(std::fabs(pk[f]) * om[f] * B, struckAt, HAMMER_TOP) * blow.ratio(), HOLD, 1 / k);
 }
 
 void TinesEngine::Voice::strike(double v) {
+  struckAt = v;
   N = Nall; // every mode takes the blow
+  { // Press: follow the blow on the fundamental (the lowest mode the pickup hears: tuneSustainer)
+    double top = 0;
+    for (int i = 0; i < N; i++) top = std::max(top, std::fabs(pk[i]));
+    int f = -1;
+    for (int i = 0; i < N; i++) if (std::fabs(pk[i]) >= 0.1 * top && (f < 0 || om[i] < om[f])) f = i;
+    blow.start(f < 0 ? 0 : om[f] / TAU, 1 / k, v, HAMMER_TOP);
+  }
   double u = 0;
   for (int i = 0; i < N; i++) u += w[i] * q[i];
   eta = u - 1.5 * v * k; etaPrev = eta - v * k;
@@ -181,6 +190,7 @@ void TinesEngine::Voice::render(double *buf, int n, TinesEngine &eng) {
       }
       const double etaF = 2 * eta - etaPrev;
       const double F = contactForce(etaF - uf);
+      blow.add(F);
       etaPrev = eta; eta = etaF - kOverM * F;
       if (F > 0) {
         for (int i = 0; i < N; i++) q[i] += bw[i] * F;

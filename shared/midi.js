@@ -547,7 +547,8 @@ export function createSostenuto() {
  *                                without, a reset if the key had some
  * A bend becomes { type: 'noteBend', key, value: the frequency ratio along the tuning }, a slide
  * { type: 'slide', key, value: the slide's parameter as the wheel would set it (NaN: none) },
- * pressure { type: 'pressure', value, key }.
+ * pressure { type: 'pressure', value, key, own: true } (a note's own, which on the instruments whose
+ * notes hold sets the level a note holds at: forte/engine.h notePressure).
  */
 export function pageMpe({ post, params, slide, modWheel, groups = [] }) {
   const wheel = slide ?? (modWheel && (typeof modWheel === 'string' ? { param: modWheel } : modWheel));
@@ -558,7 +559,7 @@ export function pageMpe({ post, params, slide, modWheel, groups = [] }) {
   const mpe = createMpe({
     noteBend: (key, semitones) => express({ type: 'noteBend', key, value: bendRatio(params(), key, semitones) }),
     noteSlide: (key, u) => { if (p) express({ type: 'slide', key, value: Number.isNaN(u) ? NaN : wheelValue(p, u * 127, wheel.max ?? p.max) }); },
-    notePressure: (key, value) => post({ type: 'pressure', value, key }),
+    notePressure: (key, value) => post({ type: 'pressure', value, key, own: true }),
   });
   let on = false;
   return {

@@ -20,7 +20,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/kalimba/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity: how hard the thumb pushes |
 | `Space` | keep fingers off released tines (when *Let the tines ring* is off) |
-| MIDI | notes, velocity, sustain pedal (CC64), mod wheel: a finger over the sound hole; a firm press (aftertouch, past half way) drives a sustainer on the held note's tine: it swells and holds |
+| MIDI | notes, velocity, sustain pedal (CC64), mod wheel: a finger over the sound hole; a firm press (aftertouch, past half way) drives a sustainer on the held note's tine: it holds the note as loud as the press, however hard it was struck |
 
 ## The physics
 

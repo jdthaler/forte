@@ -112,7 +112,7 @@ void ArmonicaEngine::tune(Voice &v, double r) {
 
 void ArmonicaEngine::pressure(double value, int key) { // MIDI aftertouch: channel (key −1) or polyphonic
   if (key < 0) { pressureAll = value; for (int i = 0; i < count; i++) voices[i]->after = value; }
-  else for (int i = 0; i < count; i++) if (voices[i]->key == key) voices[i]->after = value;
+  else for (int i = 0; i < count; i++) if (voices[i]->key == key) { voices[i]->after = value; if (ownPressure) voices[i]->hold.came(); }
 }
 
 void ArmonicaEngine::noteOn(int key, double velocity) {
@@ -130,7 +130,7 @@ void ArmonicaEngine::noteOn(int key, double velocity) {
       else if (count > MAX_VOICES) voices[0]->dead = true;
     }
   }
-  v->touch = true; v->vel = velocity;
+  v->touch = true; v->vel = velocity; v->hold.start();
   focus = key;
 }
 
@@ -148,7 +148,7 @@ void ArmonicaEngine::allNotesOff() { count = 0; }
 
 // Normal force of the finger on the rim (N), relative to the key's regulated speaking threshold:
 // the slider scales it, velocity sets how firmly the finger lands, aftertouch presses harder.
-double ArmonicaEngine::force(const Voice &v) const { return v.touch ? v.Nreg * P[p::press] * (0.6 + 0.8 * v.vel) * (1 + v.after) : 0; }
+double ArmonicaEngine::force(const Voice &v) const { return v.touch ? v.Nreg * P[p::press] * (0.6 + 0.8 * v.hold.vel(v.vel, v.after)) * (1 + v.after) : 0; }
 
 void ArmonicaEngine::bend(double value) {
   bendTo = std::pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12);
@@ -207,6 +207,7 @@ void ArmonicaEngine::run(float *L, float *R, int n) {
     const double *G = v.gain.data();
     double *DET = v.det.data();
     for (int j = 0; j < NM; j++) { const double gw = (v.g[j] * W) / k; BET[j] = v.buc[j] * gw; BES[j] = v.bus[j] * gw; DET[j] = 1 / (1 + BET[j] * BES[j]); }
+    v.hold.step(n * k);
     const double Nt = force(v), Vrim = W * v.b.a * v.rim;
     const bool tr = focus == v.key;
     const double gr = 1 - std::exp((-TAU * Vrim) / (RIDGE * fsd));

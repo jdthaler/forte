@@ -21,7 +21,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/vibraphone/
 | `←` `→` | octave |
 | `↑` `↓` | velocity (the mallet's speed, up to 3 m/s by default) |
 | `Space` | damper pedal: lifts the felt off every bar |
-| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = shaft speed**; a firm press (aftertouch, past half way) bows the held note's bar at its end: it swells and holds |
+| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = shaft speed**; a firm press (aftertouch, past half way) bows the held note's bar at its end: it holds the note as loud as the press, however hard it was struck |
 
 ## The physics
 

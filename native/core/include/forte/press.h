@@ -13,6 +13,7 @@
 // before.
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -41,21 +42,44 @@ struct Presses {
 
 // The note's own pressure as it comes (no threshold), for the engines whose Press shapes a held
 // note from the first touch (a louder beam, a stronger field): each key's and the channel's
-// (key −1), the larger counting. With nothing pressed of() is exactly 0.
+// (key −1), the larger counting. With nothing pressed of() is exactly 0. came(k): key k's own
+// pressure (Engine::notePressure: MPE's) has come since its note began (Held, below).
 struct Pressures {
   std::array<double, 128> key{};
+  std::array<bool, 128> own{};
   double channel = 0;
-  void set(double value, int k) {
+  void set(double value, int k, bool mine = false) {
     const double v = value > 0 ? (value < 1 ? value : 1) : 0; // (NaN: none)
     if (k < 0) channel = v;
-    else if (k < 128) key[k] = v;
+    else if (k < 128) { key[k] = v; if (mine) own[k] = true; }
   }
   double of(int k) const { const double v = k >= 0 && k < 128 ? key[k] : 0; return v > channel ? v : channel; }
-  void reset(int k) { if (k >= 0 && k < 128) key[k] = 0; } // a new note's own pressure starts at none
-  void clear() { key.fill(0); channel = 0; }
+  bool came(int k) const { return k >= 0 && k < 128 && own[k]; }
+  void reset(int k) { if (k >= 0 && k < 128) { key[k] = 0; own[k] = false; } } // a new note's own pressure starts at none
+  void clear() { key.fill(0); own.fill(false); channel = 0; }
 };
 
 constexpr double PRESS_GLIDE = 0.01; // s: a voice's press follows its key's this fast
+
+// A held note: Strike sets its attack, Press the level it holds at. On the engines whose notes hold
+// (a bow, a breath, a wind, a current), a note's own pressure (Engine::notePressure: MPE's, which a
+// Seaboard sends from the first touch) takes its level over once it comes: the level a strike as
+// hard as the key is pressed would hold, the strike's own giving way to it over ATTACK_T from the
+// pressure's first message (on a Seaboard, as the note begins). Without one (the computer keys, a
+// keyboard's aftertouch, a finger leaning on a page's key, all of which rest at none) the strike
+// sets the level, and pressure adds to it as it always has. vel() is the velocity an engine makes
+// the held level from, in place of the strike's.
+constexpr double ATTACK_T = 0.1; // s
+
+struct Held {
+  bool own = false; // its key's own pressure has come
+  double t = 0;     // s since it came
+  void start() { own = false; t = 0; }
+  void came() { if (!own) { own = true; t = 0; } }
+  void pressed(int key, int k, bool own) { if (own && key >= 0 && key == k) came(); } // pressure(value, key) for note k (own: Engine::ownPressure)
+  void step(double dt) { if (own && t < 20 * ATTACK_T) t += dt; }
+  double vel(double strike, double p) const { return own ? p + (strike - p) * fdlibm::exp(-t / ATTACK_T) : strike; }
+};
 
 struct Press {
   double p = 0; // 0 … 1
@@ -87,11 +111,48 @@ inline double twoPoleAmplitude(double y0, double y1, double a1, double a2) {
 // σ·V²/w² once the velocity at the point swings ±V, so it holds where V = (2/π)·F·w²/σ: from a
 // struck note's level it swells or decays toward that over its own decay time 1/σ and stays.
 // tune() sets F on the note's fundamental as its strike leaves it, so a full press holds it at
-// `hold` times the velocity its strike gave the point. Below saturation (v0, a tenth of that) the
+// `hold` times the velocity the hardest strike gives the point (hardest(): Strike shapes only the
+// attack, and Press alone sets the level the note holds at). Below saturation (v0, a tenth of that) the
 // amplifier is linear, a negative damping of p·F·w²/(2·v0), 2.5π·σ·p: past the lightest press it
 // outgrows the note's losses, so every press holds the note, at a level as hard as it is pressed.
 // Unpressed nothing calls it, and the engine plays as before.
 constexpr double SUSTAIN_Q = 2;
+
+// The velocity amplitude the hardest strike, of speed sTop, would give a point, from the one a strike
+// of speed s gave it: a struck note swings in proportion to its strike, to first order (a felt
+// hammer's stiffening makes a hard blow's fundamental a little less than in proportion, and puts
+// the rest into its overtones).
+inline double hardest(double vStruck, double s, double sTop) { return s > 0 ? vStruck * sTop / s : 0; }
+
+// A felt hammer's blow is no short one on a high note: its contact lasts longer than half the
+// period, and the fundamental takes only a share of its impulse, |Σ F·e^(−iωt)| / Σ F over the
+// contact. A soft blow's contact lasts a little longer than a hard one's (the string gives way:
+// τ ∝ s^−0.13 on the Ribbon Piano's model), so its fundamental swings less than in proportion to
+// the blow, by as much as 10 dB at the top of a piano. Blow follows a blow's force, sample by
+// sample, and gives the hardest blow's share over this one's, taking the hardest's pulse to be
+// this one's, sped up by (s/sTop)^0.13: hardest() × ratio() is then the swing the hardest blow
+// gives the fundamental, within a few dB.
+struct Blow {
+  double zr = 1, zi = 0, hr = 1, hi = 0;  // e^(−iωt) at this blow's pace and the hardest's
+  double ar = 0, ai = 0, br = 0, bi = 0;  // Σ F·e^(−iωt) for each
+  double pr = 1, pi = 0, qr = 1, qi = 0;  // a sample's turn for each
+  // a blow of speed s on a fundamental at f (Hz), the hardest sTop, fs samples a second
+  void start(double f, double fs, double s, double sTop) {
+    const double w = 2 * std::numbers::pi * f / fs, c = s > 0 && s < sTop ? std::pow(s / sTop, 0.13) : 1;
+    pr = std::cos(w); pi = -std::sin(w); qr = std::cos(w * c); qi = -std::sin(w * c);
+    zr = hr = 1; zi = hi = 0; ar = ai = br = bi = 0;
+  }
+  void add(double F) {
+    ar += F * zr; ai += F * zi; br += F * hr; bi += F * hi;
+    const double z = zr * pr - zi * pi, h = hr * qr - hi * qi;
+    zi = zr * pi + zi * pr; zr = z; hi = hr * qi + hi * qr; hr = h;
+  }
+  // the hardest blow's share over this one's (1 when nothing was added), within 1/8 … 8
+  double ratio() const {
+    const double a = std::sqrt(ar * ar + ai * ai), b = std::sqrt(br * br + bi * bi);
+    return a > 0 && b > 0 ? std::clamp(b / a, 0.125, 8.0) : 1;
+  }
+};
 
 struct Sustainer {
   double F = 0;   // N at full press (0: not tuned yet: it waits for the strike to end)
@@ -101,9 +162,10 @@ struct Sustainer {
   double u1 = 0, x1 = 0, x2 = 0, y1 = 0, y2 = 0;
   bool live = false;
   // On the fundamental as the strike leaves it: its decay rate sigma (1/s), weight w at the point,
-  // frequency f0 (Hz), and the point's velocity amplitude from it, vStruck (m/s)
-  void tune(double sigma, double w, double f0, double vStruck, double hold, double fs) {
-    vH = hold * vStruck; w2 = w * w;
+  // frequency f0 (Hz), and the point's velocity amplitude the hardest strike gives it, vTop (m/s:
+  // hardest())
+  void tune(double sigma, double w, double f0, double vTop, double hold, double fs) {
+    vH = hold * vTop; w2 = w * w;
     if (!(vH > 0) || !(w2 > 0)) { F = 0; return; }
     v0 = 0.1 * vH;
     const double w0 = std::min(2 * std::numbers::pi * f0 / fs, 3.0), al = std::sin(w0) / (2 * SUSTAIN_Q), a0 = 1 + al;

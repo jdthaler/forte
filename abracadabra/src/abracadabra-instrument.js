@@ -17,6 +17,7 @@ export const INSTRUMENT = {
   space: 'sustain',                     // Space and CC64: keep the magnets charged after the keys come up
   modWheel: { param: 'halo', max: 2000 }, // CC1: a hotter halo, up to a galaxy cluster's
   mpe: { bend: 0.1, slide: true },      // MPE: an axion's mass does not bend, but the Earth's speed through the halo shifts it; CC74 heats its own halo
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
   aftertouch: 'its magnet\'s field, up to twice: a stronger signal above the noise', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   glide: 'the Earth\'s speed through the halo: a tiny Doppler shift', // what a note's own bend does
   lift: 'how fast the magnet ramps down: a slow lift over up to four times the ramp, a fast one in a quarter of it', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
