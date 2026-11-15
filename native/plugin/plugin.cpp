@@ -72,6 +72,8 @@ static_assert(sizeof kTransposeChoices / sizeof *kTransposeChoices == 2 * kSemit
 // Morph (shared/morph.js): Morph from and Morph to name two presets (0 the defaults, k the k-th),
 // and Morph (0..1) is how far the sound is from one to the other, each parameter part way
 // (morph(), as shared/presets.js morph). A song can automate Morph. Every plugin with presets has them.
+// The window's switch (editor.html) shows them; switched off, Morph goes back to 0, and Keep this
+// mix puts it at 0 leaving the values where it had them (keepMix()).
 constexpr uint32_t kMorphFromId = 0x7ffffff8, kMorphToId = 0x7ffffff7, kMorphId = 0x7ffffff6;
 const FormatSegment kMorphFormat[] = {{INFINITY, "", " %", 100, 0, 0, false, false, false, false}};
 // The soft pedal (CC67): a key struck while it is down is struck this much slower, so it sounds
@@ -84,7 +86,7 @@ constexpr uint32_t kEditorWidth = 1000, kEditorHeight = 760, kEditorMinWidth = 6
 
 // what the editor asks of the audio thread
 struct UiEvent {
-  enum Type : uint8_t { param, begin, end, on, off, pedal, pressure, panic, swap } type; // swap: a preset's values follow (fade across them)
+  enum Type : uint8_t { param, begin, end, on, off, pedal, pressure, panic, swap, keep } type; // swap: a preset's values follow (fade across them); keep: Keep this mix
   int16_t i; // a parameter or a key
   double v;
 };
@@ -246,8 +248,8 @@ struct Plugin : Instance, MpeDecoder::Sink {
   // ---- parameters ---------------------------------------------------------------------------
   // Set parameter i (audio thread, or main thread while not processing). A change of Preset
   // applies it: the defaults, then the kept parameters, then the preset's values (shell.js); and
-  // it is where Morph starts now, unless it is where Morph ends (shared/morph.js). A change of
-  // Morph, Morph from or Morph to applies the morph.
+  // it is where Morph starts now, at 0 (shared/morph.js). A change of Morph, Morph from or Morph
+  // to applies the morph.
   void set(int i, double v, const clap_output_events_t *out) {
     if (i == touchAt) { P[i] = constrain(touchParam(), v); shown[i] = P[i]; return; }
     if (i == mpeAt) { P[i] = constrain(mpeParam(), v); shown[i] = P[i]; mpeMode(); return; }
@@ -260,8 +262,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
       swapIn();
       for (int j = 0; j < I.paramCount; j++) if (morphA[j] != P[j]) { P[j] = morphA[j]; shown[j] = P[j]; tell(j, out); }
       P[i] = k; shown[i] = k;
-      if (k == (int)P[toAt] && k != (int)P[fromAt]) put(morphAt, 1, out);
-      else { put(fromAt, k, out); put(morphAt, 0, out); }
+      put(fromAt, k, out); put(morphAt, 0, out);
       dirty = true;
       return;
     }
@@ -302,6 +303,14 @@ struct Plugin : Instance, MpeDecoder::Sink {
       if (v != P[j]) { P[j] = v; shown[j] = v; tell(j, out); }
     }
     if (t <= 0 || t >= 1) put(presetAt, t <= 0 ? a : b, out);
+    dirty = true;
+  }
+  // Keep this mix (the window's): Morph back at 0 with every value where it is, so the mix is the
+  // sound to change or save; at 1 it is Morph to's preset, where the morph starts now
+  void keepMix(const clap_output_events_t *out) {
+    if (morphAt < 0 || P[morphAt] <= 0) return;
+    if (P[morphAt] >= 1) put(fromAt, P[toAt], out);
+    put(morphAt, 0, out);
     dirty = true;
   }
   // parameter i set by the plugin itself, as it is, and the host told
@@ -712,6 +721,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
       case UiEvent::pressure: pressure(e.v, e.i); break;
       case UiEvent::panic: panic(); break;
       case UiEvent::swap: swapIn(); break;
+      case UiEvent::keep: keepMix(out); break;
     }
   }
   void gesture(int i, bool begin, const clap_output_events_t *out) {
@@ -749,6 +759,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
   //   note(key, vel)      a key: vel 0..1 as MIDI velocity / 127, 0 to let go
   //   pressure(key, v)  pedal(on)  panic()
   //                       (pedal: Space; with space "switch", CC64's switch, as describe's switch says)
+  //   keepMix()           Keep this mix: Morph to 0, every value as Morph put it (keepMix())
   //   presets()           your own presets (presets.h): { folder, list: [[name, file, index]…] }
   //   loadPreset(file, index)   plays one: every parameter (not Preset); { ok, error }
   //   savePreset(name)    saves the parameters as one: { ok, file, error }
@@ -934,6 +945,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
     if (m == "pressure") { const int key = (int)num(1); if (key >= 0 && key < 128) toAudio({UiEvent::pressure, (int16_t)key, num(2)}); return {}; }
     if (m == "pedal") { toAudio({UiEvent::pedal, 0, num(1)}); return {}; }
     if (m == "panic") { toAudio({UiEvent::panic, 0, 0}); return {}; }
+    if (m == "keepMix") { toAudio({UiEvent::keep, 0, 0}); return {}; }
     auto text = [&](uint32_t k) { return args.size() > k && args[k].isString() ? std::string(args[k].getString()) : std::string(); };
     if (m == "presets") {
       Value list = createEmptyArray();

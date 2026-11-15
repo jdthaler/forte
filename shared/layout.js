@@ -744,7 +744,8 @@ if (presets) {
 }
 // ---------------------------------------------------------------------------
 // the drawer: at the left of every instrument page, what every instrument has alike. The
-// Presets menu (in Perform it goes above the keys instead), Morph, a Seaboard RISE while one is plugged in (shared/rise.js), the Output, Tuning and
+// Presets menu (in Perform it goes above the keys instead) with Morph's switch beside it and, while it is on, To and its
+// slider below (shared/morph.js), a Seaboard RISE while one is plugged in (shared/rise.js), the Output, Tuning and
 // Expression groups (moved here from the Controls panel, which keeps the instrument's own), and
 // the MIDI settings (shared/midi.js midiSettings, which the MIDI status opens). Each section folds,
 // as the browser remembers. On a desktop it is a column beside the views and the controls, folded
@@ -764,11 +765,11 @@ const drawerPrefs = (() => {
 const saveDrawer = () => { try { localStorage.setItem(DRAWER, JSON.stringify(drawerPrefs)); } catch { /* storage unavailable */ } };
 const narrowQuery = matchMedia(inPlugin ? 'not all' : '(max-width: 1099px)'); // as shared/layout.css
 const drawerMode = () => (phoneQuery.matches ? 'sheet' : narrowQuery.matches ? 'over' : 'docked');
-// the groups every instrument has, by their titles, in the drawer's order (Morph: shared/morph.js)
+// the groups every instrument has, by their titles, in the drawer's order
 const SHARED = ['output', 'tuning', 'expression'];
 // each section's place in the drawer, and whether it starts open (a controller's panel, shared/rise.js
 // and the FC-300's, comes after the presets; a key not here goes last, open)
-const SECTIONS = { presets: [10, true], morph: [20, false], rise: [30, true], fc300: [35, true], output: [40, true], tuning: [50, false], expression: [60, false], midi: [70, false] };
+const SECTIONS = { presets: [10, true], rise: [30, true], fc300: [35, true], output: [40, true], tuning: [50, false], expression: [60, false], midi: [70, false] };
 const SIDE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5"/></svg>';
 const PANEL = '<svg viewBox="0 0 18 16" aria-hidden="true"><rect x="1.5" y="2" width="15" height="12" rx="2"/><path d="M6.5 2v12M3.4 5.2h1.4M3.4 7.6h1.4M3.4 10h1.4"/></svg>';
 let drawer = null, drawerBody = null, floating = false, drawerOpener = null, drawerFold = null;
@@ -813,13 +814,12 @@ function details(key, name) {
   return det;
 }
 // the groups every instrument has, from the Controls panel into the drawer (each time the page
-// builds controls: Morph comes once the presets are ready)
+// builds controls)
 function placeDrawer() {
   if (!drawer || !sidebar) return;
   for (const det of sidebar.querySelectorAll('details.group')) {
     const name = det.querySelector('summary')?.textContent.trim().toLowerCase() ?? '';
-    const key = det.classList.contains('forte-morph') ? 'morph' : SHARED.includes(name) ? name : null;
-    if (key) drawerSection(key, det);
+    if (SHARED.includes(name)) drawerSection(name, det);
   }
 }
 if (mainEl && sidebar && !inPlugin) {
@@ -856,11 +856,13 @@ if (mainEl && sidebar && !inPlugin) {
     if (e.key !== 'Escape' || drawerMode() === 'docked' || !drawerIsOpen() || document.querySelector('dialog[open]')) return;
     setDrawer(false);
   });
-  // the presets, first: the page's own menu (placeTools puts it here in Discover)
+  // the presets, first: a head (Morph puts its switch there), the page's own menu (placeTools
+  // puts it here in Discover), then To and the slider while Morph is on (shared/morph.js)
   if (presets) {
     const name = presets.querySelector('select')?.getAttribute('aria-label');
-    const sec = el('div', 'forte-drawer-presets');
-    sec.append(el('h3', '', !name || name === 'Preset' ? 'Presets' : name));
+    const sec = el('div', 'forte-drawer-presets'), top = el('div', 'forte-drawer-presets-head');
+    top.append(el('h3', '', !name || name === 'Preset' ? 'Presets' : name));
+    sec.append(top, el('div', 'forte-drawer-menu'));
     drawerSection('presets', sec);
   }
   // the MIDI settings, where there is Web MIDI
@@ -891,7 +893,7 @@ if (mainEl && sidebar && !inPlugin) {
 let kbTools = null, restack = () => {};
 function placeTools() {
   const perf = performing() && !!kbTools && !sidewaysQuery.matches;
-  const home = drawerBody?.querySelector('[data-drawer="presets"]') ?? bars.controls?.tools;
+  const home = drawerBody?.querySelector('[data-drawer="presets"] .forte-drawer-menu') ?? bars.controls?.tools;
   if (presets && home) (perf ? kbTools : home).appendChild(presets);
   const f = bars.controls?.fold;
   if (f) (perf ? kbTools : bars.controls.bar).appendChild(f);
