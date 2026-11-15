@@ -21,7 +21,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/reeds/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity (hammer speed, 0.1–2 m/s) |
 | `Space` | damper pedal |
-| MIDI | notes, velocity, sustain pedal (CC64) |
+| MIDI | notes, velocity, sustain pedal (CC64); a firm press (aftertouch, past half way) drives a sustainer on the held note's reed, a coil by its pickup: it swells and holds |
 
 ## The physics
 

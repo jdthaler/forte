@@ -25,7 +25,7 @@ inline const FormatSegment kFormat_width[] = {{0.000009994999999999998, "", " pp
 inline const FormatSegment kFormat_power[] = {{kNoLimit, "Γ ∝ M^", "", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_phase[] = {{kNoLimit, "", "°", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_release[] = {{9.994999999999997, "", " Hz", 1, 0, 2, false, false, false, false}, {99.94999999999999, "", " Hz", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " Hz", 1, 0, 0, false, false, false, false}};
-inline const FormatSegment kFormat_press[] = {{9.994999999999997, "", " Hz", 1, 0, 2, false, false, false, false}, {99.94999999999999, "", " Hz", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " Hz", 1, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_press[] = {{kNoLimit, "", " ×", 1, 0, 2, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const char *const kChoices_venue[] = {"Studio", "Room", "Recital hall", "Concert hall", "Cathedral"};
 inline const char *const kKeys_venue[] = {"studio", "room", "recital", "hall", "cathedral"};
@@ -54,8 +54,8 @@ inline const ParamInfo kParams[p::count] = {
   {"width", "Width Γ/M", "Resonance", ParamKind::continuous, 0.000001, 1, 0.00417, 0, true, true, nullptr, 0, kFormat_width, 6},
   {"power", "Width grows as Mⁿ", "Resonance", ParamKind::continuous, 0, 5, 1, 0.05, false, false, nullptr, 0, kFormat_power, 1},
   {"phase", "Phase at birth", "Resonance", ParamKind::continuous, 0, 90, 0, 1, false, false, nullptr, 0, kFormat_phase, 1},
-  {"release", "Key-up channel Γ₂", "Decay channels", ParamKind::continuous, 0.05, 500, 6, 0, true, true, nullptr, 0, kFormat_release, 3},
-  {"press", "Press channel Γ₃", "Decay channels", ParamKind::continuous, 0.5, 500, 30, 0, true, false, nullptr, 0, kFormat_press, 3},
+  {"release", "Key-up channel Γ₂", "Decay and production", ParamKind::continuous, 0.05, 500, 6, 0, true, true, nullptr, 0, kFormat_release, 3},
+  {"press", "Press production", "Decay and production", ParamKind::continuous, 0.1, 3, 1.5, 0.05, false, false, nullptr, 0, kFormat_press, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},

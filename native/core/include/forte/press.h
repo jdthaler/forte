@@ -40,7 +40,7 @@ struct Presses {
 };
 
 // The note's own pressure as it comes (no threshold), for the engines whose Press shapes a held
-// note rather than damping it (a louder beam, a stronger field): each key's and the channel's
+// note from the first touch (a louder beam, a stronger field): each key's and the channel's
 // (key −1), the larger counting. With nothing pressed of() is exactly 0.
 struct Pressures {
   std::array<double, 128> key{};

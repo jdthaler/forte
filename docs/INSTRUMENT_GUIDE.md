@@ -141,7 +141,7 @@ export const INSTRUMENT = {
                                         // pressing a string behind the bridge only sharpens it)
   glide: 'a finger pressing the string behind the bridge: up to a semitone sharp', // what a note's own
                                         // bend does, when it isn't simply a bend (the RISE's panel says it)
-  aftertouch: 'a hand pressed against the gong damps it', // what pressing into a held key does (any aftertouch, MPE
+  aftertouch: 'a firm press rolls the gong, as hard as it is pressed', // what pressing into a held key does (any aftertouch, MPE
                                         // pressure: a Seaboard's Press), as the RISE's panel says it; leave it out when
                                         // the engine ignores pressure (test/mpe-tests.mjs checks both ways)
   lift: 'a slow lift lets the damper settle softly', // what a slow or a fast release does (release velocity: a
@@ -239,13 +239,18 @@ an Osmose) bends, slides and presses each note alone. `shared/mpe.js` and the pl
   from where it landed, towards either end of the key (`slideFrom`; a host's per-note brightness
   likewise from its first value), so a finger resting mid-key leaves the note as the computer
   keys play it;
-* `pressure(value, key)`, which per-key pressure already was. The struck and plucked engines
-  take it as a hand, palm, mallet or felt held against what rings (`forte/press.h`): `Presses`
-  keeps each key's and the channel's, counting only a press past half way (`PRESS_FROM`: a
-  Seaboard sends some from a finger at rest) and the rest as none to full; each held note's
-  `Press` glides there over 10 ms and adds its loss (`loss` weighs it by frequency, the upper
-  partials first). Unpressed, a note plays bit for bit as before. An engine whose press shapes
-  a held note rather than damping it (a brighter beam, a stronger field, a deeper trap) keeps
+* `pressure(value, key)`, which per-key pressure already was. A press makes a note more, never
+  less. The struck and plucked engines take it through `forte/press.h`: `Presses` keeps each
+  key's and the channel's, counting only a press past half way (`PRESS_FROM`: a Seaboard sends
+  some from a finger at rest) and the rest as none to full, and each held note's `Press` glides
+  there over 10 ms. What it does is a player's or a device's that keeps a struck note going: a
+  `Sustainer` (an EBow over a string, a driver coil by a tine's, reed's or spring's pickup, a
+  bow on a bar) senses the velocity at its point through a band-pass on the note and pushes in
+  step through an amplifier that saturates at p·F, tuned as the strike leaves so that a full
+  press holds the fundamental at a few times its swing then (it swells or decays there over its
+  own decay time); the mallet instruments `Roll`, striking again as hard as the key is pressed.
+  Unpressed, a note plays bit for bit as before. An engine whose press shapes a held note (a
+  brighter beam, a stronger field, a deeper trap) keeps
   `Pressures` instead, the pressure as it comes, and glides toward `1 + k·p` over `PRESS_GLIDE`;
   one whose press sets something off (an echo train, aftershocks, matter falling in) uses
   `Presses`, so a finger at rest fires nothing. Both `reset(key)` on a new note.

@@ -11,13 +11,13 @@ export { GROUPS, DEFAULTS, PRESETS };
 export const INSTRUMENT = {
   id: 'piano',
   groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: offInPresets(PRESETS, ['glide', 'press']), // its presets turn off what makes little sense on it (shared/expression.js)
+  presets: offInPresets(PRESETS, ['glide']), // its presets turn off what makes little sense on it (shared/expression.js)
   keep: ['volume', 'room', 'venue', 'soundboard', 'velocity', 'maxFreq', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],      // MIDI keys: A0–C8
   lift: 'how fast the damper falls: a slow lift leaves a longer tail, a fast one stops the string sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   mpe: { bend: 1, way: 'up', slide: { param: 'strikePos', max: 0.04 } }, // MPE: a note's own bend tightens its strings (up only, a semitone at most); its slide moves its hammer towards the agraffe, at the strike
   glide: 'a finger pressing the strings behind the bridge: up to a semitone sharp', // what a note's own bend does
-  aftertouch: 'a firm press rests a palm on the strings: shorter and darker', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  aftertouch: 'a firm press drives a sustainer over the strings: the note swells and holds', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   space: 'sustain',      // Space and CC64: the damper pedal, sent to the engine
   controllers: { 67: 'unaCorda' }, // MIDI CC67, the soft pedal: on at 64 and above
   // noteOn's velocity is the hammer's speed in m/s; MIDI velocity / 127 → 0.25 … 6 m/s

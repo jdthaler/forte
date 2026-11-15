@@ -207,8 +207,9 @@ deepens, so its electron stays longer; on the NMR Spin Echo a firm press
 runs the key's own echo train; on Ringing Planets it sets off aftershocks,
 and on the Black-Hole Keyboard it drops matter in, each clump ringing the
 hole again. On the Ion Chain a held key's laser pushes its ions, so a firm
-press keeps them ringing. On the Breit-Wigner Keyboard a firm press opens
-a third decay channel, so the note dies while it is pressed. Slide, set before a strike, is TESS's planet's
+press keeps them ringing. On the Breit-Wigner Keyboard a firm press keeps
+making the state, as a beam at its energy would, so the note swells and
+holds. Slide, set before a strike, is TESS's planet's
 path across its star, CUORE's own thermistor bias, where a Collider Showers
 particle lands, and a Whistlers line's plasma density; on the Wind Harp it
 is how gusty the wind is at that key's strings.
@@ -248,9 +249,14 @@ mode button sends nothing, so it shows white once a fader sends and cyan once
 a fader moves the RISE's own Glide, Slide or Press sensitivity (seen in the
 settings it reads, below); until then it asks for a fader. Press (the note's own pressure, as any aftertouch) shapes the
 notes of most instruments that hold them; on the struck and plucked ones a
-firm press (past half way, so a finger resting on a key changes nothing) lays
-a palm, a hand, a mallet or a felt on what rings and damps it, as hard as the
-key is pressed. Its preset arrows step through the Presets menu from the
+firm press (past half way, so a finger resting on a key changes nothing)
+makes the note more, never less, as hard as the key is pressed: a sustainer
+(an EBow over a string, a driver coil by a pickup) swells and holds the
+strings, tines, reeds, springs and the celesta's and kalimba's steel, a bow
+holds the Vibraphone's bars, and the mallet instruments roll (the Marimba,
+Steel Pan, Gong Keyboard, Carillon, Tubular Bells and Gamelan). On the
+Timpani and Tabla a firm press is still the heel in the head, which raises
+the pitch. Its preset arrows step through the Presets menu from the
 preset playing, whichever way it got there (the FC-300's pedals, the menu),
 so the two stay in step; the first press after the RISE has counted
 elsewhere goes the way its own number lies. The chevron folds the

@@ -23,6 +23,10 @@ constexpr double DAMP_RAMP = 0.008; // s: the damper felt lands (and lifts) over
 constexpr int POST_BLOCKS = 4;      // live view messages every few blocks
 constexpr double BEND_T = 0.02;    // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double NYQUIST = 0.45;    // × fs: modes from here up are left out (they would alias)
+// Press: a full press bows the bar's fundamental up to HOLD times the swing the mallet gave it; the
+// fundamental's decay rate, which sets the bow's grip, is measured as it rings, over SIG_T (several
+// turns of the discs, which change it as they turn)
+constexpr double HOLD = 1.6, SIG_T = 0.5;
 
 // ---- a voice: one bar and its tube ---------------------------------------------------------
 
@@ -89,6 +93,8 @@ void VibraphoneEngine::Voice::strike(const VibraphoneEngine &eng, double velocit
     if (i > 0) { bws[i] = bc[i] * wsi; comp += bc[i] * wsi * wsi; }
   }
   ws0 = ws[0]; compModes = comp;
+  for (int i = 0; i < N; i++) we[i] = d->tors[i] ? 0 : d->w[i * nx]; // (Press: the bow, at the end)
+  we0 = we[0]; sus = Sustainer{}; tuneNow = false;
   const Mallet M = malletOf(P[p::hardness], P[p::mass]);
   const double v = P[p::speedMax] * std::max(0.0, std::min(1.0, velocity)), h = 1 / eng.fs;
   if (!(v > 0)) return;
@@ -139,6 +145,9 @@ void VibraphoneEngine::Voice::render(float *L, float *Rt, int n, VibraphoneEngin
   const double c1 = 2 * sig1;
   const double fadeStep = fading ? 1 / (FADE * eng.fs) : 0;
   double qb_ = qb, vb_ = vb, X_ = X, vx_ = vx, fade_ = fade;
+  const bool drive = !released && press.on() && sus.ready(); // Press: the bow on the bar
+  if (!drive) sus.rest();
+  double loss = 0; // Press: the power the fundamental and its tube lose, summed over the block (per unit time step)
   for (int s = 0; s < n; s++) {
     const double t = (s + 1) * inv;
     // the disc in this bar's mouth: open area, and the end correction and boundary-layer loss of the
@@ -170,10 +179,16 @@ void VibraphoneEngine::Voice::render(float *L, float *Rt, int n, VibraphoneEngin
         if (Fc > Fmax) Fmax = Fc;
       }
       if (++inFlight > eng.malletMax || (contact && Fc == 0 && dPrev < -1e-4)) {
-        malletOn = false; lastContactMs = (1000.0 * contactSamples) / eng.fs;
+        malletOn = false; lastContactMs = (1000.0 * contactSamples) / eng.fs; tuneNow = true;
       }
+    } else if (drive) { // the bow: it answers the fundamental alone (the tube drains it faster than the bar's overtones ring)
+      const double Fd = sus.force(we0 * qb_, press.p, eng.fs);
+      for (int i = 1; i < N; i++) q[i] += bc[i] * we[i] * Fd;
+      const double f0 = we0 * Fd * h * id;
+      vmb += a22 * f0; vmx -= a12 * f0;
     }
     const double vbN = 2 * vmb - vb_, vxN = 2 * vmx - vx_;
+    loss += c1 * m11 * vmb * vmb + r22 * vmx * vmx;
     qb_ += h * vmb; X_ += h * vmx;
     double y = (tga + dtg * t) * (vxN - vx_) * eng.fs + out0 * (vbN - vb_) * eng.fs;
     vb_ = vbN; vx_ = vxN;
@@ -183,6 +198,18 @@ void VibraphoneEngine::Voice::render(float *L, float *Rt, int n, VibraphoneEngin
     L[s] += gl * y; Rt[s] += gr * y;
   }
   qb = qb_; vb = vb_; X = X_; vx = vx_; fade = fade_;
+  // Press: the fundamental's decay rate as it rings (sigEff): what the bar and its tube lose, over
+  // twice the bar's own energy in it (the tube takes some and radiates it, the discs as they turn
+  // more or less); the bow, tuned on the fundamental as the mallet has left, pays for it
+  if (const double e1 = 0.5 * (M11n * vb * vb + K11 * qb * qb); e1 > 1e-24) {
+    const double s1 = std::max(sig1, loss / (n * 2 * e1));
+    sigEff = sigEff > 0 ? sigEff + (1 - std::exp(-n / (SIG_T * eng.fs))) * (s1 - sigEff) : s1;
+  }
+  if (tuneNow) {
+    tuneNow = false;
+    const double om = std::sqrt(K11 / M11n);
+    sus.tune(sigEff, we0, om / TAU, std::fabs(we0) * std::sqrt(vb * vb + om * om * qb * qb), HOLD, eng.fs);
+  } else if (sus.ready()) sus.decay(sigEff);
   M11 = M11n; M12 = M12n; M22 = M22n; Ka = Kan; R = Rn;
   lvS = lvSn; cdisc = cdiscn; tubeGain = tubeGainn; Rd = Rdn;
   age += n / eng.fs;
@@ -373,7 +400,7 @@ void VibraphoneEngine::processBlock(float *L, float *R, int n) {
     // the damper felt: on every bar not held by a key, unless the pedal is down
     double want = v->released && !sustain && !lock ? 1 : 0;
     if (v->touchLeft > 0) { want += v->touch; v->touchLeft -= n; } // and a mallet's touch after a fast lift
-    if (!v->released) want = std::max(want, presses.of(v->key)); // Press: damped as hard as the key is pressed
+    v->press.follow(v->released ? 0 : presses.of(v->key), n, fs); // Press: the bow (render)
     if (v->damp != want) v->damp = want > v->damp ? std::min(want, v->damp + dStep) : std::max(want, v->damp - dStep);
     const double to = own.bendOf(v->key), was = v->bent; // Glide: the mallet dragged along the bar
     if (was != to) v->bent = glideTo(was, to, n / fs, BEND_T);

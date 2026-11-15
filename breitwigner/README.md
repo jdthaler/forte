@@ -26,7 +26,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/breitwigner
 | `←` `→` | octave |
 | `↑` `↓` | velocity: the amplitude the state is made with |
 | `Space` | keep the key-up channel shut: the states live out their own lifetimes |
-| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = the width** (from the width set up to a ρ meson's); **pitch bend up = a boost** (to γ = 1.12); aftertouch opens a third decay channel; release velocity sets how wide the key-up channel opens; MPE: each note's own boost (two octaves, γ = 4), its own width by slide (CC74) and its own press |
+| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = the width** (from the width set up to a ρ meson's); **pitch bend up = a boost** (to γ = 1.12); aftertouch keeps making the state (production: the note swells and holds); release velocity sets how wide the key-up channel opens; MPE: each note's own boost (two octaves, γ = 4), its own width by slide (CC74) and its own press |
 
 ## The physics
 
@@ -124,11 +124,11 @@ How should the width change with the mass? **Width grows as Mⁿ** sets it, abou
 The exponent counts along the equal-tempered keyboard, so retuning a key leaves its Γ/M alone.
 Γ/M is held at 2 or less.
 
-### 5. Decay channels: partial widths add
+### 5. Decay channels and production
 
 A state that can decay in several ways has a **partial width** for each, and the widths add:
 
-  Γ = Γ₁ + Γ₂ + Γ₃
+  Γ = Γ₁ + Γ₂ + …
 
 Its lifetime is ħ over the sum, and the share of its decays that go each way is Γᵢ/Γ. The
 keyboard uses this for the player's hands:
@@ -140,8 +140,17 @@ keyboard uses this for the player's hands:
   wide.
 * **The pedal** (or Space) keeps that channel shut, so every state lives out its own lifetime;
   it opens when the pedal comes up.
-* **Press channel Γ₃.** A firm press into a held key (aftertouch, above half pressure) opens a
-  third channel, up to its width at full pressure: the note dies while it is pressed.
+* **Press production.** A firm press into a held key (aftertouch, above half pressure) keeps
+  making its state, as a beam at its energy would: each instant it adds to |ψ| in step with
+  it as much as the line takes away at a level T, so |ψ| goes to T at the line's own rate,
+
+    |ψ(t)| = T + (|ψ₀| − T)·e^(−πΓt),
+
+  and holds there while the key is pressed (a narrow line swells slowly, a wide one at once).
+  T is Press production (1.5 by default) times how hard the key is pressed past half way,
+  times the amplitude the key made the state with; a light press holds the note lower, never
+  dying faster than it would alone. The state turns at its own mass throughout, and let go of,
+  it decays at its own width again (tested: |ψ| against this law within 2 %).
 
 ### 6. A boost
 
@@ -173,7 +182,7 @@ imaginary part, the same on both sides.
 A key press **adds** v·e^(iφ) to the key's number. Amplitudes add, so a key struck again while
 it still rings may be reinforced or cancelled, as its two states fall in or out of step; the
 tests strike a key twice, half a turn and a whole turn apart. A width that changes (the mod
-wheel, a slide, a channel opening) and a boost move the multiplier, gliding in 20 ms; the
+wheel, a slide, a channel opening), a press and a boost move the multiplier, gliding in 20 ms; the
 number itself is never touched, so nothing clicks. A state is dropped when it is 100 dB under
 a full one. All 128 keys can ring at once, and none is ever stolen.
 
@@ -223,11 +232,13 @@ tools/render-breitwigner.mjs                       the demos
   ρ's grows with the pions' momentum, cubed), so its line is skewed and its mass depends on
   the form chosen. The ρ and Δ presets take one number, Γ/M, and make a plain line of it.
 * **One state at a time.** There is no interference between a resonance and a background or
-  a neighbour (the ρ–ω mixing that notches the real ρ line), and no production: a key makes
-  its state whole, at one instant. Two keys never interfere, being different states; only a
-  key struck again does.
-* **The key-up and press channels are the player's, not physics**: a real state's channels
-  cannot be opened and shut. What is physical is that they add.
+  a neighbour (the ρ–ω mixing that notches the real ρ line). A key makes its state whole, at
+  one instant, and a press keeps making it in step with itself, as a beam tuned exactly to
+  its energy would (a real beam has a spread of energies, and makes the whole line). Two keys
+  never interfere, being different states; only a key struck again does.
+* **The key-up channel and the press are the player's, not physics**: a real state's channels
+  cannot be opened and shut, nor a beam aimed at one state. What is physical is that widths
+  add, and that production balances decay.
 * **The boost's width, Γ/γ, is the narrow state's.** The exact pole of section 6 differs in
   second order in Γ/M (tested); even for a ρ that is about a part in a thousand.
 * **A boost that changes while the state rings** is an acceleration, which would radiate

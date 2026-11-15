@@ -3,7 +3,8 @@
 // each sample by the dome's quadratic forces among them (steelpan-model.h, noteTriples) and by the steel's
 // coupling to the neighbouring notes, which come alive with it (the pan's note layout), and to
 // the skirt, a ring of steel whose modes every sounding note pushes on. A note's
-// own slide (MPE) is its own roll: how hard its sticks strike again while its key is down.
+// own slide (MPE) is its own roll: how hard its sticks strike again while its key is down; a firm
+// press rolls it too, as hard as it is pressed (forte/press.h).
 #pragma once
 
 #include <array>
@@ -29,7 +30,7 @@ class SteelPanEngine : public Engine {
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's own roll
   // Glide: a hand pressing the note's rim, stiffening its edge: up to a quarter tone sharp
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
-  void pressure(double value, int key) override { presses.set(value, key); } // the stick held into the note, muting it
+  void pressure(double value, int key) override { presses.set(value, key); } // a firm press rolls the note, as hard as it is pressed
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -49,7 +50,7 @@ class SteelPanEngine : public Engine {
     double vel = 0, gl = 1, gr = 1, rollIn = 0;
     double liftK = 1; // how many times longer than usual the hand takes to still it (forte/lift.h)
     double bent = 1;  // its modes × this (a note's own bend)
-    Press press;      // the stick held into it while its key is down (forte/press.h)
+    Press press;      // how hard its key is pressed: a firm press rolls it (forte/press.h)
     int touch = 0;    // samples the stick still rests on it after a fast lift (the notes let ring)
     int age = 0;                   // samples since it came alive
     int version = -1;              // the parameters its coefficients were made from

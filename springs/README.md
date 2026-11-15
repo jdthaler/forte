@@ -28,7 +28,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/springs/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity: how hard the mallet taps the bead |
 | `Space` | sustain: holds the felt dampers off the springs |
-| MIDI | notes, velocity, release velocity (how fast the damper falls), sustain pedal (CC64); the mod wheel (CC1) lays a hand on the springs |
+| MIDI | notes, velocity, release velocity (how fast the damper falls), sustain pedal (CC64); the mod wheel (CC1) lays a hand on the springs; a firm press (aftertouch, past half way) drives a sustainer on the held note's springs, a coil at the driving bead: it swells and holds |
 
 ## The physics
 

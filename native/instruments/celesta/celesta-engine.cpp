@@ -2,10 +2,9 @@
 
 #include "celesta-engine.h"
 
-#include <complex>
-
 #include <algorithm>
 #include <cmath>
+#include <complex>
 #include <numbers>
 
 namespace forte::celesta {
@@ -128,7 +127,8 @@ double CelestaEngine::Voice::contactForce(double dFree, double C) {
 
 // The decay rate (1/s) of the bar's fundamental coupled to its box: the root near the bar's own of
 // det(λ²M + λC + K) = 0, M = [m11 m12; m12 m22], C = diag(c11, r22), K = diag(k11, ka), by Newton's
-// method from −s1 + iω₁.
+// method from −s1 + iω₁. The box takes the fundamental's energy and radiates it, so a sustainer
+// that holds the fundamental pays for that too.
 static double coupledDecay(double m11, double m12, double m22, double k11, double ka, double c11, double r22, double s1) {
   using C = std::complex<double>;
   C l(-s1, std::sqrt(k11));

@@ -11,9 +11,9 @@
 // The coupling tables (gongs-model.h, buildShell: a few milliseconds per change of Dome rise,
 // Coupling terms or Rim) are built on a worker thread and handed over without locks (Shells); a
 // note struck before its tables are ready waits for them. A note's own slide (MPE) is where its
-// mallet lands, taken as it strikes. Pressure (aftertouch) does nothing: a Seaboard sends it from
-// any finger at rest, and a hand on the gong is the key's release. Voices live in a fixed pool, and
-// nothing is allocated in process() (but for the tests' trace of a voice's steps).
+// mallet lands, taken as it strikes. A firm press rolls a held gong (forte/press.h Roll), and a hand
+// on the gong is the key's release. Voices live in a fixed pool, and nothing is allocated in
+// process() (but for the tests' trace of a voice's steps).
 #pragma once
 
 #include <array>
@@ -147,7 +147,8 @@ class Voice {
   double liftK = 1; // how many times longer than usual the hand takes to still it (forte/lift.h)
   double bent = 1;  // its plate × this (a note's own bend): its step in the plate's time, k, goes as it
   void bend(double r) { bent = r; k = g.k * r; setDamping(); }
-  Press press;      // the mallet held against it while its key is down (forte/press.h)
+  Press press;      // how hard its key is pressed (forte/press.h)
+  Roll roll;        // a firm press's roll
   bool released = false, damped = false, killing = false, dead = false;
   int m = 1;
   double h = 0, calm = 0;
@@ -185,7 +186,7 @@ class GongEngine : public Engine {
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's strike point, at its next strike
   // Glide: a hand pressing the rim, stiffening the plate: a few cents sharp
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
-  void pressure(double value, int key) override { presses.set(value, key); } // a firm press: the mallet held against the plate, muting it
+  void pressure(double value, int key) override { presses.set(value, key); } // a firm press rolls the gong, as hard as it is pressed
   int voiceCount() const override { return nv; }
   void process(float *L, float *R, int n) override;
 
@@ -230,6 +231,7 @@ class GongEngine : public Engine {
   Voice *focus = nullptr;
   int64_t frame = 0, sinceView = 0;
   uint32_t serials = 0;
+  uint32_t rng = 12345; // the rolls' unevenness
   float amp[90] = {}, band[6] = {};
   // notes struck while their tables were being built (with threads): played when they are ready
   struct Pending { int key; double vel; bool released; };

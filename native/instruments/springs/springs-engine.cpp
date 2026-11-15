@@ -18,6 +18,9 @@ static constexpr double GLIDE = 0.03;    // s: damping and output gains glide ov
 static constexpr double BEND_T = 0.02;   // s: a note's own bend glides as the instruments that bend glide theirs
 static constexpr double PRUNE = 3e-5;    // a mode below this × the voice's loudest is skipped (−90 dB)
 static constexpr double PULSE_MAX = 0.012; // s: the longest mallet pulse
+// Press: a full press holds the note's mode at HOLD times the swing the mallet gave it; the
+// sustainer holds the strongest mode within half an octave of the note (the pitch the ear takes)
+static constexpr double HOLD = 1.6;
 static double handSigma(double h) { return 60 * h * h; } // a hand h (0..1) on the coils: σ = 60h² s⁻¹
 static const double PANS[3][3] = {{0, 0, 0}, {-0.3, 0.3, 0}, {0, 0.35, -0.35}}; // each spring's pickup, left/right of the key's place
 
@@ -176,6 +179,7 @@ void SpringEngine::Voice::start(SpringEngine &eng, int k, Data::Ref r, uint64_t 
   pulseN = 0; pulseAt = 0; tau = 0;
   age = 0; fade = 1; fading = false; dead = false; peak = 0; level = 0;
   released = false; dampGlide = GLIDE;
+  press = Press{}; sus = {}; drvMode = {-1, -1, -1}; drvTune = false;
   extra = eng.handOf(key);
   bent = eng.expr.bendOf(key); // stretched before it was struck
   if (bent != 1) for (int s = 0; s < nBanks; s++) { banks[s].retune(eng, bent); banks[s].gains(eng, true); }
@@ -207,19 +211,44 @@ void SpringEngine::Voice::strike(SpringEngine &eng, double velocity) {
   } else for (int s = 0; s < nBanks; s++) { Bank &b = banks[s]; std::fill(b.act.begin(), b.act.begin() + b.N, 1); b.compact(); }
   fading = false; fade = 1; dead = false; age = 0;
   released = false;
+  sus = {}; drvMode = {-1, -1, -1}; drvTune = true; // (Press: tuned again once this strike is over)
+}
+
+// Press: each spring's sustainer on the mode it will hold: the strongest heard within half an octave
+// of the note, as the mallet left it. On the springs' own modal coordinate the driving bead's
+// weight is 1 (the mallet's force enters every mode so), and the mode's swing there is ω·B.
+void SpringEngine::Voice::tuneSustainers(const SpringEngine &eng) {
+  drvTune = false;
+  const double fs = eng.fs;
+  for (int s = 0; s < nBanks; s++) {
+    Bank &b = banks[s];
+    const double fk = TAU * b.sp->f0 * bent;
+    int best = -1;
+    for (int q = 0; q < b.nAct; q++) {
+      const int r = b.idx[q];
+      if (b.WD[r] < fk * 0.7071 || b.WD[r] > fk * 1.4142) continue;
+      if (best < 0 || b.AMP[r] > b.AMP[best]) best = r;
+    }
+    drvMode[s] = best;
+    if (best < 0) continue;
+    const double B = twoPoleAmplitude(b.Y1[best], b.Y2[best], b.A1[best], b.A2[best]), sg = -fd::log(std::sqrt(b.A2[best])) * fs;
+    sus[s].tune(sg, 1, b.WD[best] / TAU, b.WD[best] * B, HOLD, fs);
+  }
 }
 
 void SpringEngine::Voice::render(float *L, float *R, int n, SpringEngine &eng) {
-  double *buf = eng.buf.data(), *force = eng.force.data();
+  double *buf = eng.buf.data(), *force = eng.force.data(), *drive = eng.drive.data();
   const double glide = 1 - fd::exp(-n / (GLIDE * eng.fs));
   // the force in this block (zero once the pulse is over)
   bool pushing = false;
   for (int s = 0; s < n; s++) {
     if (pulseAt < pulseN) { force[s] = pulse[pulseAt++]; pushing = true; } else force[s] = 0;
   }
-  // the hand and the damper (once the key is up, unless the pedal holds it off), or the hammer held
-  // into the coil as hard as the key is pressed (Press): extra damping, gliding in
-  const double target = eng.handOf(key) + (released ? (!eng.sustain ? eng.dampSigma : 0) : eng.presses.of(key) * eng.dampSigma);
+  // Press: the sustainers, once the mallet has left, while the key is held
+  press.follow(released || fading ? 0 : eng.presses.of(key), n, eng.fs);
+  if (!pushing && drvTune) tuneSustainers(eng);
+  // the hand and the damper (once the key is up, unless the pedal holds it off): extra damping, gliding in
+  const double target = eng.handOf(key) + (released && !eng.sustain ? eng.dampSigma : 0);
   bool retuned = false;
   if (const double to = eng.expr.bendOf(key); bent != to) { // Glide: the coil stretched
     bent = glideTo(bent, to, n / eng.fs, BEND_T); retuned = true;
@@ -237,8 +266,19 @@ void SpringEngine::Voice::render(float *L, float *R, int n, SpringEngine &eng) {
     Bank &b = banks[bi];
     std::fill(buf, buf + n, 0.0);
     const int na = b.nAct;
-    if (pushing) pushBlock(b.A1.data(), b.A2.data(), b.BC.data(), b.Y1.data(), b.Y2.data(), b.G.data(), b.GT.data(), b.idx.data(), b.nAct, buf, force, n, glide);
-    else ringBlock(b.A1.data(), b.A2.data(), b.Y1.data(), b.Y2.data(), b.G.data(), b.GT.data(), b.idx.data(), b.nAct, buf, n, glide);
+    const int dm = drvMode[bi];
+    if (!pushing && press.on() && dm >= 0 && b.act[dm] && sus[bi].ready()) {
+      // Press: the sustainer's force, sample by sample from the mode it hears (stepped here as
+      // pushBlock will step it, so the two agree), then into every mode through the bead
+      const double a1 = b.A1[dm], a2 = b.A2[dm], bc = b.BC[dm];
+      double y1 = b.Y1[dm], y2 = b.Y2[dm];
+      for (int s = 0; s < n; s++) { const double f = sus[bi].force(y1, press.p, eng.fs), y = a1 * y1 - a2 * y2 + bc * f; drive[s] = f; y2 = y1; y1 = y; }
+      pushBlock(b.A1.data(), b.A2.data(), b.BC.data(), b.Y1.data(), b.Y2.data(), b.G.data(), b.GT.data(), b.idx.data(), b.nAct, buf, drive, n, glide);
+    } else {
+      sus[bi].rest();
+      if (pushing) pushBlock(b.A1.data(), b.A2.data(), b.BC.data(), b.Y1.data(), b.Y2.data(), b.G.data(), b.GT.data(), b.idx.data(), b.nAct, buf, force, n, glide);
+      else ringBlock(b.A1.data(), b.A2.data(), b.Y1.data(), b.Y2.data(), b.G.data(), b.GT.data(), b.idx.data(), b.nAct, buf, n, glide);
+    }
     if (na < b.N) for (int r = 0; r < b.N; r++) if (!b.act[r]) b.G[r] += glide * (b.GT[r] - b.G[r]);
     const double gl = b.gl, gr = b.gr, fadeStep = fading ? 1 / (FADE * eng.fs) : 0;
     double fd_ = fade;
@@ -303,7 +343,7 @@ SpringEngine::SpringEngine(double fs)
         if (!snapshot(version, g)) return nullptr; // knobs moved on since: a newer version is wanted
         return std::make_unique<KeySprings>(keySprings(key, g, this->fs));
       }),
-      capture(CAPTURE, 0.0f), buf(BLOCK_MAX, 0.0), force(BLOCK_MAX, 0.0), pulseMax((int)std::ceil(PULSE_MAX * fs) + 2) {
+      capture(CAPTURE, 0.0f), buf(BLOCK_MAX, 0.0), force(BLOCK_MAX, 0.0), drive(BLOCK_MAX, 0.0), pulseMax((int)std::ceil(PULSE_MAX * fs) + 2) {
 #if FORTE_THREADS
   for (Voice &v : pool) { for (Bank &b : v.banks) b.reserve(MAX_MODES); v.pulse.resize(pulseMax); }
 #endif
