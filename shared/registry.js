@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.51.0';
+export const FORTE_VERSION = '0.52.0';
 
 // Where each instrument's page keeps its settings in the browser (the Combinations page reads an
 // instrument's settings from there, as it was left on its own page).
@@ -55,7 +55,7 @@ export const FILTERS = [
 
 export const INSTRUMENTS = [
   {
-    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.14.1', trim: 3,
+    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.15.0', trim: 3,
     plugin: { code: 'Ribn', ready: true },
     after: 'the concert grand',
     tagline: 'Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.',
@@ -64,7 +64,7 @@ export const INSTRUMENTS = [
     accent: '#5aa9ff',
   },
   {
-    id: 'harpsichord', name: 'Harpsichord', section: 'traditional', ready: true, version: '0.10.0', trim: -2,
+    id: 'harpsichord', name: 'Harpsichord', section: 'traditional', ready: true, version: '0.11.0', trim: -2,
     plugin: { code: 'Hrps', ready: true },
     after: 'the Flemish double-manual harpsichord and virginals (Ruckers, 1600s), and Bach’s gut-strung lute-harpsichord',
     tagline: 'A quill bends, slips off the string and plucks it; stops change where and how it plucks.',
@@ -91,7 +91,7 @@ export const INSTRUMENTS = [
     accent: '#ff9fb0',
   },
   {
-    id: 'vibraphone', name: 'Vibraphone', section: 'traditional', ready: true, version: '0.11.1', trim: 3,
+    id: 'vibraphone', name: 'Vibraphone', section: 'traditional', ready: true, version: '0.12.0', trim: 3,
     plugin: { code: 'Vibe', ready: true },
     after: 'the Deagan vibraharp (1927)',
     tagline: 'Undercut aluminium bars over tuned tubes, with motor-driven discs that open and close the resonators.',
@@ -100,7 +100,7 @@ export const INSTRUMENTS = [
     accent: '#5fd0c8',
   },
   {
-    id: 'carillon', name: 'Carillon', section: 'traditional', ready: true, version: '0.8.0', trim: 3.5,
+    id: 'carillon', name: 'Carillon', section: 'traditional', ready: true, version: '0.9.0', trim: 3.5,
     plugin: { code: 'Carl', ready: true },
     after: 'the Flemish carillon (Hemony bells, 1650s)',
     tagline: 'Bronze bells tuned partial by partial; the note you hear, the strike note, is a virtual pitch made by partials an octave and more above it.',
@@ -109,7 +109,7 @@ export const INSTRUMENTS = [
     accent: '#d9b45f',
   },
   {
-    id: 'celesta', name: 'Celesta', section: 'traditional', ready: true, version: '0.6.0', trim: 0.5,
+    id: 'celesta', name: 'Celesta', section: 'traditional', ready: true, version: '0.7.0', trim: 0.5,
     plugin: { code: 'Cele', ready: true },
     after: 'the Mustel celesta (Paris, 1886)',
     tagline: 'Felt hammers strike thin steel bars, each over a wooden box tuned to it: the bell-like sugar-plum sound.',
@@ -118,7 +118,7 @@ export const INSTRUMENTS = [
     accent: '#b9a4ff',
   },
   {
-    id: 'kalimba', name: 'Kalimba', section: 'traditional', ready: true, version: '0.5.0', trim: -4.5,
+    id: 'kalimba', name: 'Kalimba', section: 'traditional', ready: true, version: '0.6.0', trim: -4.5,
     plugin: { code: 'Kali', ready: true },
     after: 'the African mbira and Hugh Tracey’s kalimba (1950s)',
     tagline: 'Steel tines clamped behind a bridge and plucked by the thumbs, over a wooden box whose sound hole a finger can cover.',
@@ -127,7 +127,7 @@ export const INSTRUMENTS = [
     accent: '#d9a066',
   },
   {
-    id: 'steelpan', name: 'Steel Pan', section: 'traditional', ready: true, version: '0.6.0', trim: 2.5,
+    id: 'steelpan', name: 'Steel Pan', section: 'traditional', ready: true, version: '0.7.0', trim: 2.5,
     plugin: { code: 'Stee', ready: true },
     after: 'the Trinidad steelpan (1940s)',
     tagline: 'Domed note areas sunk into an oil drum, hammered until octave and twelfth ring true; struck hard, the dome pumps the octave out of the fundamental.',
@@ -180,7 +180,7 @@ export const INSTRUMENTS = [
     accent: '#d9874a',
   },
   {
-    id: 'marimba', name: 'Marimba and Xylophone', section: 'traditional', ready: true, version: '0.2.1', trim: 4.5,
+    id: 'marimba', name: 'Marimba and Xylophone', section: 'traditional', ready: true, version: '0.3.0', trim: 4.5,
     plugin: { code: 'Mrmb', ready: true },
     after: 'the concert marimba and the orchestral xylophone',
     tagline: 'Rosewood bars, undercut so their partials land on a chord (1 : 4 : 10 for the marimba, a twelfth for the xylophone), over stopped tubes that drink the sound out of them. Roll a held note to sustain it.',
@@ -189,7 +189,7 @@ export const INSTRUMENTS = [
     accent: '#c8784a',
   },
   {
-    id: 'gamelan', name: 'Gamelan', section: 'traditional', ready: true, version: '0.2.0', trim: 2,
+    id: 'gamelan', name: 'Gamelan', section: 'traditional', ready: true, version: '0.3.0', trim: 2,
     plugin: { code: 'Gmln', ready: true },
     after: 'the gamelan of Java and Bali',
     tagline: 'Bronze bars over bamboo tubes and bossed gongs, in pélog and sléndro; in Bali every bar has a partner tuned a few hertz away, so each note shimmers as the pair beats.',
@@ -216,7 +216,7 @@ export const INSTRUMENTS = [
     accent: '#9cc8e8',
   },
   {
-    id: 'tubular', name: 'Tubular Bells', section: 'traditional', ready: true, version: '0.2.0', trim: 7.5,
+    id: 'tubular', name: 'Tubular Bells', section: 'traditional', ready: true, version: '0.3.0', trim: 7.5,
     plugin: { code: 'Tubu', ready: true },
     after: 'orchestral chimes',
     tagline: 'Brass tubes hung from a frame and struck on their caps. The pitch you hear is played by no mode of the tube: it is the note whose harmonics modes 4, 5 and 6 nearly are, an octave below the fourth.',
@@ -225,7 +225,7 @@ export const INSTRUMENTS = [
     accent: '#e8cf7a',
   },
   {
-    id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.12.0', trim: 3.5,
+    id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.13.0', trim: 3.5,
     plugin: { code: 'EGrd', ready: true },
     after: 'the Yamaha CP-70',
     tagline: 'A real piano action with no soundboard: piezo pickups under the bridge hear the strings directly.',
@@ -243,7 +243,7 @@ export const INSTRUMENTS = [
     accent: '#f0b35a',
   },
   {
-    id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.13.0', trim: -3,
+    id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.14.0', trim: -3,
     plugin: { code: 'Tine', ready: true },
     after: 'the Fender Rhodes',
     tagline: 'Each key an asymmetric tuning fork of steel tine and brass bar, heard through a nonlinear magnetic pickup.',
@@ -252,7 +252,7 @@ export const INSTRUMENTS = [
     accent: '#ef5a4a',
   },
   {
-    id: 'reeds', name: 'Reed Piano', section: 'electric', ready: true, version: '0.12.0', trim: -1,
+    id: 'reeds', name: 'Reed Piano', section: 'electric', ready: true, version: '0.13.0', trim: -1,
     plugin: { code: 'Reed', ready: true },
     after: 'the Wurlitzer 200A',
     tagline: 'Struck steel reeds tuned with solder, sensed as one plate of a charged capacitor.',
@@ -270,7 +270,7 @@ export const INSTRUMENTS = [
     accent: '#c6e36a',
   },
   {
-    id: 'pianet', name: 'Sticky-Pad Piano', section: 'electric', ready: true, version: '0.11.0', trim: -4.5,
+    id: 'pianet', name: 'Sticky-Pad Piano', section: 'electric', ready: true, version: '0.12.0', trim: -4.5,
     plugin: { code: 'Pnet', ready: true },
     after: 'the Hohner Pianet',
     tagline: 'No hammers at all: tacky pads grab each reed and let it go.',
@@ -404,7 +404,7 @@ export const INSTRUMENTS = [
     accent: '#ff8a3d',
   },
   {
-    id: 'gongs', name: 'Gong Keyboard', section: 'phenomena', ready: true, version: '0.12.0', trim: 7,
+    id: 'gongs', name: 'Gong Keyboard', section: 'phenomena', ready: true, version: '0.13.0', trim: 7,
     plugin: { code: 'Gong', ready: true },
     tagline: 'Thin plates whose stiffness grows with amplitude: strike softly for a bell, hard for a crash.',
     physics: 'Von Kármán plates · wave turbulence',
@@ -436,7 +436,7 @@ export const INSTRUMENTS = [
     accent: '#6fb8ff',
   },
   {
-    id: 'springs', name: 'Spring Keyboard', section: 'phenomena', ready: true, version: '0.8.0', trim: 11.5,
+    id: 'springs', name: 'Spring Keyboard', section: 'phenomena', ready: true, version: '0.9.0', trim: 11.5,
     plugin: { code: 'Sprg', ready: true },
     tagline: 'Struck steel coils, each cut to sound its note; their waves travel at different speeds by pitch, so every echo arrives as a chirp.',
     physics: 'Helical rods (Wittrick) · dispersion · chirped echoes',
@@ -597,7 +597,7 @@ export const INSTRUMENTS = [
     accent: '#6fc3ff',
   },
   {
-    id: 'breitwigner', name: 'Breit-Wigner Keyboard', section: 'phenomena', ready: true, version: '0.1.0', trim: -2,
+    id: 'breitwigner', name: 'Breit-Wigner Keyboard', section: 'phenomena', ready: true, version: '0.2.0', trim: -2,
     plugin: { code: 'Brei', ready: true },
     tagline: 'Every key an unstable particle, the plainest resonance there is: one mass, the note, and one width. Struck, it rings at its mass and dies in its lifetime, so its spectrum is the Breit–Wigner line: a ρ meson\'s thud, a Z boson\'s knock, a J/ψ\'s needle that rings for minutes.',
     physics: 'Unstable states · the Breit–Wigner line · exponential decay · Γτ = ħ · time dilation',
