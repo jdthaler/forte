@@ -481,16 +481,17 @@ export function createShell(cfg) {
     for (const { p, wrap } of controls.values()) wrap.hidden = p.showIf ? !p.showIf(shell.P) : false;
     for (const [note, ids] of groupNotes) note.hidden = ids.some((id) => !controls.get(id)?.wrap.hidden);
   };
-  // a control moved: the menu no longer shows a preset, unless it was one a preset keeps as it was
-  // (the volume, the room: cfg.keep) and the chosen preset doesn't set it, as a volume pedal moves it.
-  // While Morph is on the menu names the preset it morphs from, and stays (shared/morph.js).
+  // a control moved: the menu names the preset the sound is now, or says Custom configuration, and
+  // with Morph on the top is the sound as it is (shared/user-presets.js, shared/morph.js), unless it
+  // was one a preset keeps as it was (the volume, the room: cfg.keep) and the chosen preset doesn't
+  // set it, as a volume pedal moves it
   const kept = new Set(cfg.keep ?? []);
   const unchoose = (ids) => {
     const ps = $('#preset');
     if (!ps) return;
-    const sets = cfg.presets?.[+ps.value]?.p ?? null;
+    const sets = /^\d+$/.test(ps.value) ? cfg.presets?.[+ps.value]?.p : null;
     if (!ids.some((k) => !kept.has(k) || (sets && k in sets))) return;
-    if (shell.presets?.morphing()) shell.presets.moved(); else ps.value = '';
+    if (shell.presets) shell.presets.moved(); else ps.value = '';
   };
   shell.setParam = (id, v, dragging = false) => {
     if (shell.P[id] === v) return;
@@ -522,7 +523,7 @@ export function createShell(cfg) {
   };
   if ($('#preset')) {
     const ps = $('#preset');
-    ps.add(new Option('Presets…', ''));
+    ps.add(new Option('Custom configuration', '')); // the settings are no preset's (shared/user-presets.js)
     (cfg.presets || []).forEach((pr, i) => ps.add(new Option(pr.name, i)));
     ps.addEventListener('change', () => {
       if (ps.value === '') return;
