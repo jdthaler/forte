@@ -15,7 +15,8 @@ Nothing else is added, and nothing is sampled. There is no hammer, no body, no s
 one complex number for each key, turned and shrunk once a sample. What shapes the notes is what
 shapes a particle's decay. Letting a key go opens a second **decay channel** (partial widths
 add), pitch bend is a **boost** (the state's energy rises and time dilation stretches its life),
-and a key struck again adds its amplitude to what still rings.
+a key struck again adds its amplitude to what still rings, and a state can be **formed** slowly
+by a source while its key is held instead of made at once.
 
 Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/breitwigner/>
 (or locally, see the [main README](../README.md)).
@@ -66,15 +67,13 @@ width times lifetime on every preset.
 
 **What is heard** is one real part of the turning amplitude:
 
-  s(t) = 0.3 · v · e^(−πΓt) · sin(2πMt + φ)
+  s(t) = 0.3 · v · e^(−πΓt) · sin(2πMt)
 
-with v the velocity and φ the **Phase at birth**. A real signal has a second pole at −M, so
-its spectrum is the line and its mirror image, which interfere far from the peak. For a narrow
-state that changes nothing; for a ρ on a low key the two overlap, and the model's `heard` is
-the exact spectrum (tested against a numerical integral). The phase decides the far tails. Born
-at 0° the note starts from nothing, a sine, and its spectrum falls as 1/f⁴ far above the mass.
-Born at 90° it starts at its peak, a cosine: the jump is a click, and the spectrum falls as
-1/f², the line's own slow tail.
+with v the velocity. Made on the real axis, the note starts from nothing, as a sine. A real
+signal has a second pole at −M, so its spectrum is the line and its mirror image, which
+interfere far from the peak: far above the mass it falls as 1/f⁴, not as the line's own 1/f².
+For a narrow state that changes nothing near the peak; for a ρ on a low key the two overlap,
+and the model's `heard` is the exact spectrum (tested against a numerical integral).
 
 ### 3. Real resonances
 
@@ -143,7 +142,42 @@ keyboard uses this for the player's hands:
 * **Press channel Γ₃.** A firm press into a held key (aftertouch, above half pressure) opens a
   third channel, up to its width at full pressure: the note dies while it is pressed.
 
-### 6. A boost
+### 6. Formed, not struck
+
+A state need not be made at once. A source that turns with it (a beam, a field driving it at
+its mass) feeds it while it runs:
+
+  dψ/dt = (2πiM − πΓ) ψ + s · e^(2πiMt)
+
+From nothing, the source makes the amplitude s·(1 − e^(−πΓt))/(πΓ) in a time t. A short
+time gives s·t, growth with no decay to speak of; a long one gives s/(πΓ), a level that no
+longer rises because the state decays as fast as it is made: **formation balances decay**.
+
+The **Formation time** T is how long a held key's source runs. Its strength is the one that
+makes the velocity's amplitude in the whole time, at the width the state has when the key goes
+down, so a held note reaches v and then decays as before:
+
+  s(t) = 0.3 · v · (1 − e^(−πΓt)) / (1 − e^(−πΓT)) · sin(2πMt)   while fed,
+
+then e^(−πΓ(t − T)) times v. Let go early, the source stops and the note decays from what it
+has made, with the key-up channel open. At 0 the state is made at once, as before. A narrow
+state takes the whole time to grow, a swell that rings on. A ρ, which lives a few
+milliseconds, reaches the balance at once and holds a steady tone while it is fed, then stops
+within its lifetime: a thud becomes an organ pipe.
+
+In energy, a source T long carries energies about 1/T wide: its spectrum is T·sinc(π(f − M)T).
+The note's spectrum is the line times that (the convolution theorem), so a source much longer
+than the lifetime makes a line **narrower** than Γ, 0.886/T at half its height, the source's
+own; a short one leaves the line as it was. This is how a resonance is seen in a collider: the
+beam's energy spread, wider or narrower than Γ, is folded into the line. The tests check `heard`
+with a source against a numerical integral, and against the line times sinc² near the peak.
+
+Nothing clicks at any length. The envelope rises from nothing with the note's own sine, so the
+signal and its slope are continuous where the source starts; where it stops, the envelope's
+slope changes by about v/T, against the strike's 2πMv. Above 2 kHz, a Z on A4 formed over 5 ms
+has under 1 % of a strike's energy, and over 50 ms under 0.01 % (tested).
+
+### 7. A boost
 
 Seen from a frame in which it moves, a state of mass M has the energy γM, and its clock runs
 slow: it lives γ times longer. Both come from the same complex mass. With momentum p the pole
@@ -158,7 +192,7 @@ no frame sees a state with less than its rest energy. This is the time dilation 
 cosmic-ray muons reach the ground (Rossi and Hall, 1941) and that was confirmed to about a part
 in a thousand with muons at γ = 29 in a storage ring (Bailey et al., 1977).
 
-### 7. The engine
+### 8. The engine
 
 Each key has one complex number z. Once a sample it is multiplied by
 
@@ -170,9 +204,18 @@ closed form of section 2 within two parts in ten million of full scale, at any p
 width (tested), and a note's pitch is right to a hundredth of a cent. The output is 0.3 times z's
 imaginary part, the same on both sides.
 
-A key press **adds** v·e^(iφ) to the key's number. Amplitudes add, so a key struck again while
-it still rings may be reinforced or cancelled, as its two states fall in or out of step; the
-tests strike a key twice, half a turn and a whole turn apart. A width that changes (the mod
+A key press **adds** v to the key's number. Amplitudes add, so a key struck again while it
+still rings may be reinforced or cancelled, as its two states fall in or out of step; the tests
+strike a key twice, half a turn and a whole turn apart. With a Formation time the key instead
+starts a source d, a second complex number that turns with the state at e^(2πif/fs), and each
+sample
+
+  z ← r·z + k·d,  k = (1 − e^(−πΓ/fs)) / (πΓ)
+
+which is again the exact solution over the sample for a source turning with the state: every
+sample matches section 6's closed form, held and let go, within the same two parts in ten
+million (tested). A key struck again while its source runs starts a new one; what the first had
+made still rings. A width that changes (the mod
 wheel, a slide, a channel opening) and a boost move the multiplier, gliding in 20 ms; the
 number itself is never touched, so nothing clicks. A state is dropped when it is 100 dB under
 a full one. All 128 keys can ring at once, and none is ever stolen.
@@ -189,8 +232,8 @@ The demos in `examples/breitwigner/`, and how to hear each on the page:
   each is a straight line, twice as steep an octave up.
 * **Partial widths add** (`04`). A long note let go: it bends down at the key-up. Then the
   same with the pedal down, which keeps the channel shut until the pedal comes up.
-* **Born at its peak** (`05`). The Z as a sine, then as a cosine: the same pitch and length,
-  with a click at the start that brightens it.
+* **Formed, not struck** (`05`). A ρ struck, a thud; then fed while held, a steady tone; then
+  an η′ formed over 0.3 s, swelling and ringing on.
 * **Sargent's rule** (`06`). Γ ∝ M⁵, from the bass up: long tones below, ticks above.
 * **A boost** (`07`). A note bent up an octave while it rings: its pitch rises and its decay
   slows to half the rate.
@@ -223,12 +266,15 @@ tools/render-breitwigner.mjs                       the demos
   ρ's grows with the pions' momentum, cubed), so its line is skewed and its mass depends on
   the form chosen. The ρ and Δ presets take one number, Γ/M, and make a plain line of it.
 * **One state at a time.** There is no interference between a resonance and a background or
-  a neighbour (the ρ–ω mixing that notches the real ρ line), and no production: a key makes
-  its state whole, at one instant. Two keys never interfere, being different states; only a
-  key struck again does.
+  a neighbour (the ρ–ω mixing that notches the real ρ line). Two keys never interfere, being
+  different states; only a key struck again does.
+* **A source exactly at the mass, switched on and off.** A Formation time's source turns with
+  the state, so it always drives it at its own mass (a real beam's energy can sit off the peak,
+  where it makes less, and beat against it), and it is a rectangle in time, full strength until
+  it stops (a real bunch has a shape, which would round the corner where the source stops).
 * **The key-up and press channels are the player's, not physics**: a real state's channels
   cannot be opened and shut. What is physical is that they add.
-* **The boost's width, Γ/γ, is the narrow state's.** The exact pole of section 6 differs in
+* **The boost's width, Γ/γ, is the narrow state's.** The exact pole of section 7 differs in
   second order in Γ/M (tested); even for a ρ that is about a part in a thousand.
 * **A boost that changes while the state rings** is an acceleration, which would radiate
   and do more than this; here the energy and the width just follow γ.

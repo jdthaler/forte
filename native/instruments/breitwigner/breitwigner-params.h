@@ -17,13 +17,13 @@
 namespace forte::breitwigner {
 
 namespace p { // parameter indices, in the descriptor's order
-enum : int { width, power, phase, release, press, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
+enum : int { width, power, formation, release, press, room, venue, volume, pitch, temperament, tuningRoot, cents1, cents2, cents3, cents4, cents5, cents6, cents7, cents8, cents9, cents10, cents11, strikeOn, glideOn, slideOn, pressOn, liftOn, count };
 }
 
 constexpr double kNoLimit = INFINITY;
 inline const FormatSegment kFormat_width[] = {{0.000009994999999999998, "", " ppm", 1000000, 0, 2, false, false, false, false}, {0.00009994999999999999, "", " ppm", 1000000, 0, 1, false, false, false, false}, {0.0009994999999999997, "", " ppm", 1000000, 0, 0, false, false, false, false}, {0.09994999999999998, "", " %", 100, 0, 2, false, false, false, false}, {0.9994999999999999, "", " %", 100, 0, 1, false, false, false, false}, {kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_power[] = {{kNoLimit, "Γ ∝ M^", "", 1, 0, 2, false, false, false, false}};
-inline const FormatSegment kFormat_phase[] = {{kNoLimit, "", "°", 1, 0, 0, false, false, false, false}};
+inline const FormatSegment kFormat_formation[] = {{kNoLimit, "", " ms", 1000, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_release[] = {{9.994999999999997, "", " Hz", 1, 0, 2, false, false, false, false}, {99.94999999999999, "", " Hz", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " Hz", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_press[] = {{9.994999999999997, "", " Hz", 1, 0, 2, false, false, false, false}, {99.94999999999999, "", " Hz", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " Hz", 1, 0, 0, false, false, false, false}};
 inline const FormatSegment kFormat_room[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
@@ -53,7 +53,7 @@ inline const FormatSegment kFormat_cents11[] = {{kNoLimit, "", " ¢", 1, 0, 2, f
 inline const ParamInfo kParams[p::count] = {
   {"width", "Width Γ/M", "Resonance", ParamKind::continuous, 0.000001, 1, 0.00417, 0, true, true, nullptr, 0, kFormat_width, 6},
   {"power", "Width grows as Mⁿ", "Resonance", ParamKind::continuous, 0, 5, 1, 0.05, false, false, nullptr, 0, kFormat_power, 1},
-  {"phase", "Phase at birth", "Resonance", ParamKind::continuous, 0, 90, 0, 1, false, false, nullptr, 0, kFormat_phase, 1},
+  {"formation", "Formation time", "Resonance", ParamKind::continuous, 0, 1, 0, 0.001, false, true, nullptr, 0, kFormat_formation, 1},
   {"release", "Key-up channel Γ₂", "Decay channels", ParamKind::continuous, 0.05, 500, 6, 0, true, true, nullptr, 0, kFormat_release, 3},
   {"press", "Press channel Γ₃", "Decay channels", ParamKind::continuous, 0.5, 500, 30, 0, true, false, nullptr, 0, kFormat_press, 3},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
@@ -88,9 +88,10 @@ inline const PresetValue kPreset5[] = {{p::width, 0.000196}};
 inline const PresetValue kPreset6[] = {{p::width, 0.0000299}};
 inline const PresetValue kPreset7[] = {{p::width, 0.000024}};
 inline const PresetValue kPreset8[] = {{p::width, 0.00000571}};
-inline const PresetValue kPreset9[] = {{p::width, 0.0274}, {p::phase, 90}};
-inline const PresetValue kPreset10[] = {{p::width, 0.002}, {p::power, 5}};
-inline const PresetValue kPreset11[] = {{p::width, 0.002}, {p::power, 0}};
+inline const PresetValue kPreset9[] = {{p::width, 0.000196}, {p::formation, 0.3}};
+inline const PresetValue kPreset10[] = {{p::width, 0.19}, {p::formation, 1}};
+inline const PresetValue kPreset11[] = {{p::width, 0.002}, {p::power, 5}};
+inline const PresetValue kPreset12[] = {{p::width, 0.002}, {p::power, 0}};
 inline const Preset kPresets[] = {
   {"φ meson: 0.42 % wide, a soft mallet", nullptr, 0},
   {"ρ meson: 19 % wide, a thud with hardly a pitch", kPreset1, 1},
@@ -101,12 +102,13 @@ inline const Preset kPresets[] = {
   {"J/ψ: 30 ppm, a needle that rings for minutes", kPreset6, 1},
   {"Higgs boson: 24 ppm, as measured so far", kPreset7, 1},
   {"Υ(1S): 5.7 ppm, the narrowest here", kPreset8, 1},
-  {"Born at its peak: the Z as a cosine", kPreset9, 2},
-  {"Sargent's rule: Γ ∝ M⁵, a bass that rings under a treble of ticks", kPreset10, 2},
-  {"One lifetime for every key: Γ the same in hertz", kPreset11, 2},
+  {"Formed slowly: the η′ swells for 0.3 s, then rings", kPreset9, 2},
+  {"A ρ fed while held: a steady tone, formation balancing decay", kPreset10, 2},
+  {"Sargent's rule: Γ ∝ M⁵, a bass that rings under a treble of ticks", kPreset11, 2},
+  {"One lifetime for every key: Γ the same in hertz", kPreset12, 2},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
-inline const Controller kControllers[] = {{107, p::power}, {109, p::release}, {111, p::press}, {113, p::phase}, {114, p::width}};
+inline const Controller kControllers[] = {{107, p::power}, {109, p::release}, {111, p::press}, {113, p::formation}, {114, p::width}};
 
 // The keyboard's tuning (forte/tuning.h): each key's frequency over equal temperament at A = 440 Hz.
 inline forte::Tuning tuningOf(const double *P) {
@@ -122,7 +124,7 @@ inline InstrumentInfo info(Engine *(*create)(double fs), double (*midiVelocity)(
     .description = "Every key an unstable particle, the plainest resonance there is: one mass, the note, and one width. Struck, it rings at its mass and dies in its lifetime, so its spectrum is the Breit–Wigner line: a ρ meson's thud, a Z boson's knock, a J/ψ's needle that rings for minutes.", .auSubtype = "Brei",
     .vst3Id = {0xe8, 0x1b, 0xea, 0x23, 0x9d, 0xfa, 0x9e, 0x36, 0x16, 0x39, 0xfd, 0x57, 0x19, 0x5a, 0xa2, 0xb2},
     .params = kParams, .paramCount = p::count,
-    .presets = kPresets, .presetCount = 12,
+    .presets = kPresets, .presetCount = 13,
     .keep = kKeep, .keepCount = 17,
     .keyLo = 21, .keyHi = 108, .space = Space::sustain,
     .modWheel = p::width, .modWheelMax = 0.2,

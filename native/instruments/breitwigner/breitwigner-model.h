@@ -29,9 +29,16 @@ Lab boosted(double mass, double fwhm, double gamma);
 double speed(double gamma);
 // The Breit–Wigner line of full width fwhm centred on f0: (Γ/2)² / ((f − f0)² + (Γ/2)²), 1 at its peak.
 double line(double f, double f0, double fwhm);
-// The power spectrum of the part that is heard, e^(−π·fwhm·t) sin(2π·f0·t + phase) from t = 0,
-// in the line's units (so 1 at a narrow line's peak): the line and its mirror image at −f0,
-// which interfere far from the peak.
-double heard(double f, double f0, double fwhm, double phase);
+// Formation: a source s that turns with the state, dψ/dt = (2πi·f0 − π·fwhm)ψ + s·e^(2πi·f0·t),
+// makes from nothing in a time t the amplitude s·formed(t, fwhm), formed = (1 − e^(−π·fwhm·t)) /
+// (π·fwhm): t for a short time, 1/(π·fwhm) for a long one, where formation balances decay.
+double formed(double t, double fwhm);
+// The power spectrum of the part that is heard, in the line's units (so 1 at a narrow line's
+// peak). Made at once (formation 0): e^(−π·fwhm·t) sin(2π·f0·t) from t = 0, the line and its
+// mirror image at −f0, which interfere far from the peak. Formed by a source that runs for a time
+// T and then stops (as strong as makes an amplitude of 1, formed(T, fwhm)): the line times the
+// source's own spectrum, T·sinc(π(f − f0)T), which a source longer than the lifetime makes
+// narrower than the line.
+double heard(double f, double f0, double fwhm, double formation);
 
 } // namespace forte::breitwigner

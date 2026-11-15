@@ -29,7 +29,7 @@ export const GROUPS = [
     params: [
       { id: 'width', label: 'Width Γ/M', perform: true, min: 1e-6, max: 1, def: 0.00417, log: true, fmt: share, hint: 'The line\'s full width at half its height, over the mass. Width times lifetime is ħ, so a wider line is a shorter note: τ = 1/Γ. Narrow, a pure tone that rings on; wide, a thud with hardly a pitch.' },
       { id: 'power', label: 'Width grows as Mⁿ', min: 0, max: 5, def: 1, step: 0.05, fmt: (v) => `Γ ∝ M^${v.toFixed(2)}`, hint: 'How the width changes from key to key, about A4. At 1 every key has the same Γ/M and rings as many cycles; at 0 every key lives as long; at 3 or 5 (Sargent\'s rule for weak decays) the heavy treble dies far sooner than the bass.' },
-      { id: 'phase', label: 'Phase at birth', min: 0, max: 90, def: 0, step: 1, fmt: (v) => `${v.toFixed(0)}°`, hint: 'Which part of the turning amplitude is heard. At 0° the note starts from nothing, a sine; at 90° it starts at its peak, a cosine, with a click that fills the line\'s far tails.' },
+      { id: 'formation', label: 'Formation time', perform: true, min: 0, max: 1, def: 0, step: 0.001, fmt: (v) => `${(v * 1000).toFixed(0)} ms`, hint: 'How long a held key\'s source feeds its state. At 0 the state is made at once, struck; longer, the note swells for that long, or until the key comes up, then decays as before. A state that lives shorter than this holds a steady tone while formation balances decay. Never a click.' },
     ],
   },
   {
@@ -65,7 +65,8 @@ export const PRESETS = [
   { name: 'J/ψ: 30 ppm, a needle that rings for minutes', p: { width: of(PARTICLES.jpsi) } },
   { name: 'Higgs boson: 24 ppm, as measured so far', p: { width: of(PARTICLES.higgs) } },
   { name: 'Υ(1S): 5.7 ppm, the narrowest here', p: { width: of(PARTICLES.upsilon) } },
-  { name: 'Born at its peak: the Z as a cosine', p: { width: of(PARTICLES.Z), phase: 90 } },
+  { name: 'Formed slowly: the η′ swells for 0.3 s, then rings', p: { width: of(PARTICLES.etaprime), formation: 0.3 } },
+  { name: 'A ρ fed while held: a steady tone, formation balancing decay', p: { width: of(PARTICLES.rho), formation: 1 } },
   { name: 'Sargent\'s rule: Γ ∝ M⁵, a bass that rings under a treble of ticks', p: { width: 0.002, power: 5 } },
   { name: 'One lifetime for every key: Γ the same in hertz', p: { width: 0.002, power: 0 } },
 ];

@@ -38,13 +38,14 @@ All four notes have the same Γ/M, so each lives the same number of turns: the b
 The second note is let go with the pedal down, which keeps the channel shut; it bends when the pedal comes up. A firm press into a held key (aftertouch) opens a third.`,
   },
   {
-    title: 'Born at its peak',
-    views: ['Amplitude', 'Spectrum'],
-    preset: 'Z boson: 2.7 %, a knock on wood',
-    play: [run('A2 A3 A4', { step: 1.4, dur: 1.2, vel: 0.9 }), { at: 4.4, set: { phase: 90 } }, run('A2 A3 A4', { at: 4.6, step: 1.4, dur: 1.2, vel: 0.9 })],
-    text: `The amplitude is a complex number, spiralling in: the Z shrinks by 8 % a turn. We hear one of its two parts, its height in the Amplitude view. Born on the real axis, the note starts from nothing, as a sine.
+    title: 'Formed, not struck',
+    views: ['Decay law', 'Amplitude'],
+    preset: 'ρ meson: 19 % wide, a thud with hardly a pitch',
+    play: [run('A2 E3 A3', { step: 0.6, dur: 0.5, vel: 0.85 }), { at: 2, set: { formation: 1 } }, run('A2 E3 A3', { at: 2.2, step: 1.3, dur: 1, vel: 0.85 }),
+      { at: 6.2, set: { width: 0.000196, formation: 0.3 } }, run('A3 C#4 E4 A4', { at: 6.4, step: 0.8, dur: 0.6, vel: 0.8 })],
+    text: `So far each state was made at once, as if struck: a sine from nothing. It can also be **formed**, fed by a source that turns with it while its key is held, for the Formation time at most. A ρ lives a few milliseconds, so formation soon balances decay, and it holds a steady tone for as long as it is fed: no longer a thud.
 
-Born at 90° it starts at its peak, a cosine. The jump is a **click**, which fills in the line's far tails: a Breit–Wigner line falls only as the square of the distance from its peak, and in the spectrum the skirts rise.`,
+A narrow state, here the η′, takes the whole time to grow: a swell, which then rings on. A source T long carries energies only about 1/T wide (time and energy again), so the note's line is the Breit–Wigner line seen through that window, and no length of source makes a click.`,
   },
   {
     title: 'A keyboard of weak decays',

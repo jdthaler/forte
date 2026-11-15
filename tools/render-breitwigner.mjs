@@ -37,10 +37,12 @@ const demos = [
   ['04-letting-go-opens-a-second-channel', () => play(P({ width: 0.0003, release: 3 }), 9.5, [
     ...chord(0.1, [60], 0.8, 2), ...chord(3.2, [67], 0.8, 0.8), [3.6, 'sus', true], [6.2, 'sus', false],
     ...chord(7, [60, 67, 72], 0.7, 0.3), ...chord(7.9, [60, 67, 72], 0.7, 0.3)])],
-  // the Z born on the real axis (a sine, from nothing), then at its peak (a cosine: a click)
-  ['05-born-as-a-sine-then-at-its-peak', () => cat(
-    play(preset('Z'), 3.2, notes(0.1, 0.7, [45, 57, 69, 81], 0.9, 0.6)),
-    play(preset('Z', { phase: 90 }), 3.2, notes(0.1, 0.7, [45, 57, 69, 81], 0.9, 0.6)))],
+  // formed, not struck: a ρ made at once (thuds), then fed while held (steady tones, formation
+  // balancing decay), then an η′ formed over 0.3 s (swells that ring on)
+  ['05-formed-not-struck', () => cat(
+    play(preset('ρ'), 2, notes(0.1, 0.6, [45, 52, 57], 0.85, 0.5)),
+    play(preset('A ρ fed'), 4.2, notes(0.1, 1.3, [45, 52, 57], 0.85, 1)),
+    play(preset('Formed slowly'), 6, [...notes(0.1, 0.8, [57, 61, 64, 69], 0.8, 0.6), ...chord(3.6, [45, 57, 64, 69], 0.7, 1.5)]))],
   // Sargent's rule, Γ ∝ M⁵: each octave up is 32 times wider
   ['06-sargents-rule-bass-rings-treble-ticks', () => play(preset('Sargent'), 10, [[0, 'sus', true],
     ...notes(0.1, 0.6, [33, 45, 57, 69, 81, 93], 0.8, 0.4), ...notes(4.2, 0.3, [93, 88, 84, 81, 76, 72, 69, 64, 60, 57, 52, 48, 45], 0.7, 0.2), [8.6, 'sus', false]])],
