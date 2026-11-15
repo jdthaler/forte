@@ -224,7 +224,7 @@ TEST("bowed: every key's own bend swept across its octave each way (and past it)
   }
 }
 
-TEST("bowed: the key action ramps the force in its travel time; aftertouch presses one key (poly) or all (channel)") {
+TEST("bowed: the key action ramps the force in its travel time; aftertouch presses one key (poly) or all (channel); a key's own (MPE) takes its force over from the strike") {
   const double fs = 48000;
   auto P = defaultParams();
   auto engine = std::make_unique<OrganistaEngine>(fs);
@@ -245,6 +245,13 @@ TEST("bowed: the key action ramps the force in its travel time; aftertouch press
   render(e, (int)(0.2 * fs));
   CHECK_NEAR(e.string(48)->FN / FT, 1.75, 1e-9);
   CHECK_NEAR(e.string(55)->FN / g0, 1.75, 1e-9);
+  // a note's own: as if struck as hard as it is pressed (the strike gives way over ATTACK_T, a
+  // tenth of a second: 2 s is e^−20 of it)
+  e.noteOn(60, 0.7);
+  render(e, (int)(0.3 * fs));
+  e.notePressure(0.5, 60);
+  render(e, (int)(2.1 * fs));
+  CHECK_NEAR(e.string(60)->FN / keyForce(60, 0.5, 1, 0.5), 1, 1e-8);
 }
 
 TEST("bowed: with the dampers lifted the 49 strings of C2–C6 are in the loop and a released note rings on; one past them joins when played; Panic stops it") {

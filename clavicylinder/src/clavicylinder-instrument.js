@@ -22,6 +22,7 @@ export const INSTRUMENT = {
   // where the glass touches its bar, at the touch; each note's pressure presses its key harder.
   mpe: { bend: 0.1, slide: { param: 'contact', max: 0.1 } },
   glide: 'the bar pressed off its centre: a few cents', // what a note's own bend does
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
   aftertouch: 'the key presses harder on the cylinder', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how fast the bar\'s cloth leaves the glass: a slow lift drags it off, quieting the bar; a fast one leaves it ringing', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['treadle', 'wet', 'grip', 'press', 'speed'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

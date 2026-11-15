@@ -254,16 +254,22 @@ as in Controls: off, the line dims and says what the instrument does
 instead). A light beside the faders says which mode they are in. The RISE's
 mode button sends nothing, so it shows white once a fader sends and cyan once
 a fader moves the RISE's own Glide, Slide or Press sensitivity (seen in the
-settings it reads, below); until then it asks for a fader. Press (the note's own pressure, as any aftertouch) shapes the
-notes of most instruments that hold them; on the struck and plucked ones a
-firm press (past half way, so a finger resting on a key changes nothing)
-makes the note more, never less, as hard as the key is pressed: a sustainer
-(an EBow over a string, a driver coil by a pickup) swells and holds the
-strings, tines, reeds, springs and the celesta's and kalimba's steel, a bow
-holds the Vibraphone's bars, and the mallet instruments roll (the Marimba,
-Steel Pan, Gong Keyboard, Carillon, Tubular Bells and Gamelan). On the
-Timpani and Tabla a firm press is still the heel in the head, which raises
-the pitch. Its preset arrows step through the Presets menu from the
+settings it reads, below); until then it asks for a fader. Strike sets
+how loud a note starts, and Press (the note's own pressure, as any
+aftertouch) the level it holds at. On the instruments whose notes hold (a
+bow, a breath, a flame, a current), a note's own press from the RISE takes
+its level over from the strike within a tenth of a second, as hard as the
+finger presses; a
+keyboard's aftertouch, or a finger leaning on a key on the screen, starts
+from nothing, so there it presses on top of the strike as before. On the
+struck and plucked ones a firm press (past half way, so a finger resting on
+a key changes nothing) makes the note more, never less: a sustainer (an
+EBow over a string, a driver coil by a pickup) holds the strings, tines,
+reeds, springs and the celesta's and kalimba's steel as loud as the press,
+however hard they were struck, a bow holds the Vibraphone's bars, and the
+mallet instruments roll (the Marimba, Steel Pan, Gong Keyboard, Carillon,
+Tubular Bells and Gamelan). On the Timpani and Tabla a firm press is still
+the heel in the head, which raises the pitch. Its preset arrows step through the Presets menu from the
 preset playing, whichever way it got there (the FC-300's pedals, the menu),
 so the two stay in step; the first press after the RISE has counted
 elsewhere goes the way its own number lies. The chevron folds the

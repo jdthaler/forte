@@ -109,6 +109,8 @@ class TinesEngine : public Engine {
     void updateDamping(const TinesEngine &eng) { damped = killing || (!keyDown && !eng.sustain && hasDamper); }
     Press press;   // how hard its key is pressed (forte/press.h)
     Sustainer sus; // Press: a driver coil beside the pickup, fed from it, pushing the tine's tip (bp)
+    double struckAt = 0; // m/s: its last strike's hammer speed
+    Blow blow;           // its force on the fundamental, as the hammer strikes (forte/press.h)
     void tuneSustainer();
     // a note's own slide: where its hammer strikes (mm from the clamp; NaN: the knob's, as built)
     std::array<double, STRIKES * MAX_MODES> ws{};

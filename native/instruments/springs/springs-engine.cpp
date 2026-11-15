@@ -18,9 +18,10 @@ static constexpr double GLIDE = 0.03;    // s: damping and output gains glide ov
 static constexpr double BEND_T = 0.02;   // s: a note's own bend glides as the instruments that bend glide theirs
 static constexpr double PRUNE = 3e-5;    // a mode below this × the voice's loudest is skipped (−90 dB)
 static constexpr double PULSE_MAX = 0.012; // s: the longest mallet pulse
-// Press: a full press holds the note's mode at HOLD times the swing the mallet gave it; the
+// Press: a full press holds the note's mode at HOLD times the swing the hardest stroke gives it (the
+// mallet's impulse is the velocity), however hard it was struck; the
 // sustainer holds the strongest mode within half an octave of the note (the pitch the ear takes)
-static constexpr double HOLD = 1.6;
+static constexpr double HOLD = 1;
 static double handSigma(double h) { return 60 * h * h; } // a hand h (0..1) on the coils: σ = 60h² s⁻¹
 static const double PANS[3][3] = {{0, 0, 0}, {-0.3, 0.3, 0}, {0, 0.35, -0.35}}; // each spring's pickup, left/right of the key's place
 
@@ -188,6 +189,7 @@ void SpringEngine::Voice::start(SpringEngine &eng, int k, Data::Ref r, uint64_t 
 
 // The mallet: a half-sine pulse of force whose impulse is the velocity, laid onto the beads.
 void SpringEngine::Voice::strike(SpringEngine &eng, double velocity) {
+  struckAt = std::min(1.0, velocity);
   tau = std::min(PULSE_MAX, pulseLength(eng.P[p::mallet], velocity));
   const int n = std::max(1, (int)jsRound(tau * eng.fs));
   const double amp = (velocity * PI * eng.fs) / (2 * n); // Σ F·h = velocity
@@ -232,7 +234,7 @@ void SpringEngine::Voice::tuneSustainers(const SpringEngine &eng) {
     drvMode[s] = best;
     if (best < 0) continue;
     const double B = twoPoleAmplitude(b.Y1[best], b.Y2[best], b.A1[best], b.A2[best]), sg = -fd::log(std::sqrt(b.A2[best])) * fs;
-    sus[s].tune(sg, 1, b.WD[best] / TAU, b.WD[best] * B, HOLD, fs);
+    sus[s].tune(sg, 1, b.WD[best] / TAU, hardest(b.WD[best] * B, struckAt, 1), HOLD, fs);
   }
 }
 

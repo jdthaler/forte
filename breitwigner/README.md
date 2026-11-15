@@ -27,7 +27,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/breitwigner
 | `←` `→` | octave |
 | `↑` `↓` | velocity: the amplitude the state is made with |
 | `Space` | keep the key-up channel shut: the states live out their own lifetimes |
-| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = the width** (from the width set up to a ρ meson's); **pitch bend up = a boost** (to γ = 1.12); aftertouch keeps making the state (production: the note swells and holds); release velocity sets how wide the key-up channel opens; MPE: each note's own boost (two octaves, γ = 4), its own width by slide (CC74) and its own press |
+| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = the width** (from the width set up to a ρ meson's); **pitch bend up = a boost** (to γ = 1.12); aftertouch keeps making the state (production: the note holds as strong as the press); release velocity sets how wide the key-up channel opens; MPE: each note's own boost (two octaves, γ = 4), its own width by slide (CC74) and its own press |
 
 ## The physics
 
@@ -147,8 +147,9 @@ keyboard uses this for the player's hands:
 
   and holds there while the key is pressed (a narrow line swells slowly, a wide one at once;
   with a Formation time, once the key's own source has stopped).
-  T is Press production (1.5 by default) times how hard the key is pressed past half way,
-  times the amplitude the key made the state with; a light press holds the note lower, never
+  T is Press production (1 by default) times how hard the key is pressed past half way,
+  times the amplitude a key at full velocity makes: how hard the key was struck sets the attack
+  alone, and the press the level the note holds at. A light press holds the note lower, never
   dying faster than it would alone. The state turns at its own mass throughout, and let go of,
   it decays at its own width again (tested: |ψ| against this law within 2 %).
 
@@ -226,7 +227,7 @@ which is again the exact solution over the sample for a source turning with the 
 sample matches section 6's closed form, held and let go, within the same two parts in ten
 million (tested). A key struck again while its source runs starts a new one; what the first had
 made still rings, and a press keeps making the state once its source has stopped (up to Press
-production times the velocity). A width that changes (the mod wheel, a slide, a channel
+production times a full velocity's amplitude). A width that changes (the mod wheel, a slide, a channel
 opening), a press and a boost move the multiplier, gliding in 20 ms; the
 number itself is never touched, so nothing clicks. A state is dropped when it is 100 dB under
 a full one. All 128 keys can ring at once, and none is ever stolen.

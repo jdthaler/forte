@@ -76,7 +76,7 @@ void PulsarsEngine::noteOn(int key, double velocity) {
   // the same key again: the pulsar switches back on, as it is
   for (Voice &x : voices) {
     if (x.key != key || x.stolen) continue;
-    x.vel = velocity; x.held = true; x.tOff = -1; x.t = 0; x.lg = 1; x.lgStep = 0;
+    x.vel = velocity; x.held = true; x.tOff = -1; x.t = 0; x.lg = 1; x.lgStep = 0; x.hold.start();
     return;
   }
   // past kMaxVoices (fewer at Medium and Low Quality), the oldest let-go pulsar (or else the
@@ -163,6 +163,9 @@ void PulsarsEngine::run(Voice &v, float *L, float *R, int n) {
   v.bent = glideTo(v.bent, expr.bendOf(v.key), n * dt, BEND_T);
   // Press: a brighter beam, up to twice as bright, gliding (a held pulsar's own pressure)
   v.br = glideTo(v.br, 1 + press.of(v.key), n * dt, PRESS_GLIDE);
+  // and once the key's own pressure comes, it sets the pulsar's level in place of the strike
+  if (v.held) { if (press.came(v.key)) v.hold.came(); v.hold.step(n * dt); }
+  const double vel = v.hold.vel(v.vel, v.br - 1);
   const double inc = v.inc * v.bent;
   for (int i = 0; i < n; i++) {
     // the share of each sub-band the pulses reach: in from the top of the band as the pulsar
@@ -213,7 +216,7 @@ void PulsarsEngine::run(Voice &v, float *L, float *R, int n) {
     // the power less its long-run mean (the receiver's baseline): a bright pulse rises above it,
     // a faint one leaves a dip
     if (v.lgStep != 0) { v.lg += v.lgStep; if (v.lg <= 0) { v.lg = 0; v.lgStep = 0; if (v.tOff < 0) v.tOff = v.t; } }
-    const double g = OUT * v.vel * v.lg * v.br;
+    const double g = OUT * vel * v.lg * v.br;
     L[i] = (float)(L[i] + g * v.envL * (a * yl + (a - 1) * dl));
     R[i] = (float)(R[i] + g * v.envR * (a * yr + (a - 1) * dr));
     v.t += dt;

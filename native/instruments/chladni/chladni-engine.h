@@ -24,6 +24,7 @@
 #include "forte/background.h"
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 
 namespace forte::chladni {
@@ -62,6 +63,7 @@ class ChladniPlateEngine : public Engine {
     double ringK = 1; // how many times longer than usual it rings on under the hand after this lift (forte/lift.h)
     double bent = 1;  // its modes × this (a note's own bend: the clamp tightened)
     double vel = 0, after = 0, bite = 0;
+    Held hold; // Strike its attack, Press its level once its own pressure comes (forte/press.h)
     double N = 0, V = 0;       // the bow's force on the edge (N) and its speed (m/s)
     double shift = 0, s = 0;   // the bow's shift along the edge, glided, and its place on the path
     double slip = 0, F = 0, sticks = 0, peak = 0;

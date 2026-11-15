@@ -15,8 +15,9 @@ constexpr double KILL_SIGMA = 250;
 constexpr double BEND_T = 0.02; // s: a note's own bend glides as the instruments that bend glide theirs
 // Press: a sustainer over the strings at the hammer's point (an EBow: forte/press.h Sustainer),
 // tuned on the fundamental as the hammer leaves, so a full press holds it at HOLD times the swing
-// the blow gave it; it drives the modes below DRIVE_TOP times the fundamental
-constexpr double HOLD = 1.6, DRIVE_TOP = 6;
+// the hardest blow (HAMMER_TOP, MIDI's 127) gives it, however hard it was struck; it drives the
+// modes below DRIVE_TOP times the fundamental
+constexpr double HOLD = 1, DRIVE_TOP = 6, HAMMER_TOP = 6;
 // longitudinal modes: none above LONG_FMAX (Hz); pairs summing below LONG_BELOW × the mode's
 // frequency left out (≥ 24 dB down); the share of the longitudinal force the board takes up,
 // set so that a forte A1's strongest phantom partials stand about 15 dB under the partials beside
@@ -162,7 +163,7 @@ void PianoEngine::Voice::tuneSustainer(const double *qn, const double *q0) {
   nu = std::max(nu, 1);
   const double c2 = std::pow(cvk[f] * k, 2) + std::pow(chk[f] * k, 2), sigma = sig[f] + 0.5 * c2 * (nu - 1);
   const double o = om[f] * bent, B = twoPoleAmplitude(qn[f], q0[f], a1[f], a2[f]);
-  sus.tune(sigma, w[f] * std::sqrt(nu), o / TWO_PI, nu * std::fabs(w[f]) * o * B, HOLD, 1 / k);
+  sus.tune(sigma, w[f] * std::sqrt(nu), o / TWO_PI, hardest(nu * std::fabs(w[f]) * o * B, struckAt, HAMMER_TOP) * blow.ratio(), HOLD, 1 / k);
 }
 
 // Its strings tightened (or let go) to sound × r: each mode's recursion at its frequency × r, its
@@ -200,8 +201,16 @@ void PianoEngine::Voice::kill() {
 // Launch the hammer at the string's current position (works for re-strikes). unaCorda: the
 // shifted action strikes one string fewer.
 void PianoEngine::Voice::strike(double v, bool unaCorda) {
+  struckAt = v;
   const bool una = unaCorda && KU != hammer.K;
   w = una ? wU : wN;
+  { // Press: follow the blow on the fundamental (the lowest mode the hammer's point moves: tuneSustainer)
+    double top = 0;
+    for (int i = 0; i < N; i++) top = std::max(top, std::fabs(w[i]));
+    int f = -1;
+    for (int i = 0; i < N; i++) if (std::fabs(w[i]) >= 0.1 * top && (f < 0 || om[i] < om[f])) f = i;
+    blow.start(f < 0 ? 0 : om[f] * bent / TWO_PI, 1 / k, v, HAMMER_TOP);
+  }
   bw = una ? bwU : bwN;
   comp = una ? compU : compN;
   hK = una ? KU : hammer.K;
@@ -337,6 +346,7 @@ void PianoEngine::Voice::render(float *L, float *R, int n, PianoEngine &eng) {
       }
       const double etaF = 2 * eta - etaPrev;
       const double F = contactForce(etaF - uf);
+      blow.add(F);
       etaPrev = eta;
       eta = etaF - kOverM * F;
       if (F > 0) {

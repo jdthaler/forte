@@ -20,6 +20,7 @@ export const INSTRUMENT = {
   // pushed on its own (CC74 is that key's push) and pressed (its pressure)
   mpe: { bend: 0.5, slide: true },
   glide: 'the avalanche\'s shear: its boom a few per cent higher or lower', // what a note's own bend does
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
   aftertouch: 'pushes more sand down the face', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how fast the flow drains when the push stops: a slow lift lets the boom run on, a fast one stops it', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['sorting', 'damp', 'speed', 'contact', 'push'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

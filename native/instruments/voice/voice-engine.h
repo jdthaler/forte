@@ -20,6 +20,7 @@
 
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "forte/tuning.h"
 #include "voice-model.h"
@@ -43,6 +44,7 @@ struct Voice {
   int key = 0;
   int64_t born = 0;
   double vel = 0, after = 0;
+  Held hold; // Strike its attack, Press its level once its own pressure comes (forte/press.h)
   double liftK = 1; // how many times longer than usual the breath takes to fall (forte/lift.h)
   // the folds and their tension
   Folds folds;

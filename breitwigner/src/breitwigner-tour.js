@@ -35,7 +35,7 @@ All four notes have the same Γ/M, so each lives the same number of turns: the b
     play: [note('C4', { dur: 2, vel: 0.8 }), note('G4', { at: 3.5, dur: 1, vel: 0.8 }), { at: 4.2, pedal: true }, { at: 6.5, pedal: false }],
     text: `A state that can decay in two ways has a width for each, and they **add**. Letting a key go opens a second channel, here 3 Hz wide: the note's line in the Decay law bends down where the key came up, and its Breit–Wigner line widens as it falls.
 
-The second note is let go with the pedal down, which keeps the channel shut; it bends when the pedal comes up. A firm press into a held key (aftertouch) does the opposite: it keeps making the state, so the note swells and holds.`,
+The second note is let go with the pedal down, which keeps the channel shut; it bends when the pedal comes up. A firm press into a held key (aftertouch) does the opposite: it keeps making the state, so the note holds as strong as the press, however hard it was struck.`,
   },
   {
     title: 'Formed, not struck',

@@ -19,6 +19,7 @@
 
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "forte/tuning.h"
 #include "saw-model.h"
@@ -40,6 +41,7 @@ struct Voice {
   int key = 0;
   int64_t born = 0;
   double vel = 0, after = 0, bite = 0, age = 0;
+  Held hold; // Strike its attack, Press its bow's force once its own pressure comes (forte/press.h)
   double u = 0, uTo = 0, uRate = 0;   // log₂ of the note (Hz): One saw slides it to uTo at uRate per second
   double bend = 1, vib = 0;           // its own bend (MPE) and vibrato depth (¢), gliding
   double f = 0;                       // the note now (Hz)

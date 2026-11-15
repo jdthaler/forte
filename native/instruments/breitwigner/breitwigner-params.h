@@ -55,7 +55,7 @@ inline const ParamInfo kParams[p::count] = {
   {"power", "Width grows as Mⁿ", "Resonance", ParamKind::continuous, 0, 5, 1, 0.05, false, false, nullptr, 0, kFormat_power, 1},
   {"formation", "Formation time", "Resonance", ParamKind::continuous, 0, 1, 0, 0.001, false, true, nullptr, 0, kFormat_formation, 1},
   {"release", "Key-up channel Γ₂", "Decay and production", ParamKind::continuous, 0.05, 500, 6, 0, true, true, nullptr, 0, kFormat_release, 3},
-  {"press", "Press production", "Decay and production", ParamKind::continuous, 0.1, 3, 1.5, 0.05, false, false, nullptr, 0, kFormat_press, 1},
+  {"press", "Press production", "Decay and production", ParamKind::continuous, 0.1, 3, 1, 0.05, false, false, nullptr, 0, kFormat_press, 1},
   {"room", "Room", "Output", ParamKind::continuous, 0, 1, 0.25, 0.01, false, true, nullptr, 0, kFormat_room, 1},
   {"venue", "Venue", "Output", ParamKind::choice, 0, 4, 1, 1, false, false, kChoices_venue, 5, nullptr, 0, kKeys_venue},
   {"volume", "Volume", "Output", ParamKind::continuous, 0, 2, 0.8, 0.01, false, true, nullptr, 0, kFormat_volume, 2},

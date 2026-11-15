@@ -8,7 +8,7 @@ the sound. Play it at <https://forte.jthaler.net/tines/> (or locally — see the
 Keys: same rows as the piano (`Z…/`, `Q…]`); `←→` octave; `↑↓` velocity; hold
 `Space` for sustain; MIDI notes, velocity and CC64 work after **Enable MIDI**, and a firm press
 (aftertouch, past half way) drives a sustainer on a held note's tine, a coil by its pickup: it
-swells and holds.
+holds the note as loud as the press, however hard it was struck.
 88 keys, A0–C8, as on the 88-key Mark I and Mark II (the Stage 73 has
 E1–E7). The keys past E1–E7 carry on the same design: each tine's length
 solved for its pitch, and the hammer, pickup gap and grommet graded as at

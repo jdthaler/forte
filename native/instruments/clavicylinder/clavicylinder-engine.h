@@ -24,6 +24,7 @@
 #include "forte/engine.h"
 #include "forte/expression.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 
 namespace forte::clavicylinder {
 
@@ -61,6 +62,7 @@ class ClavicylinderEngine : public Engine {
     bool touch = false, dead = false, stick = false;
     double lamOff = 0; // how fast the cloth leaves the glass after this lift, a sample (0: as usual; forte/lift.h)
     double vel = 0, after = 0;
+    Held hold; // Strike its attack, Press its level once its own pressure comes (forte/press.h)
     double bent = 1; // its modes × this (a note's own bend)
     double Nn = 0;           // the cloth's normal force on the glass (N)
     double x = 0, u = 0;     // the pad: displacement and velocity along the rub

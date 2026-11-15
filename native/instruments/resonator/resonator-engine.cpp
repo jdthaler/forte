@@ -57,7 +57,7 @@ void ResonatorEngine::slide(double value, int key) {
 
 void ResonatorEngine::pressure(double value, int key) { // MIDI aftertouch: channel (key −1) or polyphonic
   if (key < 0) { pressureAll = value; for (int i = 0; i < count; i++) voices[i]->press = value; }
-  else for (int i = 0; i < count; i++) if (voices[i]->key == key) voices[i]->press = value;
+  else for (int i = 0; i < count; i++) if (voices[i]->key == key) { voices[i]->press = value; if (ownPressure) voices[i]->hold.came(); }
 }
 
 int ResonatorEngine::driven() const {
@@ -170,7 +170,7 @@ void ResonatorEngine::drive(Voice &v, double velocity) {
     v.env = std::min(v.env, 0.0);
   }
   v.order = ++clock;
-  v.vel = velocity;
+  v.vel = velocity; v.hold.start();
   loopsFor(v);
 }
 
@@ -266,7 +266,8 @@ void ResonatorEngine::run(float *L, float *R, int n) {
     double *q = v.q.data(), *q1 = v.q1.data();
     const double *a1 = v.a1.data(), *a2 = v.a2.data(), *bA = v.bA.data(), *bH = v.bH.data(), *bB = v.bB.data();
     const double *psiA = v.psiA.data(), *psiH = v.psiH.data(), *beta = v.beta.data();
-    const double Inote = P[p::drive] * v.s.reg * (0.25 + 0.75 * v.vel) * (1 + v.press); // A
+    v.hold.step(n * k);
+    const double Inote = P[p::drive] * v.s.reg * (0.25 + 0.75 * v.hold.vel(v.vel, v.press)) * (1 + v.press); // A
     v.Inote = Inote;
     const double gap = gapT * v.s.gap, sG = std::sqrt(v.s.G);
     const double Fk = F_REF / v.s.nuFull; // each string's share of the pull (a string the Quality leaves out takes its share away)

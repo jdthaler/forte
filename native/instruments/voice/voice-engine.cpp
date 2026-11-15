@@ -94,7 +94,7 @@ void VoiceEngine::shape(Voice &v, double vowel, double jaw) {
 
 void VoiceEngine::start(Voice &v, int key, double velocity) {
   v.alive = true; v.held = true; v.stolen = false;
-  v.key = key; v.born = t; v.vel = std::clamp(velocity, 0.0, 1.0); v.after = 0; v.liftK = 1;
+  v.key = key; v.born = t; v.vel = std::clamp(velocity, 0.0, 1.0); v.after = 0; v.liftK = 1; v.hold.start();
   v.folds = Folds{};
   v.N = std::clamp((int)std::lround((P[p::length] / 100) * fo / C), 8, MAXN);
   for (int j = 0; j < MAXN; j++) v.F[0][j] = v.B[0][j] = v.F[1][j] = v.B[1][j] = 0;
@@ -132,7 +132,7 @@ void VoiceEngine::steal(const Voice *keep) {
 void VoiceEngine::noteOn(int key, double velocity) {
   if (!hasP || key < 0 || key > 127) return;
   for (Voice &v : voices) if (v.alive && !v.stolen && v.key == key) { // sung again while it still sounds
-    v.held = true; v.vel = std::clamp(velocity, 0.0, 1.0);
+    v.held = true; v.vel = std::clamp(velocity, 0.0, 1.0); v.hold.start();
     newest = &v;
     return;
   }
@@ -161,7 +161,7 @@ void VoiceEngine::noteOff(int key, double velocity) {
 void VoiceEngine::allNotesOff() { for (Voice &v : voices) v.held = false; }
 
 void VoiceEngine::pressure(double value, int key) {
-  for (Voice &v : voices) if (v.alive && v.held && (key < 0 || v.key == key)) v.after = std::clamp(value, 0.0, 1.0);
+  for (Voice &v : voices) if (v.alive && v.held && (key < 0 || v.key == key)) { v.after = std::clamp(value, 0.0, 1.0); v.hold.pressed(key, v.key, ownPressure); }
 }
 
 void VoiceEngine::bend(double value) { bendTo = pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12); }
@@ -183,6 +183,7 @@ void VoiceEngine::run(Voice &v, double *out, int m) {
   // the pitch the singer aims for: the key, the bends, the vibrato (setting in after a moment) and
   // the flutter (white noise through two one-poles, scaled to unit rms)
   v.age += dtb;
+  v.hold.step(dtb);
   const double in = std::clamp((v.age - 0.2) / 0.4, 0.0, 1.0), depth = P[p::vibrato] * in * in * (3 - 2 * in);
   v.vibPhase += 2 * PI * P[p::vibRate] * dtb;
   if (v.vibPhase > 2 * PI) v.vibPhase -= 2 * PI;
@@ -199,7 +200,7 @@ void VoiceEngine::run(Voice &v, double *out, int m) {
   // the lungs
   const double tau = v.stolen ? STEAL_T : v.held ? P[p::onset] : P[p::release] * v.liftK;
   const double gEnv = 1 - exp(-dt / tau), target = v.held ? 1 : 0;
-  const double Pfull = P[p::pressure] * CMH2O * (0.35 + 0.95 * v.vel) * (1 + 0.8 * v.after) * lungs(v.Q);
+  const double Pfull = P[p::pressure] * CMH2O * (0.35 + 0.95 * v.hold.vel(v.vel, v.after)) * (1 + 0.8 * v.after) * lungs(v.Q);
   const double gMean = 1 - exp(-2 * PI * (v.fT / 6) * dt), gNoise = 1 - exp(-2 * PI * NOISE_HZ * dt);
   const bool rec = &v == newest;
   const int N = v.N;

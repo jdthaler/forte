@@ -96,7 +96,7 @@ void ChladniPlateEngine::start(Voice &v, int key, KeyData<Plate>::Ref ref) {
 
 void ChladniPlateEngine::pressure(double value, int key) { // MIDI aftertouch: channel (key −1) or polyphonic
   if (key < 0) { pressureAll = value; for (int i = 0; i < count; i++) voices[i]->after = value; }
-  else for (int i = 0; i < count; i++) if (voices[i]->key == key) voices[i]->after = value;
+  else for (int i = 0; i < count; i++) if (voices[i]->key == key) { voices[i]->after = value; if (ownPressure) voices[i]->hold.came(); }
 }
 
 void ChladniPlateEngine::noteOn(int key, double velocity) {
@@ -123,7 +123,7 @@ void ChladniPlateEngine::noteOn(int key, double velocity) {
     }
   }
   if (fresh) start(*v, key, ref);
-  v->touch = true; v->vel = velocity; v->hand = false; v->ringK = 1;
+  v->touch = true; v->vel = velocity; v->hand = false; v->ringK = 1; v->hold.start();
   v->bite = BITE * velocity; // the bow set on the edge bites: pressed harder for its first strokes
   coefficients(*v);
   focus = key;
@@ -182,7 +182,8 @@ void ChladniPlateEngine::run(float *L, float *R, int n) {
     // the bow's force: the slider (times the figure's speaking threshold) through velocity (how hard
     // the key draws it) and aftertouch
     // the key draws it), aftertouch and the attack's bite, which lets go over BITE_T cycles of the note
-    const double Nt = v.touch ? std::min(MAXFORCE, P[p::force] * v.Nth * (0.5 + v.vel) * (1 + v.after) * (1 + v.bite)) : 0, Vt = P[p::speed];
+    v.hold.step(bn);
+    const double Nt = v.touch ? std::min(MAXFORCE, P[p::force] * v.Nth * (0.5 + v.hold.vel(v.vel, v.after)) * (1 + v.after) * (1 + v.bite)) : 0, Vt = P[p::speed];
     v.bite *= std::exp(-(bn * v.kp.f0) / BITE_T);
     const double Yb = v.Yb;
     double pk = 0, sticks = 0;

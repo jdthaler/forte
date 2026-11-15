@@ -22,6 +22,7 @@
 #include "forte/background.h"
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "pyrophone-model.h"
 #include "pyrophone-params.h"
@@ -75,6 +76,7 @@ class PyrophoneEngine : public Engine {
     int hw = 0;
     double panL = 0, panR = 0;
     double beta = 0, betaT = 0, press = 0, vel0 = 0;
+    Held hold; // its own pressure, once it comes, parts its flames in place of the strike (forte/press.h)
     double xf = -1, h = 0, dBore = NAN, dDamp = NAN, d = 0, W = 1, hHot = 0;
     double nb = 1; // the key's own bend (MPE), gliding as the wheel's
     double gain = 1;

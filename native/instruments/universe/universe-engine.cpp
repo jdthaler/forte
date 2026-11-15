@@ -221,7 +221,10 @@ void EarlyUniverseEngine::process(float *L, float *R, int n) {
     if (const double to = expr.bendOf(v.key); v.bent != to) { v.bent = glideTo(v.bent, to, n / fs, BEND_T); retune(v); }
     // Press: a larger primordial amplitude, up to twice: every wave the larger with it (linear)
     v.amp = glideTo(v.amp, 1 + press.of(v.key), n / fs, PRESS_GLIDE);
-    for (int m = 0; m < v.count; m++) w[m] = (m + 1) * v.f * v.bent < 0.48 * fs ? OUT * v.velocity * v.amp * std::pow(m + 1.0, tilt) : 0;
+    // and once the key's own pressure comes, it sets the level in place of the strike
+    if (v.held) { if (press.came(v.key)) v.hold.came(); v.hold.step(n / fs); }
+    const double vel = v.hold.vel(v.velocity, v.amp - 1);
+    for (int m = 0; m < v.count; m++) w[m] = (m + 1) * v.f * v.bent < 0.48 * fs ? OUT * vel * v.amp * std::pow(m + 1.0, tilt) : 0;
     for (int i0 = 0; i0 < n; i0 += BLOCK) {
       const int len = std::min(BLOCK, n - i0);
       // the clock: conformal time up to recombination, then (inside the plasma, or once let go)

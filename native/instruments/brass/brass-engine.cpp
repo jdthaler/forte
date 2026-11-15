@@ -46,6 +46,7 @@ void BrassEngine::setParams(const double *p) {
 void BrassEngine::pressure(double value, int key) {
   if (key < 0) after = std::clamp(value, 0.0, 1.0);
   else if (key < 128) press[key] = std::clamp(value, 0.0, 1.0);
+  for (Voice &v : pool) if (v.active) v.hold.pressed(key, v.key, ownPressure);
 }
 
 int BrassEngine::voiceCount() const {
@@ -96,7 +97,7 @@ void BrassEngine::start(Voice &v, double velocity) {
   v.t = 0;
   v.y = 0; v.v = 0; v.pc = 0; v.U = 0; v.pm = 0; // (the lips held shut by the tongue)
   v.ra = v.rb = v.Uo = v.out = 0; v.env = 0;
-  v.vel = velocity; v.age = 0;
+  v.vel = velocity; v.age = 0; v.hold.start();
   v.attack = 1e-3 * P[p::tongue];
   v.ym = 0; v.yPrev = 0; v.yl1 = 0; v.yl2 = 0; v.tCross = -1; v.low = false; v.fm = 0; v.crossings = 0; v.yAmp = 0; v.yMax = -1; v.yMin = 1;
   v.slideNow = v.plan.ext;
@@ -138,7 +139,7 @@ void BrassEngine::noteOn(int key, double velocity) {
   Voice *v = nullptr;
   for (Voice &x : pool) if (x.active && x.key == key) { v = &x; break; }
   if (v) {
-    v->down = true; v->vel = velocity; v->age = 0;
+    v->down = true; v->vel = velocity; v->age = 0; v->hold.start();
     v->attack = 1e-3 * P[p::tongue];
     focus = v;
     return;
@@ -329,9 +330,11 @@ void BrassEngine::process(float *Lb, float *Rb, int n) {
   bendNow = glideTo(bendNow, bendTo, dt, 0.02);
   for (Voice &v : pool) {
     if (!v.active) continue;
-    // the breath: the tongue lets it go over `attack`, then it follows the velocity and aftertouch
+    // the breath: the tongue lets it go over `attack`, then it follows the velocity and aftertouch,
+    // and the note's own press once it comes (Held)
     const double prs = std::max(after, press[v.key]);
-    v.pTarget = v.down ? mouthPressure(v.vel, v.plan.f * v.plan.scale, P[p::breath]) * (1 + 0.5 * prs) : 0;
+    v.hold.step(dt);
+    v.pTarget = v.down ? mouthPressure(v.hold.vel(v.vel, prs), v.plan.f * v.plan.scale, P[p::breath]) * (1 + 0.5 * prs) : 0;
     v.bendNow = glideTo(v.bendNow, expr.bendOf(v.key) * bendNow, dt, 0.03);
     v.plungerTo = expr.slideOr(v.key, P[p::plunger]);
     v.plunger = glideTo(v.plunger, v.plungerTo, dt, 0.02);

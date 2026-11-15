@@ -20,6 +20,7 @@ export const INSTRUMENT = {
   // MPE: a finger slides as the ring slides along the ribbon, so a note bends four octaves; CC74
   // rocks its own key; its pressure presses the intensity key harder
   mpe: { bend: 48, slide: true },
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
   aftertouch: 'presses the intensity key harder: louder', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how the intensity key lets go: a slow lift fades the note, a fast one cuts it', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['pull', 'octave', 'souffle', 'balance', 'vibrato'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)

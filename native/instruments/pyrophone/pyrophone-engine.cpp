@@ -213,7 +213,7 @@ const Tuning *PyrophoneEngine::current() {
 }
 // held keys follow the flame power (and the threshold); released ones the key-up power
 void PyrophoneEngine::retune() {
-  for (int i = 0; i < nVoices; i++) { Voice &v = *voices[i]; v.betaT = v.keyDown ? betaDown(v.key, v.vel0, v.press) : betaUp(); }
+  for (int i = 0; i < nVoices; i++) { Voice &v = *voices[i]; v.betaT = v.keyDown ? betaDown(v.key, v.hold.vel(v.vel0, v.press), v.press) : betaUp(); }
 }
 
 // flames apart: K β_H (0.4 + 0.6 v), K the key's; aftertouch parts them up to 25 % further (below
@@ -272,7 +272,7 @@ void PyrophoneEngine::start(int key, double velocity) {
     v->tune(*this, b);
     voices[nVoices++] = v;
   } else if (v->amp < 0.02) v->tune(*this, b); // a silent tube may be re-cut; a singing one keeps its length
-  v->vel0 = velocity; v->press = pressure_; v->since = 0;
+  v->vel0 = velocity; v->press = pressure_; v->since = 0; v->hold.start();
   v->keyDown = true; v->kUp = 0;
   v->betaT = betaDown(key, velocity, v->press);
   v->nb = ex.bendOf(key); // the key's own bend from the strike, without a glide
@@ -317,7 +317,7 @@ void PyrophoneEngine::pressure(double value, int key) { // aftertouch: lean on a
   if (key < 0) pressure_ = value;
   for (int i = 0; i < nVoices; i++) {
     Voice &v = *voices[i];
-    if (v.keyDown && (key < 0 || key == v.key)) { v.press = value; v.betaT = betaDown(v.key, v.vel0, value); }
+    if (v.keyDown && (key < 0 || key == v.key)) { v.press = value; v.hold.pressed(key, v.key, ownPressure); v.betaT = betaDown(v.key, v.hold.vel(v.vel0, value), value); }
   }
 }
 
@@ -325,7 +325,7 @@ void PyrophoneEngine::slide(double value, int key) { // one tube's own flame pow
   ex.setSlide(value, key);
   for (int i = 0; i < nVoices; i++) {
     Voice &v = *voices[i];
-    if (v.keyDown && v.key == key) v.betaT = betaDown(key, v.vel0, v.press);
+    if (v.keyDown && v.key == key) v.betaT = betaDown(key, v.hold.vel(v.vel0, v.press), v.press);
   }
 }
 
@@ -351,6 +351,7 @@ void PyrophoneEngine::process(float *L, float *R, int n) {
     v.theta += kw * ((v.keyDown || v.song > SINGING ? 1 : 0) - v.theta);
     v.watch = v.key == focus;
     v.nb = glideTo(v.nb, ex.bendOf(v.key), dt, BEND_TAU);
+    if (v.keyDown) { v.hold.step(dt); if (v.hold.own) v.betaT = betaDown(v.key, v.hold.vel(v.vel0, v.press), v.press); }
     v.coeffs(*this);
     v.render(*this, L, R, n);
     v.age += dt; v.since += dt; v.rel += dt;

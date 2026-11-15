@@ -107,7 +107,7 @@ export function wasmEngine(I, { messages } = {}) {
     setSustain(on) { x.forte_set_sustain(this.h, on ? 1 : 0); }
     allNotesOff() { x.forte_all_notes_off(this.h); }
     handle(m) {
-      if (m.type === 'pressure') x.forte_pressure(this.h, m.value, m.key ?? -1);
+      if (m.type === 'pressure') (m.own && m.key != null ? x.forte_note_pressure : x.forte_pressure)(this.h, m.value, m.key ?? -1); // own: a note's own (MPE: forte/engine.h notePressure)
       else if (m.type === 'bend') x.forte_bend(this.h, m.value);
       else if (m.type === 'noteBend') x.forte_note_bend(this.h, m.value, m.key);
       else if (m.type === 'slide') x.forte_slide(this.h, m.value ?? NaN, m.key);

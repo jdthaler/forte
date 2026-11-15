@@ -107,7 +107,7 @@ void SawEngine::retune(Voice &v, double f) {
 }
 
 void SawEngine::excite(Voice &v, double velocity) {
-  v.vel = std::clamp(velocity, 0.0, 1.0);
+  v.vel = std::clamp(velocity, 0.0, 1.0); v.hold.start();
   v.held = true; v.hand = false; v.quiet = 0; v.ringK = 1;
   v.age = 0;
   if ((int)P[p::excite] == excite_::bow) v.bite = BITE * v.vel;
@@ -212,7 +212,7 @@ void SawEngine::allNotesOff() {
 void SawEngine::pressure(double value, int key) { // MIDI aftertouch: channel (key −1) or polyphonic
   value = std::clamp(value, 0.0, 1.0);
   if (key < 0) pressureAll = value;
-  for (Voice &v : voices) if (v.alive && (key < 0 || v.key == key)) v.after = value;
+  for (Voice &v : voices) if (v.alive && (key < 0 || v.key == key)) { v.after = value; v.hold.pressed(key, v.key, ownPressure); }
 }
 
 void SawEngine::bend(double value) { bendTo = pow(2.0, std::clamp(value, -1.0, 1.0) * kBendSemitones / 12); }
@@ -246,12 +246,13 @@ void SawEngine::run(float *L, float *R, int n) {
       v.bend = glideTo(v.bend, expr.bendOf(v.key), dt, BEND_T);
       v.vib = glideTo(v.vib, expr.slideOr(v.key, P[p::vibrato]), dt, BEND_T);
       v.age += dt;
+      v.hold.step(dt);
       const double base = pow(2.0, v.u) * bendNow * v.bend;
       const double f = base * pow(2.0, (v.vib * std::min(1.0, v.age / VIB_IN) * sv) / 1200);
       if (built[vi] != version || std::fabs(log2(base / v.pl.f)) > REBEND) { built[vi] = version; bendFor(v, base, false); }
       retune(v, f);
       const int M = v.M;
-      const double Nt = v.held && bow ? std::min(MAXFORCE * v.pl.lambda * v.pl.lambda, P[p::force] * v.Nth * (0.5 + v.vel) * (1 + v.after) * (1 + v.bite)) : 0;
+      const double Nt = v.held && bow ? std::min(MAXFORCE * v.pl.lambda * v.pl.lambda, P[p::force] * v.Nth * (0.5 + v.hold.vel(v.vel, v.after)) * (1 + v.after) * (1 + v.bite)) : 0;
       v.bite *= exp(-dt / BITE_T);
       double pk = 0, sticks = 0;
       for (int i = at; i < at + m; i++) {

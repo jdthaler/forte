@@ -23,6 +23,7 @@
 #include "forte/dsp.h"
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "forte/tuning.h"
 #include "cellulophone-model.h"
@@ -35,6 +36,7 @@ struct Voice {
   int key = 0, octave = 0, pc = 0, slots = 1, mip = 0, screen = 0;
   int64_t born = 0;
   double vel = 0, after = 0, depth = 0, depthNow = 0, push = 0, pushNow = 0;
+  Held hold; // its key's own pressure, once it comes, sets its depth in place of the strike (forte/press.h)
   double mirror = 0, rise = 0, fall = 0; // the mirror's place across the spot (0 out, 1 in) and its steps a sample
   double arc = 1, arcStep = 0;           // the damping arc: the slot's length left
   int slot = -1;                         // the slot now in the window, and its cutting errors
@@ -67,6 +69,12 @@ class CellulophoneEngine : public Engine {
   void start(Voice &v);
   double mirrorLight(double m) const;
   int maxVoices() const { return pick(kKeys, 24, 12); }
+  // how much of the beam a key's screen lets through: the strike's share (Touch), and aftertouch
+  // opening it the rest of the way; once the key's own pressure comes it stands in for the strike too
+  double depthOf(const Voice &v) const {
+    const double d = 1 - touch + touch * v.hold.vel(v.vel, v.after);
+    return d + (1 - d) * v.after;
+  }
 
   std::array<double, p::count> P{};
   bool hasP = false;

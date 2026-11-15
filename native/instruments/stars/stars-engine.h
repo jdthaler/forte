@@ -21,6 +21,7 @@
 #include "forte/background.h"
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "stars-model.h"
 #include "stars-params.h"
@@ -76,6 +77,8 @@ class StarEngine : public Engine {
     std::array<double, MAX_MODES> W{}, C{}, S{}, RHO{}, A1{}, A2{}, Y1{}, Y2{}, G{}, GT{}, AMP{}, ETA{};
     double gl = 0, gr = 0, lift = 1; // lift: the played modes' gain, for the power of those trimmed
     double vel = 0.7, pressure = 1, age = 0, fade = 1, peak = 1e-12, level = 0;
+    Held hold; // its own pressure, once it comes, drives it in place of the strike (forte/press.h)
+    double driven() const { return hold.vel(vel, pressure - 1) * pressure; } // the convection's drive over the knob's
     double tail = 0, tailT = 0; // a slow lift (forte/lift.h): the convection's driving, dying away over tailT s
     double bent = 1; // its Doppler factor: its orbit in a binary, toward us or away (a note's own bend)
     double spin = 1; bool slid = false; // the rotation it turns at (the knob's, or its slide's), and whether a slide moves it

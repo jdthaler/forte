@@ -79,6 +79,7 @@ class CelestaEngine : public Engine {
     // the box takes the fundamental's energy and radiates it)
     Press press;
     Sustainer sus;
+    double struckAt = 0; // its last strike's velocity (0 … 1)
     bool tuneNow = false;
     double sigEff = 0;
     double bent = 1; // its modes × this (a note's own bend: a finger on the bar)

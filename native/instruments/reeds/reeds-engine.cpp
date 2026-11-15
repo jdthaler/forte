@@ -93,8 +93,9 @@ void ReedEngine::Voice::aim(double at) {
 
 // Press: a sustainer, a driver coil under the reed's tip fed from the pickup. Tuned on the reed's
 // fundamental (its lowest mode the slot hears) as the hammer leaves: a full press holds the tip's
-// swing there at HOLD times what the blow gave it (forte/press.h Sustainer).
-constexpr double HOLD = 1.6;
+// swing there at HOLD times what the hardest blow (MIDI's 127: HAMMER_VMAX) gives it, however hard
+// it was struck (forte/press.h Sustainer).
+constexpr double HOLD = 1;
 void ReedEngine::Voice::tuneSustainer() {
   double top = 0;
   for (int i = 0; i < N; i++) top = std::max(top, std::fabs(pk[i]));
@@ -102,7 +103,7 @@ void ReedEngine::Voice::tuneSustainer() {
   for (int i = 0; i < N; i++) if (std::fabs(pk[i]) >= 0.1 * top && (f < 0 || om[i] < om[f])) f = i;
   if (f < 0) return;
   const double B = twoPoleAmplitude(q[f], q1[f], a1[f], a2[f]);
-  sus.tune(sig[f], pk[f], om[f] / TAU, std::fabs(pk[f]) * om[f] * B, HOLD, 1 / k);
+  sus.tune(sig[f], pk[f], om[f] / TAU, hardest(std::fabs(pk[f]) * om[f] * B, struckAt, HAMMER_VMAX), HOLD, 1 / k);
 }
 
 void ReedEngine::Voice::kill(const ReedEngine &eng) {
@@ -112,6 +113,7 @@ void ReedEngine::Voice::kill(const ReedEngine &eng) {
 
 // Launch the hammer from just below the reed's current position at speed v.
 void ReedEngine::Voice::strike(double v) {
+  struckAt = v;
   if (N != Nall) { N = Nall; stopFor(N); } // every mode takes the blow
   double uu = 0;
   for (int i = 0; i < N; i++) uu += w[i] * q[i];

@@ -25,6 +25,7 @@
 #include "forte/dsp.h"
 #include "forte/engine.h"
 #include "forte/lift.h"
+#include "forte/press.h"
 #include "forte/expression.h"
 #include "forte/tuning.h"
 #include "ondes-model.h"
@@ -43,6 +44,7 @@ struct Voice {
   int64_t born = 0;
   double liftK = 1; // how many times longer than usual the intensity key takes to let go (forte/lift.h)
   double vel = 0, after = 0, F = 0, aPress = 0, aLift = 0; // the intensity key's force (N), and how fast it follows
+  Held hold; // Strike its attack, Press the intensity key once its own pressure comes (forte/press.h)
   double g0 = 0, g1 = 0;            // its gain at the chunk's start and end
   double u = 0, uTo = 0, uRate = 0; // log₂ of the note's frequency: the ribbon slides it to uTo at uRate per second
   double bend = 1, vib = 0;         // its own bend and vibrato depth (MPE), gliding
