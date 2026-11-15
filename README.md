@@ -507,8 +507,13 @@ Forte works offline. On the first visit the browser keeps a copy of the
 whole site in the background (about 5 MB to download), so from then on
 every instrument opens and plays without a network: on a plane, say, or
 from the home-screen app. Only the front page's demos need a connection. A
-new release downloads in the background too, just the files that changed,
-and takes over the next time you move from one page to another.
+new release downloads in the background too, just the files that changed.
+It takes over the next time you move from one page to another, or by itself
+with a reload as soon as nobody is using the page: when it is in the
+background, or freshly opened, and no key is held, no sound still rings and
+no song, tour or rhythm is playing. Meanwhile a note at the bottom says a new
+version is ready, with **Reload** to take it at once; after a reload of its
+own, the page says Forte was updated.
 
 ## Plugins
 
