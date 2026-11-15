@@ -49,7 +49,10 @@ export async function wasmModel() {
       return { f, fwhm: w, speed };
     },
     line: (f, f0, fwhm) => x.breitwigner_line(f, f0, fwhm),
-    heard: (f, f0, fwhm, phase) => x.breitwigner_heard(f, f0, fwhm, phase),
+    // what a source of 1 a second makes from nothing in a time t (s), in a state of full width fwhm (Hz)
+    formed: (t, fwhm) => x.breitwigner_formed(t, fwhm),
+    // the power spectrum of what is heard, made at once (formation 0) or by a source formation s long
+    heard: (f, f0, fwhm, formation = 0) => x.breitwigner_heard(f, f0, fwhm, formation),
   };
 }
 

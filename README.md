@@ -350,7 +350,7 @@ and the RISE 2; Chrome and Edge only (Safari has no Web MIDI).
 | Pulsars | Magnetic inclination · Sightline · Pulse-to-pulse jitter | Observing frequency | Dispersion measure |
 | Singing Dunes | Sorting · Water in the sand · Avalanche speed | Collision length | Push |
 | NMR Spin Echo | Pulse angle · T₂ · Receiver noise | Echo time | Field inhomogeneity (shim) |
-| Breit-Wigner Keyboard | Width grows as Mⁿ · Key-up channel Γ₂ · Press channel Γ₃ | Phase at birth | Width Γ/M |
+| Breit-Wigner Keyboard | Width grows as Mⁿ · Key-up channel Γ₂ · Press production | Formation time | Width Γ/M |
 
 </details>
 

@@ -1,7 +1,7 @@
 forte breitwigner 0.1.0
 width 0.002
 power 0
-phase 0
+formation 0
 release 6
 press 1.5
 room 0.25
@@ -26,4 +26,4 @@ glideOn 1
 slideOn 1
 pressOn 1
 liftOn 1
-preset 11
+preset 13

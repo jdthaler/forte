@@ -42,14 +42,35 @@ double line(double f, double f0, double fwhm) {
   return h * h / (d * d + h * h);
 }
 
-// ∫₀^∞ e^(−at) sin(wt + φ) e^(−iωt) dt = ((a + iω) sin φ + w cos φ) / ((a + iω)² + w²), with
-// a = π·fwhm and w = 2π·f0; times 2a, its size is 1 at a narrow line's peak.
-double heard(double f, double f0, double fwhm, double phase) {
-  const double a = TAU / 2 * fwhm, w = TAU * f0, o = TAU * f;
-  const double sn = fd::sin(phase), cs = fd::cos(phase);
-  const double nr = a * sn + w * cs, ni = o * sn;
-  const double dr = a * a - o * o + w * w, di = 2 * a * o;
-  return 4 * a * a * (nr * nr + ni * ni) / (dr * dr + di * di);
+double formed(double t, double fwhm) {
+  const double a = TAU / 2 * fwhm;
+  return a * t > 1e-9 ? -fd::expm1(-a * t) / a : t; // (to first order in at below)
+}
+
+namespace {
+struct C { double re, im; };
+C div(C x, C y) { const double d = y.re * y.re + y.im * y.im; return {(x.re * y.re + x.im * y.im) / d, (x.im * y.re - x.re * y.im) / d}; }
+} // namespace
+
+// The amplitude ψ(t) = ∫ source · propagator turning at w = 2π·f0, with a = π·fwhm, has the
+// transform Ψ(Ω) = S(Ω − w) / (a + i(Ω − w)): S = 1 for a state made at once, and for a source of
+// strength s running from 0 to T, s(1 − e^(−iδT))/(iδ) = sT·e^(−iδT/2)·sinc(δT/2). What is heard
+// is Im ψ = (ψ − ψ̄)/2i, whose transform is (Ψ(Ω) − conj Ψ(−Ω))/2i; times 2a, its size is 1 at a
+// narrow line's peak.
+double heard(double f, double f0, double fwhm, double formation) {
+  const double a = TAU / 2 * fwhm, w = TAU * f0, o = TAU * f, T = std::max(0.0, formation);
+  const double sT = T > 0 ? T / formed(T, fwhm) : 1; // the source's strength times its length
+  const auto psi = [&](double d) {
+    C S{1, 0};
+    if (T > 0) {
+      const double x = d * T / 2, sinc = std::abs(x) < 1e-4 ? 1 - x * x / 6 : fd::sin(x) / x;
+      S = {sT * sinc * fd::cos(x), -sT * sinc * fd::sin(x)};
+    }
+    return div(S, C{a, d});
+  };
+  const C p = psi(o - w), q = psi(-o - w);
+  const double re = p.re - q.re, im = p.im + q.im; // Ψ(Ω) − conj Ψ(−Ω)
+  return a * a * (re * re + im * im);
 }
 
 } // namespace forte::breitwigner
