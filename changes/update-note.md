@@ -1,4 +1,0 @@
-# a new version says so, and reloads itself when nobody is playing
-
-### Forte (minor)
-- **A new version of Forte says it is ready, and comes in by itself:** once a new release has downloaded in the background, every page reloads into it as soon as nobody is using it: in the background (another tab or app in front, and no MIDI playing it from there), or freshly opened; and only while no key or pedal is held, no sound still rings, and no song, tour, rhythm or dialog is going. It takes over when every page open can move to it, so no page mixes two releases. Until then a note at the bottom of the page says a new version is ready, with **Reload** to take it at once (a page still in use elsewhere then says Forte was updated in another tab, and reloads as soon as it can). After a reload of its own, a page says Forte has been updated, with what's new. Not in a plugin's window.

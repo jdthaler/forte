@@ -16,6 +16,70 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-11-15 — the Breit-Wigner Keyboard's states formed, not struck; a drawer for the MIDI devices; Presets and Morph together; Press makes a note more, never less; a new version says so, and reloads itself when nobody is playing
+
+### Forte 0.52.0
+- **A second drawer, at the right, for the MIDI devices,** on every instrument page and the Combinations page where the browser has Web MIDI (Chrome, Edge, Firefox; not Safari, iPhone or iPad). It lists the devices plugged in, each with a lamp that lights as it plays (a Seaboard marked MPE, an FC-300's interface marked so), then a Seaboard RISE's panel and an FC-300's, then the MIDI settings (Touch, MPE, Octave, Transpose), which leave the drawer at the left. With MIDI off it says so and has its own *Enable MIDI*.
+- It folds to a rail as the left one does, and the MIDI status in the header opens it. On a desktop it stays as you leave it: at first open once a device is plugged in, and folded in Perform. In a narrower window it opens over the views, and on a phone it is a sheet from the right, opened by the MIDI status; over the page, one drawer opens at a time.
+- **Morph is part of the Presets section:** a Morph switch beside the Presets heading, in the drawer of every page and in the plugins' and the Forte app's window. Off, the Presets menu plays one preset, as it always has; on, the menu is the preset you morph from, and To, the slider and Keep this mix appear under it.
+- **Switching Morph off goes back to the From preset.** **Keep this mix** switches it off instead leaving the sound, and every control, where the slider put it: a new mix to change or to save as a preset.
+- Choosing a preset always makes it the one Morph starts from, with the slider at 0 % (choosing To's preset no longer jumps the slider to 100 %), on the pages and in the plugins. An FC-300's EXP 2 switches Morph on as it moves it, and so does a song's automation of Morph in a plugin's window.
+- **A new version of Forte says it is ready, and comes in by itself:** once a new release has downloaded in the background, every page reloads into it as soon as nobody is using it: in the background (another tab or app in front, and no MIDI playing it from there), or freshly opened; and only while no key or pedal is held, no sound still rings, and no song, tour, rhythm or dialog is going. It takes over when every page open can move to it, so no page mixes two releases. Until then a note at the bottom of the page says a new version is ready, with **Reload** to take it at once (a page still in use elsewhere then says Forte was updated in another tab, and reloads as soon as it can). After a reload of its own, a page says Forte has been updated, with what's new. Not in a plugin's window.
+
+### Ribbon Piano 0.15.0
+- **Press sustains:** a firm press into a held key (aftertouch, a Seaboard's Press) drives a sustainer over its strings where the hammer struck, an EBow on a piano: the note swells and holds while it is pressed, instead of being damped. A finger resting on the key (up to half pressure) still does nothing. The presets keep Press on.
+
+### Harpsichord 0.11.0
+- **Press sustains:** a firm press drives a sustainer over the held note's strings where the quills plucked them, which swell and hold, instead of a hand damping them. The presets keep Press on.
+
+### Vibraphone 0.12.0
+- **Press bows the bar:** a firm press draws a bow across the held note's bar, which swells and holds, instead of damping it.
+
+### Carillon 0.9.0
+- **Press plays a tremolo:** a firm press sets the clapper striking the bell again and again, as hard as it is pressed, instead of damping it.
+
+### Celesta 0.7.0
+- **Press sustains:** a firm press drives a sustainer on the bar, which swells and holds, instead of damping it.
+
+### Kalimba 0.6.0
+- **Press sustains:** a firm press drives a sustainer on the tine, which swells and holds, instead of damping it.
+
+### Steel Pan 0.7.0
+- **Press rolls:** a firm press rolls the held note, as hard as it is pressed, instead of damping it.
+
+### Marimba and Xylophone 0.3.0
+- **Press rolls:** a firm press rolls the held note, the mallets in turn, as hard as it is pressed, instead of damping it.
+
+### Gamelan 0.3.0
+- **Press rolls:** a firm press rolls the held note, as hard as it is pressed, instead of the player's hand damping it.
+
+### Tubular Bells 0.3.0
+- **Press rolls:** a firm press rolls the tube with two mallets in turn, as hard as it is pressed, instead of damping it.
+
+### Electric Grand 0.13.0
+- **Press sustains:** a firm press drives a sustainer over the held note's strings, which swell and hold, instead of damping them. The presets keep Press on.
+
+### Tine Piano 0.14.0
+- **Press sustains:** a firm press drives a sustainer on the tine, which swells and holds, instead of damping it. The presets keep Press on.
+
+### Reed Piano 0.13.0
+- **Press sustains:** a firm press drives a sustainer on the reed, which swells and holds, instead of damping it. The presets keep Press on.
+
+### Sticky-Pad Piano 0.12.0
+- **Press sustains:** a firm press drives a sustainer on the reed, which swells and holds, instead of damping it. The presets keep Press on.
+
+### Gong Keyboard 0.13.0
+- **Press rolls:** a firm press rolls the gong with soft mallets, as hard as it is pressed, instead of damping it.
+
+### Spring Keyboard 0.9.0
+- **Press sustains:** a firm press drives a sustainer on each of the note's springs, on its strongest mode near the note, which swells and holds, instead of damping it.
+
+### Breit-Wigner Keyboard 0.2.0
+- **Formation time in place of Phase at birth.** Phase at birth only added a click: the phase of a lone decaying sine is heard only as the jump at its start. The new control is how long a held key's source feeds its state (0 to 1 s). At 0 a state is made at once, as before; longer, the note swells for that long, or until the key comes up, then decays as it did. A state that lives shorter than the source holds a steady tone while formation balances decay, so a ρ becomes a held tone rather than a thud. Nothing clicks at any length: above 2 kHz a Z formed over 5 ms has under 1 % of a strike's energy.
+- The engine feeds each state with a second complex number turning with it, exactly over each sample, as the decay already was; the README's new section, *Formed, not struck*, has the physics (a source T long carries energies about 1/T wide, so the note's line is the Breit–Wigner line times sinc²), and the tests check every sample, held and let go, and the spectrum against a numerical integral. A press (Press production) keeps making the state once the key's source has stopped.
+- The *Born at its peak* preset, tour stop and demo give way to *Formed slowly: the η′ swells for 0.3 s, then rings* and *A ρ fed while held*, a tour stop *Formed, not struck*, and a demo of the three. The Seaboard RISE's pad moves the Formation time along X. Songs saved with the 0.1.0 plugin lose their Phase at birth and their preset's place in the list (fine below 1.0); the plugin tests' saved state is rewritten to match.
+- **Press keeps making the state:** a firm press drives the held note's state at its own energy, as a beam would, so it swells and holds, instead of opening a third decay channel. **Press channel Γ₃** is now **Press production**, how many times the struck amplitude a full press builds to (1.5× by default). A song saved with 0.1.0 opens with it at its most, 3×.
+
 ## 2026-11-12 — the Breit-Wigner Keyboard
 
 ### Forte 0.51.0

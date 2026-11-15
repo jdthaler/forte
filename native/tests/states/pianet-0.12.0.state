@@ -1,4 +1,4 @@
-forte pianet 0.11.0
+forte pianet 0.12.0
 tack 0.25
 rate 0.59999999999999998
 padK 0.59999999999999998
@@ -34,6 +34,6 @@ cents11 0
 strikeOn 1
 glideOn 1
 slideOn 1
-pressOn 0
+pressOn 1
 liftOn 1
 preset 12

@@ -1,4 +1,4 @@
-forte piano 0.14.1
+forte piano 0.15.0
 material 0
 shape 0
 aspect 12
@@ -54,6 +54,6 @@ cents11 0
 strikeOn 1
 glideOn 0
 slideOn 1
-pressOn 0
+pressOn 1
 liftOn 1
 preset 16

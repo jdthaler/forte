@@ -1,18 +1,16 @@
-forte marimba 0.2.1
-kind 0
-depth 1
-eta 0.0011999999999999999
-tubes 1
-gap 25
-detune 0
-offset 0
-hardness 300
-mass 14
-strike 0.41999999999999998
-across 0.10000000000000001
-speedMax 3
-roll 0
-rollRate 12
+forte kalimba 0.6.0
+back 1.1200000000000001
+thick 1.2
+t60 6
+damping 0.80000000000000004
+fullRange 0
+pluck 0.90000000000000002
+thumb 0.59999999999999998
+ring 1
+box 0.88
+hole 25
+cover 0
+buzz 2
 room 0.25
 venue 1
 volume 0.80000000000000004
@@ -35,4 +33,4 @@ glideOn 0
 slideOn 1
 pressOn 1
 liftOn 0
-preset 15
+preset 11
