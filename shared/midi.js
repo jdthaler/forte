@@ -225,6 +225,17 @@ function foot(fn) {
 const FOOT = 'forte/fc300/v1';
 const footName = () => { try { return JSON.parse(localStorage.getItem(FOOT) || '{}')?.name ?? null; } catch { return null; } };
 
+// A device playing the page (a channel message: not its clock or active sensing) tells
+// shared/boot.js, which holds back a reload into a new release of Forte while someone plays,
+// even from another window; at most four times a second
+let stirred = -Infinity;
+function stir() {
+  const t = performance.now();
+  if (t - stirred < 250) return;
+  stirred = t;
+  document.dispatchEvent?.(new Event('forte-activity'));
+}
+
 // A Seaboard's panel (shared/rise.js), loaded the first time one connects; fn(panel) once it is
 // there, each in the order it came (a message is drawn after the connection that brought it)
 let risen = null;
@@ -268,6 +279,7 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
         if (inp.name && inp.name === footName()) footed(inp); // the FC-300 came by this interface before
         inp.onmidimessage = (ev) => {
           const d = ev.data;
+          if (d[0] >= 0x80 && d[0] < 0xf0) stir();
           lamp(inp.id, d);
           if (board) rise((r) => r.midi(inp.id, d));
           if (board && (d[0] & 0xf0) === 0xc0) { // its preset arrows: a step from the preset playing

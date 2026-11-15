@@ -627,7 +627,7 @@ body.no-midi :is(#midi-btn, #midi, #midi-menu) { display: none; }
 
 /* toasts: announced, never in the way of the keys */
 /* over the sticky bars, the controls' and the keys' (a phone's controls' bar sits right where it shows), and the drawer */
-body[data-instrument] #toast { z-index: 45; pointer-events: none; bottom: calc(var(--footer-h, calc(var(--kb-h, 115px) + 52px)) + 12px); max-width: min(90vw, 560px); }
+body[data-instrument] #toast { z-index: 45; pointer-events: none; bottom: calc(var(--footer-h, calc(var(--kb-h, 115px) + 52px)) + 12px); max-width: min(90vw, 560px); margin-bottom: var(--forte-update-h, 0px); } /* (above a new release's note: shared/boot.js) */
 
 /* ---- phones (portrait, or landscape under 500px tall): no room to share, so the page
    scrolls (and Safari can tuck its toolbars away) under the header, which sticks to the top:

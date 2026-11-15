@@ -57,7 +57,7 @@
 //   { type: 'noteBend', key, value }, { type: 'slide', key, value } and pressure: midi.js pageMpe)
 //   onParam(id, value, P, param, dragging)   id = '*' after a preset or reset
 
-import { createChain } from './chain.js';
+import { createChain, ringing } from './chain.js';
 import { createKeyboard } from './keyboard.js';
 import { trimGain, paramsStore } from './registry.js';
 import { controlOwns, unfocus } from './focus.js';
@@ -237,6 +237,10 @@ export function createShell(cfg) {
     const off = () => { shell.post({ type: 'noteOff', key, velocity }); cfg.onNoteOff?.(key); };
     if (shell.audio) off(); else if (starting) starting.then(off, () => {});
   }
+  // a reload into a new release of Forte (shared/boot.js) waits while a key or the pedal is held, or the sound rings
+  document.addEventListener('forte-can-reload', (e) => {
+    if (sounding.size || latched.size || shell.sustain || ringing(shell.audio?.ctx, shell.audio?.analyser)) e.preventDefault();
+  });
   const setSostenuto = (on) => { for (const k of sost.set(on, [...sounding.keys(), ...latched])) if (!sounding.has(k)) release(k); };
   shell.noteOn = down; shell.noteOff = up;
   shell.activeKeys = () => [...new Set([...sounding.keys(), ...latched, ...sost.keys()])].sort((a, b) => a - b);

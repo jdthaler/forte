@@ -419,6 +419,8 @@ export function attachBacking(shell, { id, styles = ['pulsetube'], about = {}, s
 
   // ---- the sequencer: a look-ahead clock that schedules each step on the audio clock --------------
   let running = false, armed = false, fill = false, inFill = false, chord = null;
+  // a reload into a new release of Forte (shared/boot.js) waits while the rhythm plays, or waits for a key
+  document.addEventListener('forte-can-reload', (e) => { if (running || armed) e.preventDefault(); });
   let bus = null, kit = null, surf = null, timer = 0, step = 0, nextT = 0, t0 = 0;
   async function start() {
     if (running) return;
