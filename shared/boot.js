@@ -183,7 +183,7 @@
   var found = function () { if (reg && reg.waiting && reg.active) { ready = true; keepTrying(); } };
   var watch = function (w) { w.addEventListener('statechange', function () { if (w.state === 'installed') found(); }); };
   addEventListener('load', function () {
-    SW.register(sw).then(function (r) {
+    navigator.serviceWorker.register(sw).then(function (r) {
       reg = r;
       if (r.installing) watch(r.installing);
       r.addEventListener('updatefound', function () { if (r.installing) watch(r.installing); });

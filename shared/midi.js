@@ -232,7 +232,7 @@ function stir() {
   const t = performance.now();
   if (t - stirred < 250) return;
   stirred = t;
-  document.dispatchEvent(new Event('forte-activity'));
+  document.dispatchEvent?.(new Event('forte-activity'));
 }
 
 // A Seaboard's panel (shared/rise.js), loaded the first time one connects; fn(panel) once it is
