@@ -697,7 +697,7 @@ function placeControls() {
 // The presets menu offers "Default settings", which presses the page's Reset.
 function addDefaults() {
   const ps = document.querySelector('#preset'), reset = document.querySelector('#reset');
-  const blank = ps && [...ps.options].findIndex((o) => o.value === ''); // "Presets…", once the page has filled the menu
+  const blank = ps && [...ps.options].findIndex((o) => o.value === ''); // "Custom configuration", once the page has filled the menu
   if (!reset || !(blank >= 0) || ps.querySelector('option[value="__default"]')) return;
   ps.add(new Option('Default settings', '__default'), ps.options[blank + 1] ?? null);
 }

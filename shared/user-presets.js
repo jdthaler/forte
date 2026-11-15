@@ -7,9 +7,11 @@
 //                              a link that opens the page with them (shared/presets.js)
 //   Your presets and files…    the list (play, link, save to a file, delete), and opening a
 //                              preset file, which the plugins' Presets menu reads and writes too
-// Opening a link made that way applies its settings and takes them off the address. It also puts
-// the Scala file button under the Temperament control (shared/tuning-ui.js), and Morph, a switch
-// beside the menu that slides from its preset to another (shared/morph.js).
+// Opening a link made that way applies its settings and takes them off the address. The menu
+// names the preset the sound is, whichever way it got there, or else says Custom configuration
+// (a control moved since, a link's settings). It also puts the Scala file button under the
+// Temperament control (shared/tuning-ui.js), and Morph, a switch beside the menu that slides
+// from its preset to another (shared/morph.js).
 //
 //   attachPresets({ instrument: INSTRUMENT, get: () => P, set: (values) => …, defaults: DEFAULTS, toast })
 // get gives the page's parameters (for the organ, P with its console); values() turns them into
@@ -17,15 +19,15 @@
 // as choosing a preset would. defaults is the page's P before a preset's own values (a factory
 // preset is { ...defaults, ...preset.p }); without it, the parameters' defaults. toast is the
 // page's. pageState (below) hands them to a guided tour. It returns { params, open, copyLink,
-// scala, morphing, moved }: morphing() whether Morph is on (the menu then names the preset it
-// morphs from, so a control moved by hand leaves it, and moved() says so).
+// scala, moved }: moved() after a control moves by hand (the menu then names the preset the sound
+// is, or with Morph on the top, which is now the sound as it is).
 
 import { unfocus } from './focus.js';
 import { presetParams, presetFile, readPresetFile, linkHash, readLinkHash, complete, cleanName } from './presets.js';
 import { byId, INSTRUMENTS } from './registry.js';
 import { sheet, show } from './notes.js';
 import { attachScala } from './tuning-ui.js';
-import { attachMorph } from './morph.js';
+import { attachMorph, CUSTOM } from './morph.js';
 
 const NAMES = Object.fromEntries(INSTRUMENTS.map((i) => [i.id, i.name]));
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -40,7 +42,7 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, defa
   const sel = document.querySelector('#preset');
   if (!sel) return null;
   const params = presetParams(I);
-  Object.assign(pageState, { instrument: I, params, get: () => complete(params, values(get())), set });
+  Object.assign(pageState, { instrument: I, params, get: () => complete(params, values(get())), set: (v, o) => { set(v, o); changed(); } });
   const reg = byId(I.id);
   const name = reg?.name ?? I.name ?? I.id;
   const STORE = `forte/${I.id}/presets/v1`;
@@ -71,20 +73,52 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, defa
     yours.replaceChildren(...mine.map((pr, i) => new Option(pr.name, USER + i)));
     if (mine.length) sel.insertBefore(yours, actions); else yours.remove();
     sel.value = [...sel.options].some((o) => o.value === v) ? v : '';
-    morphing?.refresh();
+    if (morphing) { morphing.refresh(); rename(); }
   }
   menu();
-  // the menu's value before a pick, so an action leaves it as it was (a page empties it when a
-  // parameter moves, so it names a preset only while the sound is that preset's)
+  // the menu's value before a pick, so an action leaves it as it was
   let before = sel.value;
   const note = () => { if (!sel.value.startsWith('__')) before = sel.value; };
   for (const ev of ['focus', 'pointerdown', 'keydown', 'change']) sel.addEventListener(ev, note);
-  // the name of the preset playing now, if the sound is still a preset's
-  const current = () => {
-    if (morphing && !morphing.exact()) return ''; // a mix of two, or moved from the one the menu names
-    const o = [...sel.options].find((x) => x.value === before);
-    return before === '' || before === '__default' || !o ? '' : o.text;
+
+  // ---- which preset the sound is -----------------------------------------------------------------
+  // Each preset by a key: 'default' (Default settings), 'f:<index>' (the instrument's) or
+  // 'u:<name>' (yours). The sound is a preset's when every parameter is as the preset has it, but
+  // those a preset leaves as they are (I.keep: the volume, the room…) unless it sets them itself.
+  const base = defaults ?? Object.fromEntries(params.map((p) => [p.id, p.def]));
+  const factory = (I.presets ?? []).map((pr) => ({ name: pr.name, values: complete(params, values({ ...base, ...pr.p })), sets: new Set(Object.keys(pr.p ?? {})) }));
+  const plain = complete(params, values(base)), kept = new Set(I.keep ?? []);
+  const book = {
+    factory: factory.length,
+    keys: () => ['default', ...factory.map((_, i) => `f:${i}`), ...mine.map((pr) => `u:${pr.name}`)],
+    valuesOf: (key) => (key === 'default' ? plain : key?.startsWith('f:') ? factory[+key.slice(2)]?.values : key?.startsWith('u:') ? mine[find(key.slice(2))]?.values : undefined),
+    nameOf: (key) => (key === 'default' ? 'Default settings' : key?.startsWith('f:') ? factory[+key.slice(2)]?.name ?? '' : key?.startsWith('u:') ? key.slice(2) : ''),
+    // the key of the preset whose sound these values are (prefer tried first), or null
+    match: (v, prefer) => [prefer, ...book.keys()].find((k) => k && k !== CUSTOM && is(v, k)) ?? null,
   };
+  const same = (a, b) => a === b || (typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(a), Math.abs(b)))
+    || (typeof a === 'object' && typeof b === 'object' && JSON.stringify(a) === JSON.stringify(b));
+  function is(v, key) {
+    const w = book.valuesOf(key), sets = key.startsWith('f:') ? factory[+key.slice(2)]?.sets : null;
+    return !!w && params.every((p) => (kept.has(p.id) && !sets?.has(p.id)) || same(v[p.id], w[p.id]));
+  }
+  const keyOf = (v) => (v === '__default' ? 'default' : /^\d+$/.test(v) ? `f:${v}` : v.startsWith(USER) && mine[+v.slice(USER.length)] ? `u:${mine[+v.slice(USER.length)].name}` : null);
+  // The menu names the preset the sound is (prefer: the one to try first, as two may be alike), or
+  // with Morph on the top, or else says Custom configuration: its blank, out of the list otherwise.
+  const blank = sel.querySelector('option[value=""]');
+  if (blank) { blank.disabled = true; sel.addEventListener('change', () => { blank.hidden = sel.value !== ''; }); }
+  function rename(prefer = keyOf(sel.value)) {
+    const key = morphing?.on() ? morphing.top() : book.match(now(), prefer);
+    const k = key?.startsWith('u:') ? find(key.slice(2)) : -1;
+    const v = key === 'default' ? '__default' : key?.startsWith('f:') ? key.slice(2) : k >= 0 ? USER + k : '';
+    sel.value = [...sel.options].some((o) => o.value === v) ? v : '';
+    before = sel.value;
+    if (blank) blank.hidden = sel.value !== '';
+  }
+  // the values changed some other way than by a preset: with Morph on the top is the sound as it is
+  function changed() { morphing?.moved(); rename(); }
+  // the name of the preset playing now, if the sound is a preset's
+  const current = () => { const k = book.match(now(), keyOf(before)); return k && k !== 'default' ? book.nameOf(k) : ''; };
 
   // Before the page's own listener and layout.js's: these choices are not factory presets.
   document.addEventListener('change', (e) => {
@@ -99,13 +133,12 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, defa
     else if (v === '__mine') openSheet({});
   }, true);
 
-  function play(pr, shown = true) {
+  function play(pr) {
     if (!pr) return;
     set(complete(params, pr.values), { swap: true });
     const k = mine.indexOf(pr);
-    sel.value = shown && k >= 0 ? USER + k : '';
-    before = sel.value;
     if (k >= 0) morphing?.picked(`u:${pr.name}`);
+    rename(k >= 0 ? `u:${pr.name}` : null);
   }
 
   // ---- links ---------------------------------------------------------------------------------------
@@ -122,7 +155,7 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, defa
     if (!got) return;
     history.replaceState(null, '', location.pathname + location.search);
     set(got.values, { swap: true });
-    sel.value = ''; before = '';
+    changed();
     toast(`Playing ${got.name ? `“${got.name}”` : 'the settings from the link'}. To keep them, save them from the Presets menu.`);
   }
   window.addEventListener('hashchange', fromLink);
@@ -189,7 +222,7 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, defa
       if (k >= 0) mine[k] = entry; else { mine.push(entry); k = mine.length - 1; }
       if (!store()) return;
       menu();
-      sel.value = USER + k; before = sel.value;
+      rename(`u:${n}`);
       d.close();
       toast(`Saved “${n}” in this browser.`);
     });
@@ -202,9 +235,7 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, defa
       else if (act === 'file') download([mine[k]], `${name} - ${mine[k].name}`);
       else if (act === 'delete') {
         if (!confirm(`Delete your preset “${mine[k].name}”?`)) return;
-        const wasShown = sel.value === USER + k;
         mine.splice(k, 1); store(); menu(); list();
-        if (wasShown) { sel.value = ''; before = ''; }
       } else if (act === 'open') picker.click();
       else if (act === 'all') { if (mine.length) download(mine, `${name} presets`); else say('There are no presets of yours to save yet.'); }
       else if (act === 'copy') {
@@ -251,23 +282,14 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, defa
   }
 
   // ---- Morph: a slider from one preset to another (shared/morph.js) --------------------------------
-  const base = defaults ?? Object.fromEntries(params.map((p) => [p.id, p.def]));
-  const factory = (I.presets ?? []).map((pr) => ({ name: pr.name, values: complete(params, values({ ...base, ...pr.p })) }));
-  morphing = attachMorph({
-    instrument: I, params, factory, mine: () => mine, now, set, keep: I.keep, toast,
-    naming: () => sel.value !== '',
-    shown: (key) => { // the Presets menu names the preset the morph starts from, or none
-      const k = key?.startsWith('u:') ? find(key.slice(2)) : -1;
-      sel.value = key === 'default' ? '__default' : key?.startsWith('f:') ? key.slice(2) : k >= 0 ? USER + k : '';
-      before = sel.value;
-    },
-  });
+  morphing = attachMorph({ instrument: I, params, book, now, set, keep: I.keep, rename: () => rename(), toast });
   // the instrument's presets and Default settings chosen from the menu (yours go through play)
   document.addEventListener('change', (e) => { if (e.target === sel && /^\d+$/.test(sel.value)) morphing.picked(`f:${sel.value}`); }, true);
-  document.querySelector('#reset')?.addEventListener('click', () => morphing.picked('default'));
+  document.querySelector('#reset')?.addEventListener('click', () => { morphing.picked('default'); rename('default'); });
+  setTimeout(() => rename()); // once the page has finished setting itself up (and the menu has Default settings)
 
   // a Scala file sets the custom temperament (shared/tuning-ui.js), as a preset would
-  const scala = attachScala({ set: (v) => set({ ...now(), ...v }), toast });
+  const scala = attachScala({ set: (v) => { set({ ...now(), ...v }); rename(); }, toast });
 
-  return { params, open: openSheet, copyLink, scala, morphing: () => morphing.on(), moved: () => morphing.moved() };
+  return { params, open: openSheet, copyLink, scala, moved: changed };
 }

@@ -347,6 +347,72 @@ TEST("plugin: Morph takes every parameter part way from one preset to another, k
   for (uint32_t i = 0; i < in.params->count(in.p); i++) if (in.params->get_info(in.p, i, &info) && info.id == in.id("Morph")) break;
   CHECK(info.flags & CLAP_PARAM_IS_AUTOMATABLE);
 }
+TEST("plugin: Morph's top is the sound as it is when the window moves a control (a custom configuration, kept with the state), Swap trades the ends keeping the sound, and the window's menu names the preset the sound is") {
+  Instance in(48000);
+  auto bridge = (const forte::EditorBridge *)in.p->get_extension(in.p, forte::kEditorBridge);
+  auto call = [&](const char *json) { return bridge->call(in.p, json); };
+  auto named = [&] { // poll()'s "named": the preset the parameters are, or -1
+    const std::string r = call("[\"poll\"]");
+    const size_t at = r.find("\"named\": ");
+    return at == std::string::npos ? -9 : std::atoi(r.c_str() + at + 9);
+  };
+  call("[\"describe\"]");
+  CHECK(named() == 0); // Default settings
+  char text[64];
+  CHECK(in.params->value_to_text(in.p, in.id("Morph from"), 2, text, sizeof text) && std::string(text) == "Custom configuration");
+  Events moved;
+  moved.param(0, in.id("Ring time"), 2.5); // a control moved by hand, Morph on
+  in.run(128, 128, moved);
+  CHECK(named() == -1); // Custom configuration
+  call("[\"morphHere\", 0]");
+  Events none;
+  in.run(128, 128, none);
+  CHECK(in.value("Morph from") == 2 && in.value("Morph") == 0 && std::fabs(in.value("Ring time") - 2.5) < 1e-12);
+  Events half;
+  half.param(0, in.id("Morph"), 0.5); // from the custom configuration's 2.5 s to "Long ring"'s 6 s
+  in.run(128, 128, half);
+  CHECK(std::fabs(in.value("Ring time") - std::sqrt(2.5 * 6)) < 1e-9);
+  call("[\"morphSwap\"]");
+  in.run(128, 128, none);
+  CHECK(in.value("Morph from") == 1 && in.value("Morph to") == 2 && in.value("Morph") == 0.5 && std::fabs(in.value("Ring time") - std::sqrt(2.5 * 6)) < 1e-9);
+  Events bottom;
+  bottom.param(0, in.id("Morph"), 1); // all the way down: the custom configuration, which names no preset
+  in.run(128, 128, bottom);
+  CHECK(std::fabs(in.value("Ring time") - 2.5) < 1e-12 && in.value("Preset") == 0 && named() == -1);
+  // a kept parameter moved (the volume) leaves the top as it is
+  call("[\"morphHere\", 1]");
+  in.run(128, 128, none);
+  CHECK(in.value("Morph from") == 1 && in.value("Morph") == 1);
+  // saved and loaded: the custom configuration at the bottom too
+  std::string saved;
+  clap_ostream_t os{&saved, [](const clap_ostream_t *s, const void *b, uint64_t n) -> int64_t { ((std::string *)s->ctx)->append((const char *)b, n); return (int64_t)n; }};
+  CHECK(in.state->save(in.p, &os));
+  CHECK(saved.find("\nmorphTo.decay 2.5\n") != std::string::npos && saved.find("morphFrom.") == std::string::npos);
+  Instance b(48000);
+  struct Reader { std::string s; size_t at = 0; } r{saved};
+  clap_istream_t is{&r, [](const clap_istream_t *s, void *buf, uint64_t n) -> int64_t {
+    auto *r = (Reader *)s->ctx; const size_t k = std::min<size_t>(n, r->s.size() - r->at);
+    std::memcpy(buf, r->s.data() + r->at, k); r->at += k; return (int64_t)k; }};
+  CHECK(b.state->load(b.p, &is));
+  Events top;
+  top.param(0, b.id("Morph"), 0);
+  b.run(128, 128, top);
+  CHECK(std::fabs(b.value("Ring time") - 6) < 1e-12);
+  Events down;
+  down.param(0, b.id("Morph"), 1);
+  b.run(128, 128, down);
+  CHECK(b.value("Morph to") == 2 && std::fabs(b.value("Ring time") - 2.5) < 1e-12);
+  // the top made where the sound is a preset's is that preset
+  Events preset;
+  preset.param(0, in.id("Preset"), 1);
+  in.run(128, 128, preset);
+  CHECK(named() == 1);
+  call("[\"morphSwap\"]");
+  in.run(128, 128, none);
+  call("[\"morphHere\", -1]");
+  in.run(128, 128, none);
+  CHECK(in.value("Morph from") == 1 && in.value("Morph") == 0);
+}
 TEST("plugin: the mod wheel moves its parameter from the default (at rest) to the maximum") {
   Instance in(48000);
   Events ev;
