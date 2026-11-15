@@ -77,7 +77,7 @@ Every other idea only adds, and can come before or after 1.0.
 |------|------|-------|
 | Save your own presets | M | Done: in the Presets menu on every page (kept in the browser, saved to and opened from a file) and in the plugins' window (files in a presets folder per instrument, the same format). |
 | A choice of rooms (reverb) | M | Done: a Venue choice on every page and plugin (Studio, Room, Recital hall, Concert hall, Cathedral), Room, the original, the default. |
-| Morph between two presets | S–M | Done: a Morph group on every page (From, To and a slider; numbers glide, choices and switches change halfway, volume, room and tuning stay) and Morph from, Morph to and Morph in every plugin, so a song can automate the sweep. |
+| Morph between two presets | S–M | Done: a Morph switch in the Presets section of every page and plugin window (on, the Presets menu is From, with To, a slider and Keep this mix under it; numbers glide, choices and switches change halfway, volume, room and tuning stay; off goes back to From) and Morph from, Morph to and Morph in every plugin, so a song can automate the sweep. |
 | Quality or CPU setting | S–M | Done: a Quality choice (High, Medium, Low) on every page and plugin. High sounds exactly as before; Medium and Low play fewer voices, partials or modes and lighten or drop the sympathetic strings, at about 60 % and a third of High's cost on the heavy instruments. A device's setting: in no preset or link, and the page suggests it when the audio drops out. |
 
 ### The site
@@ -91,8 +91,8 @@ Every other idea only adds, and can come before or after 1.0.
 | A guided tour of each instrument's physics | M | Done: *Tour* in the header, a few steps per instrument (`shared/tour.js`, `<slug>-tour.js`). |
 | Accessibility pass | M | Done: every control named for screen readers (symbol buttons, the views' canvases, sliders' values as shown, hints read after a control's name), keyboard focus kept after Enter or Space, a focus ring everywhere, and with Reduce Motion the views step four times a second and nothing slides. The page checks fail on an unnamed control. |
 | Search and filter on the front page | S | Done: a search box on the front page (it forgives a slipped letter, and `/` goes to it), with filters for what sounds (strings, bars and bells, air, circuits, space, particles) and whether the notes ring out or sustain, all kept in the link. |
-| A drawer on every instrument page | S–M | Done: at the left of every page (a column on a desktop, folded to a rail; over the page on a tablet upright; a sheet from the header on a phone), the Presets menu, Morph, a Seaboard RISE's panel while one is plugged in, Output, Tuning, Expression and the MIDI settings. The keys fold away too, from the keyboard bar. |
-| A right-hand drawer | S–M | Decided against for now (2026-11-07): a second drawer narrows the views on every screen. The idea worth trying if it comes back: How it works docked at the right, to read while playing. |
+| A drawer on every instrument page | S–M | Done: at the left of every page (a column on a desktop, folded to a rail; over the page on a tablet upright; a sheet from the header on a phone), the Presets menu with its Morph switch, Output, Tuning and Expression. The keys fold away too, from the keyboard bar. |
+| A right-hand drawer | S–M | Done (2026-11-15), for the MIDI devices, where the browser has Web MIDI: the devices plugged in, each with a lamp as it plays, a Seaboard RISE's panel, an FC-300's, and the MIDI settings; it folds to a rail as the left one does, and the MIDI status opens it. (2026-11-07 it was decided against, as a second drawer narrows the views; folding both answers that.) The idea for another, if it comes: How it works docked at the right, to read while playing. |
 
 ### The plugins and the app
 

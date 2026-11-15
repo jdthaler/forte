@@ -37,7 +37,7 @@ import { rotaryKnob } from './faces.js';
 import { focusedByPointer, unfocus } from './focus.js';
 import { installDropdowns } from './dropdown.js';
 import { inPlugin } from './in-plugin.js';
-import { midiSettings } from './midi.js';
+import { midiSettings, midiDevices } from './midi.js';
 
 const body = document.body;
 installDropdowns(); // what a dropdown opens, as a panel (shared/dropdown.js)
@@ -743,146 +743,192 @@ if (presets) {
   }, true);
 }
 // ---------------------------------------------------------------------------
-// the drawer: at the left of every instrument page, what every instrument has alike. The
-// Presets menu (in Perform it goes above the keys instead), Morph, a Seaboard RISE while one is plugged in (shared/rise.js), the Output, Tuning and
-// Expression groups (moved here from the Controls panel, which keeps the instrument's own), and
-// the MIDI settings (shared/midi.js midiSettings, which the MIDI status opens). Each section folds,
-// as the browser remembers. On a desktop it is a column beside the views and the controls, folded
-// to a rail; in a narrower window (a tablet upright) the rail stays and the drawer opens over the
-// views; on a phone it is a sheet, opened from the header, over all but the keys. Either way the
-// keys stay playable while it is open, to try presets with. Docked, it stays as it was left (in
-// Discover open at first, in Perform folded); over the page, it opens only when asked.
+// the drawers, each folding to a rail. At the left of every instrument page, what every
+// instrument has alike: the Presets menu (in Perform it goes above the keys instead) with Morph's
+// switch at its head and, while Morph is on, To and its slider under it (shared/morph.js), and
+// the Output, Tuning and Expression groups (moved here from the Controls panel, which keeps the
+// instrument's own). At the right, where the browser has Web MIDI, the MIDI devices: those
+// plugged in, each with a lamp that lights as it plays (shared/midi.js midiDevices), a Seaboard
+// RISE's panel while one is plugged in (shared/rise.js), a Roland FC-300's once one is seen
+// (shared/fc300.js), and the MIDI settings (midiSettings); the MIDI status opens it. Each section
+// folds, as the browser remembers. On a desktop each drawer is a column beside the views and the
+// controls, or folded a rail; in a narrower window (a tablet upright) the rails stay and a drawer
+// opens over the views; on a phone it is a sheet over all but the keys, the presets' from the
+// header's button and the MIDI devices' from the MIDI status. Either way the keys stay playable
+// while one is open, to try presets with. Docked, each stays as it was left (at first, in
+// Discover the presets' open and the MIDI devices' open once a device is plugged in; in Perform
+// both folded); over the page, one opens at a time, and only when asked.
 
-const DRAWER = 'forte/drawer/v1';
-const drawerPrefs = (() => {
-  let s = {};
-  try { s = JSON.parse(localStorage.getItem(DRAWER) || '{}') || {}; } catch { /* corrupt */ }
-  const bool = (v, d) => (typeof v === 'boolean' ? v : d);
-  const sections = Object.fromEntries(Object.entries(s.sections && typeof s.sections === 'object' ? s.sections : {}).filter(([, v]) => typeof v === 'boolean'));
-  return { open: bool(s.open, true), perform: bool(s.perform, false), sections };
-})();
-const saveDrawer = () => { try { localStorage.setItem(DRAWER, JSON.stringify(drawerPrefs)); } catch { /* storage unavailable */ } };
 const narrowQuery = matchMedia(inPlugin ? 'not all' : '(max-width: 1099px)'); // as shared/layout.css
 const drawerMode = () => (phoneQuery.matches ? 'sheet' : narrowQuery.matches ? 'over' : 'docked');
-// the groups every instrument has, by their titles, in the drawer's order (Morph: shared/morph.js)
+// the groups every instrument has, by their titles, in the drawer's order
 const SHARED = ['output', 'tuning', 'expression'];
-// each section's place in the drawer, and whether it starts open (a controller's panel, shared/rise.js
-// and the FC-300's, comes after the presets; a key not here goes last, open)
-const SECTIONS = { presets: [10, true], morph: [20, false], rise: [30, true], fc300: [35, true], output: [40, true], tuning: [50, false], expression: [60, false], midi: [70, false] };
+// each drawer's sections: their place in it, and whether each starts open (a key not in either
+// goes last in the presets' drawer, open). A controller's panel comes after the devices plugged in.
+const LEFT = { presets: [10, true], output: [40, true], tuning: [50, false], expression: [60, false] };
+const RIGHT = { devices: [10, true], rise: [30, true], fc300: [35, true], midi: [70, true] };
 const SIDE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5"/></svg>';
 const PANEL = '<svg viewBox="0 0 18 16" aria-hidden="true"><rect x="1.5" y="2" width="15" height="12" rx="2"/><path d="M6.5 2v12M3.4 5.2h1.4M3.4 7.6h1.4M3.4 10h1.4"/></svg>';
-let drawer = null, drawerBody = null, floating = false, drawerOpener = null, drawerFold = null;
-const drawerIsOpen = () => !!drawer && (drawerMode() === 'docked' ? drawerPrefs[performing() ? 'perform' : 'open'] : floating);
-function setDrawer(on) {
-  if (!drawer) return;
-  if (drawerMode() === 'docked') { drawerPrefs[performing() ? 'perform' : 'open'] = on; saveDrawer(); } else floating = on;
-  showDrawer();
+const drawers = [];
+let drawer = null, drawerBody = null; // the presets' drawer, and its body (placeTools, placeDrawer)
+let midiDrawer = null; // the MIDI devices', where there is Web MIDI
+let devicesIn = false; // a MIDI device plugged in (shared/midi.js's forte-midi-devices event)
+
+// a drawer: side 'left' or 'right'; opens() whether it starts open, docked in Discover, until
+// the player opens or folds it (then as they left it); flag the body's class while it is open
+function makeDrawer({ id, side, name, fold: foldText, store, sections, opens, flag }) {
+  let s = {};
+  try { s = JSON.parse(localStorage.getItem(store) || '{}') || {}; } catch { /* corrupt */ }
+  const bool = (v) => (typeof v === 'boolean' ? v : null);
+  const prefs = {
+    open: bool(s.open), perform: bool(s.perform) ?? false,
+    sections: Object.fromEntries(Object.entries(s.sections && typeof s.sections === 'object' ? s.sections : {}).filter(([, v]) => typeof v === 'boolean')),
+  };
+  const aside = el('aside', `forte-drawer forte-drawer-${side}`);
+  aside.id = id;
+  aside.setAttribute('aria-label', name);
+  const head = el('div', 'forte-drawer-head');
+  const fold = button('');
+  fold.className = 'forte-fold forte-drawer-fold';
+  fold.innerHTML = SIDE;
+  fold.setAttribute('aria-controls', id);
+  head.append(el('b', '', name), fold);
+  const inner = el('div', 'forte-drawer-body');
+  aside.append(head, inner);
+  // over the page: a tap outside it (but on the keys) folds it
+  const shade = el('div', 'forte-drawer-shade');
+  if (side === 'left') mainEl.prepend(aside); else mainEl.append(aside);
+  mainEl.prepend(shade);
+  const d = {
+    el: aside, body: inner, side, sections, flag, floating: false, openers: [fold],
+    save: () => { try { localStorage.setItem(store, JSON.stringify(prefs)); } catch { /* storage unavailable */ } },
+    isOpen: () => (drawerMode() === 'docked' ? (performing() ? prefs.perform : prefs.open ?? opens()) : d.floating),
+    set(on) {
+      if (drawerMode() === 'docked') { prefs[performing() ? 'perform' : 'open'] = on; d.save(); } else {
+        d.floating = on;
+        if (on) for (const o of drawers) if (o !== d) o.floating = false; // over the page, one at a time
+      }
+      showDrawers();
+    },
+    show() {
+      const on = d.isOpen(), mode = drawerMode(), was = aside.classList.contains('is-open');
+      aside.classList.toggle('is-open', on);
+      shade.classList.toggle('is-open', on && mode !== 'docked');
+      body.classList.toggle(flag, on);
+      const say = on ? foldText : name;
+      for (const b of d.openers) { b.setAttribute('aria-expanded', String(on)); b.title = say; b.setAttribute('aria-label', say); }
+      inner.inert = !on; // a rail, or a sheet out of sight: nothing in it to reach
+      aside.inert = mode === 'sheet' && !on;
+      return was !== on && mode === 'docked'; // the views and the controls have a new width
+    },
+    // a section: a fold of its own, open as it was left
+    section(key, det) {
+      const [order, open] = sections[key] ?? [80, true];
+      det.dataset.drawer = key;
+      det.dataset.order = String(order);
+      det.classList.add('forte-drawer-section');
+      if (det.tagName === 'DETAILS') {
+        det.open = prefs.sections[key] ?? open;
+        if (!det.dataset.remembers) {
+          det.dataset.remembers = '';
+          det.addEventListener('toggle', () => { prefs.sections[key] = det.open; d.save(); });
+        }
+      }
+      const after = [...inner.children].find((c) => c !== det && +c.dataset.order > order);
+      if (det.parentNode !== inner || det.nextElementSibling !== (after ?? null)) inner.insertBefore(det, after ?? null);
+    },
+  };
+  fold.addEventListener('click', () => { d.set(!d.isOpen()); unfocus(fold); });
+  // folded, the rail opens it wherever it is tapped
+  head.addEventListener('click', (e) => { if (!d.isOpen() && !fold.contains(e.target)) d.set(true); });
+  shade.addEventListener('click', () => d.set(false));
+  drawers.push(d);
+  return d;
 }
-function showDrawer() {
-  if (!drawer) return;
-  const on = drawerIsOpen(), mode = drawerMode(), was = body.classList.contains('drawer-open');
-  body.classList.toggle('drawer-open', on);
+function showDrawers() {
+  const mode = drawerMode();
   for (const m of ['docked', 'over', 'sheet']) body.classList.toggle(`drawer-${m}`, m === mode);
-  const say = on ? 'Fold the presets and settings away' : 'Presets and settings';
-  for (const b of [drawerFold, drawerOpener]) { if (!b) continue; b.setAttribute('aria-expanded', String(on)); b.title = say; b.setAttribute('aria-label', say); }
-  drawerBody.inert = !on; // a rail, or a sheet out of sight: nothing in it to reach
-  if (mode === 'sheet') drawer.inert = !on;
-  else drawer.inert = false;
-  if (was !== on && mode === 'docked') window.dispatchEvent(new Event('resize')); // the views and the controls have a new width
+  let resized = false;
+  for (const d of drawers) resized = d.show() || resized;
+  if (resized) window.dispatchEvent(new Event('resize'));
 }
-// a section of the drawer: a fold of its own, open as it was left
-function drawerSection(key, det) {
-  const [order, open] = SECTIONS[key] ?? [80, true];
-  det.dataset.drawer = key;
-  det.dataset.order = String(order);
-  det.classList.add('forte-drawer-section');
-  if (det.tagName === 'DETAILS') {
-    det.open = drawerPrefs.sections[key] ?? open;
-    if (!det.dataset.remembers) {
-      det.dataset.remembers = '';
-      det.addEventListener('toggle', () => { drawerPrefs.sections[key] = det.open; saveDrawer(); });
-    }
-  }
-  const after = [...drawerBody.children].find((c) => c !== det && +c.dataset.order > order);
-  if (det.parentNode !== drawerBody || det.nextElementSibling !== (after ?? null)) drawerBody.insertBefore(det, after ?? null);
-}
-function details(key, name) {
+function details(name) {
   const det = el('details', 'forte-drawer-own');
-  const sum = el('summary', '', name);
-  det.append(sum);
+  det.append(el('summary', '', name));
   return det;
 }
 // the groups every instrument has, from the Controls panel into the drawer (each time the page
-// builds controls: Morph comes once the presets are ready)
+// builds controls)
 function placeDrawer() {
   if (!drawer || !sidebar) return;
   for (const det of sidebar.querySelectorAll('details.group')) {
     const name = det.querySelector('summary')?.textContent.trim().toLowerCase() ?? '';
-    const key = det.classList.contains('forte-morph') ? 'morph' : SHARED.includes(name) ? name : null;
-    if (key) drawerSection(key, det);
+    if (SHARED.includes(name)) drawer.section(name, det);
   }
 }
 if (mainEl && sidebar && !inPlugin) {
-  drawer = el('aside', 'forte-drawer');
-  drawer.id = 'forte-drawer';
-  drawer.setAttribute('aria-label', 'Presets and settings');
-  const head = el('div', 'forte-drawer-head');
-  drawerFold = button('');
-  drawerFold.className = 'forte-fold forte-drawer-fold';
-  drawerFold.innerHTML = SIDE;
-  drawerFold.setAttribute('aria-controls', drawer.id);
-  head.append(el('b', '', 'Presets and settings'), drawerFold);
-  drawerBody = el('div', 'forte-drawer-body');
-  drawer.append(head, drawerBody);
-  mainEl.prepend(drawer);
+  drawer = makeDrawer({
+    id: 'forte-drawer', side: 'left', name: 'Presets and settings', fold: 'Fold the presets and settings away',
+    store: 'forte/drawer/v1', sections: LEFT, opens: () => true, flag: 'drawer-open',
+  });
+  drawerBody = drawer.body;
   body.classList.add('has-drawer');
-  drawerFold.addEventListener('click', () => { setDrawer(!drawerIsOpen()); unfocus(drawerFold); });
-  // folded, the rail opens it wherever it is tapped
-  head.addEventListener('click', (e) => { if (!drawerIsOpen() && !drawerFold.contains(e.target)) setDrawer(true); });
   // on a phone, the header opens it
   if (header) {
-    drawerOpener = button('');
-    drawerOpener.className = 'forte-drawer-open';
-    drawerOpener.innerHTML = PANEL;
-    drawerOpener.setAttribute('aria-controls', drawer.id);
-    drawerOpener.addEventListener('click', () => { setDrawer(!drawerIsOpen()); unfocus(drawerOpener); });
-    (header.querySelector('.brand') ?? header).prepend(drawerOpener);
+    const opener = button('');
+    opener.className = 'forte-drawer-open';
+    opener.innerHTML = PANEL;
+    opener.setAttribute('aria-controls', drawer.el.id);
+    opener.addEventListener('click', () => { drawer.set(!drawer.isOpen()); unfocus(opener); });
+    (header.querySelector('.brand') ?? header).prepend(opener);
+    drawer.openers.push(opener);
   }
-  // over the page: a tap outside it (but on the keys) or Esc folds it
-  const shade = el('div', 'forte-drawer-shade');
-  shade.addEventListener('click', () => setDrawer(false));
-  mainEl.prepend(shade);
-  document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || drawerMode() === 'docked' || !drawerIsOpen() || document.querySelector('dialog[open]')) return;
-    setDrawer(false);
-  });
-  // the presets, first: the page's own menu (placeTools puts it here in Discover)
+  // the presets, first: a head (Morph puts its switch there), the page's own menu (placeTools
+  // puts it here in Discover), then To and the slider while Morph is on (shared/morph.js)
   if (presets) {
     const name = presets.querySelector('select')?.getAttribute('aria-label');
-    const sec = el('div', 'forte-drawer-presets');
-    sec.append(el('h3', '', !name || name === 'Preset' ? 'Presets' : name));
-    drawerSection('presets', sec);
+    const sec = el('div', 'forte-drawer-presets'), top = el('div', 'forte-drawer-presets-head');
+    top.append(el('h3', '', !name || name === 'Preset' ? 'Presets' : name));
+    sec.append(top, el('div', 'forte-drawer-menu'));
+    drawer.section('presets', sec);
   }
-  // the MIDI settings, where there is Web MIDI
+  // the MIDI devices, where there is Web MIDI: those plugged in, then the MIDI settings
   if (navigator.requestMIDIAccess) {
-    const det = details('midi', 'MIDI');
+    midiDrawer = makeDrawer({
+      id: 'forte-midi', side: 'right', name: 'MIDI devices', fold: 'Fold the MIDI devices away',
+      store: 'forte/midi-drawer/v1', sections: RIGHT, opens: () => devicesIn, flag: 'midi-open',
+    });
+    body.classList.add('has-midi-drawer');
+    midiDrawer.section('devices', midiDevices());
+    const det = details('MIDI settings');
     det.append(midiSettings());
-    drawerSection('midi', det);
+    midiDrawer.section('midi', det);
+    document.addEventListener('forte-midi-devices', (e) => {
+      const any = e.detail > 0;
+      if (any !== devicesIn) { devicesIn = any; showDrawers(); }
+    });
   }
-  // shared/midi.js (the MIDI status: { section: 'midi' }) and shared/rise.js ({ section: 'rise', element })
+  // over the page, Esc folds it
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || drawerMode() === 'docked' || document.querySelector('dialog[open]')) return;
+    for (const d of drawers) if (d.isOpen()) d.set(false);
+  });
+  // a section by its key, in its drawer: { section, element } adds it (shared/rise.js, shared/fc300.js);
+  // { section } alone opens the drawer at it (shared/midi.js: the MIDI status, { section: 'devices' })
   document.addEventListener('forte-drawer', (e) => {
-    const d = typeof e.detail === 'string' ? { section: e.detail } : e.detail ?? {};
-    if (d.element) { drawerSection(d.section, d.element); return; }
-    const sec = drawerBody.querySelector(`[data-drawer="${d.section}"]`);
+    const s = typeof e.detail === 'string' ? { section: e.detail } : e.detail ?? {};
+    const d = midiDrawer && s.section in RIGHT ? midiDrawer : drawer;
+    if (s.element) { d.section(s.section, s.element); return; }
+    const sec = d.body.querySelector(`[data-drawer="${s.section}"]`);
     if (!sec) return;
     if (sec.tagName === 'DETAILS') sec.open = true;
-    setDrawer(true);
+    d.set(true);
     requestAnimationFrame(() => sec.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
   });
-  const reset = () => { floating = false; showDrawer(); };
+  const reset = () => { for (const d of drawers) d.floating = false; showDrawers(); };
   phoneQuery.addEventListener('change', reset);
   narrowQuery.addEventListener('change', reset);
-  showDrawer();
+  showDrawers();
 }
 
 // In Perform the presets and More controls join the keyboard bar (once it's built), and the
@@ -891,7 +937,7 @@ if (mainEl && sidebar && !inPlugin) {
 let kbTools = null, restack = () => {};
 function placeTools() {
   const perf = performing() && !!kbTools && !sidewaysQuery.matches;
-  const home = drawerBody?.querySelector('[data-drawer="presets"]') ?? bars.controls?.tools;
+  const home = drawerBody?.querySelector('[data-drawer="presets"] .forte-drawer-menu') ?? bars.controls?.tools;
   if (presets && home) (perf ? kbTools : home).appendChild(presets);
   const f = bars.controls?.fold;
   if (f) (perf ? kbTools : bars.controls.bar).appendChild(f);
@@ -933,7 +979,7 @@ function apply() {
   addDefaults();
   body.classList.toggle('perform', performing());
   placeTools();
-  showDrawer(); // (Perform has its own: folded at first)
+  showDrawers(); // (Perform has its own: folded at first)
   document.documentElement.classList.toggle('perform', performing()); // for :root's colours (shared/layout.css)
   for (const b of modeBtns) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
   body.classList.toggle('no-views', !shown.length);
