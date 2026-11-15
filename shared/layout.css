@@ -239,7 +239,7 @@ body.sharing, body.sharing * { cursor: row-resize !important; user-select: none;
 /* in Perform the views' bar is just the mode, over the views' corner, and the controls' just the
    presets and the chevron that opens the panel (More controls) */
 body.perform .forte-split, body.perform .forte-views-bar .forte-fold { display: none; }
-body.perform .forte-views-bar { position: absolute; z-index: 5; top: 8px; right: 10px; padding: 0; background: none; border: 0; }
+body.perform .forte-views-bar { position: absolute; z-index: 5; top: 8px; right: calc(var(--midi-w, 0px) + 10px); padding: 0; background: none; border: 0; }
 body.perform .forte-views-bar .forte-mode { background: color-mix(in srgb, var(--bg) 82%, transparent); }
 body.perform .forte-controls-bar { padding-block: 5px; }
 
@@ -850,30 +850,39 @@ html.in-plugin body[data-instrument] > main { grid-template-rows: auto minmax(0,
 html.in-plugin .forte-views-bar { padding-right: 10px; }
 html.in-plugin .forte-stage { grid-template-rows: repeat(var(--rows, 1), minmax(0, 1fr)); } /* the views fit the frame, as in Perform */
 
-/* ---- the drawer (shared/layout.js): at the left, the presets and what every instrument has
-   alike. Docked beside the views and the controls on a desktop, folded to a rail; in a narrower
-   window the rail stays and the drawer opens over the views; on a phone a sheet from the header.
+/* ---- the drawers (shared/layout.js): at the left the presets and what every instrument has
+   alike; at the right, where the browser has Web MIDI, the MIDI devices. Docked beside the views
+   and the controls on a desktop, each folded to a rail; in a narrower window the rails stay and a
+   drawer opens over the views; on a phone a sheet, from the header's button or the MIDI status.
    Over the page it leaves the keys uncovered, to play while choosing. Body classes: has-drawer,
-   drawer-open, and drawer-docked | drawer-over | drawer-sheet. -------------------------------- */
-body.has-drawer > main { grid-template-columns: var(--drawer-w, 40px) minmax(0, 1fr); }
+   has-midi-drawer, drawer-open (the left's), midi-open (the right's), and drawer-docked |
+   drawer-over | drawer-sheet; a drawer open is .is-open, and so is its shade. ---------------- */
+body.has-drawer > main { grid-template-columns: var(--drawer-w, 40px) minmax(0, 1fr) var(--midi-w, 0px); }
+body.has-midi-drawer > main { --midi-w: 40px; }
 body.has-drawer.drawer-docked.drawer-open > main { --drawer-w: clamp(248px, 19vw, 300px); }
+body.has-midi-drawer.drawer-docked.midi-open > main { --midi-w: clamp(248px, 19vw, 300px); }
 body.has-drawer > main > :not(.forte-drawer, .forte-drawer-shade), body.has-drawer :is(#views, #controls) { grid-column: 2; }
 .forte-drawer {
   grid-column: 1; grid-row: 1 / -1; min-height: 0; min-width: 0; overflow-y: auto; overscroll-behavior: contain;
   display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line);
 }
+.forte-drawer-right { grid-column: 3; border-right: 0; border-left: 1px solid var(--line); }
 .forte-drawer-head { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 10px 7px 14px; }
+.forte-drawer-right .forte-drawer-head { flex-direction: row-reverse; padding: 7px 14px 7px 10px; } /* its chevron on the inside, as the left's */
 .forte-drawer-head > b { flex: 1 1 auto; min-width: 0; font-size: 11px; font-weight: 400; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .forte-drawer-body { display: flex; flex-direction: column; min-width: 0; padding: 0 12px 16px; }
 /* folded: a rail, its name on its side, that opens the drawer wherever it's tapped */
-body.has-drawer:not(.drawer-open) .forte-drawer { overflow: hidden; cursor: pointer; }
-body.has-drawer:not(.drawer-open) .forte-drawer:hover { background: color-mix(in srgb, var(--accent) 6%, var(--panel)); }
-body.has-drawer:not(.drawer-open) .forte-drawer-head { flex-direction: column-reverse; justify-content: flex-end; gap: 12px; padding: 7px 4px; }
-body.perform.has-drawer:not(.drawer-open) .forte-drawer-head > b { visibility: hidden; } /* Perform: no text but the keys' */
-body.has-drawer:not(.drawer-open) .forte-drawer-head > b { writing-mode: vertical-rl; transform: rotate(180deg); overflow: visible; }
-body.has-drawer:not(.drawer-open) .forte-drawer-body { display: none; }
-body.has-drawer:not(.drawer-open) .forte-drawer-fold svg { transform: rotate(180deg); }
-/* its sections, each folding: the presets, Morph, the RISE, Output, Tuning, Expression, MIDI */
+.forte-drawer:not(.is-open) { overflow: hidden; cursor: pointer; }
+.forte-drawer:not(.is-open):hover { background: color-mix(in srgb, var(--accent) 6%, var(--panel)); }
+.forte-drawer:not(.is-open) .forte-drawer-head { flex-direction: column-reverse; justify-content: flex-end; gap: 12px; padding: 7px 4px; }
+body.perform .forte-drawer:not(.is-open) .forte-drawer-head > b { visibility: hidden; } /* Perform: no text but the keys' */
+.forte-drawer:not(.is-open) .forte-drawer-head > b { writing-mode: vertical-rl; transform: rotate(180deg); overflow: visible; }
+.forte-drawer-right:not(.is-open) .forte-drawer-head > b { transform: none; } /* at the right, it reads downwards */
+.forte-drawer:not(.is-open) .forte-drawer-body { display: none; }
+/* the chevron points the way the drawer goes: open, towards its own edge */
+.forte-drawer-left:not(.is-open) .forte-drawer-fold svg, .forte-drawer-right.is-open .forte-drawer-fold svg { transform: rotate(180deg); }
+/* their sections, each folding: the presets, Morph, Output, Tuning, Expression; the devices plugged
+   in, the RISE, the FC-300, the MIDI settings */
 .forte-drawer-body > .forte-drawer-section { border-top: 1px solid var(--line); padding: 4px 0 8px; margin: 0; }
 .forte-drawer-body > details.forte-drawer-section > summary { padding: 6px 0; font-size: 13px; }
 .forte-drawer-body > details.forte-drawer-section:not([open]) { padding-bottom: 4px; }
@@ -893,22 +902,35 @@ details.forte-drawer-own:not([open]) > summary::after { content: "▸"; }
 .forte-drawer .param.check:not(.hint-open) { flex-wrap: nowrap; }
 .forte-drawer .param.check > label { flex: 0 1 auto; min-width: 0; }
 .forte-drawer .param.scala button { width: 100%; }
+/* the MIDI devices plugged in: a lamp lit as each sends, its name, what it is here */
+.forte-midi-devices { display: grid; gap: 7px; padding: 8px 0 10px; }
+.forte-midi-devices > h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.forte-midi-devices ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.forte-midi-devices ul[hidden], .forte-midi-devices > [hidden] { display: none; }
+.forte-midi-devices li { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; min-width: 0; font-size: 12.5px; }
+.forte-midi-devices li > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.forte-midi-devices li > small { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.forte-midi-lamp { width: 8px; height: 8px; border-radius: 50%; background: #3b3530; box-shadow: inset 0 1px 1px rgb(0 0 0 / 0.6); }
+.forte-midi-lamp.on { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.forte-midi-devices > p { margin: 0; font-size: 11.5px; line-height: 1.4; color: var(--muted); }
+.forte-midi-devices > button { justify-self: start; }
 /* the MIDI settings: a name and a dropdown on each line */
 .forte-midi-settings { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 12px; align-items: center; padding: 4px 0 2px; }
 .forte-midi-settings label { display: contents; }
 .forte-midi-settings label > span { color: var(--muted); }
 .forte-midi-settings select { min-width: 0; width: 100%; }
-/* the opener in the header, and the shade over the page: only where the drawer opens over it */
+/* the presets' opener in the header, and the shade over the page: only where a drawer opens over it */
 body[data-instrument] .forte-drawer-open { display: none; }
 .forte-drawer-open svg { width: 18px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
 .forte-drawer-shade { display: none; }
-/* a narrower window: the rail stays, and the drawer opens over the views and the controls */
+/* a narrower window: the rails stay, and a drawer opens over the views and the controls */
 @media (max-width: 1099px) {
-  body.has-drawer.drawer-over.drawer-open .forte-drawer {
+  body.drawer-over .forte-drawer.is-open {
     position: absolute; z-index: 32; top: 0; bottom: 0; left: 0; width: min(320px, 82vw);
     box-shadow: 12px 0 40px rgb(0 0 0 / 0.5);
   }
-  body.has-drawer.drawer-over.drawer-open .forte-drawer-shade { display: block; position: absolute; z-index: 31; inset: 0; background: rgb(0 0 0 / 0.3); }
+  body.drawer-over .forte-drawer-right.is-open { left: auto; right: 0; box-shadow: -12px 0 40px rgb(0 0 0 / 0.5); }
+  body.drawer-over .forte-drawer-shade.is-open { display: block; position: absolute; z-index: 31; inset: 0; background: rgb(0 0 0 / 0.3); }
 }
 /* an instrument page in a plugin's window: no drawer (the window has its own controls) */
 html.in-plugin :is(.forte-drawer, .forte-drawer-shade, .forte-drawer-open, .forte-rise, .forte-fc300) { display: none; }
@@ -1032,7 +1054,8 @@ body[data-instrument] .forte-rise-dim > input.forte-rise-switch:focus-visible { 
 .forte-rise-srow output { text-align: right; font-variant-numeric: tabular-nums; color: var(--accent); }
 .forte-rise-snote { margin: 2px 0 0; font-size: 10.5px; color: var(--muted); }
 
-/* phones: the drawer is a sheet from the header's button, over the page down to the keys */
+/* phones: each drawer is a sheet over the page down to the keys, the presets' from the header's
+   button at the left, the MIDI devices' from the MIDI status, at the right */
 @media (max-width: 600px), (max-width: 1050px) and (max-height: 500px) {
   body.has-drawer > main { grid-template-columns: minmax(0, 1fr); }
   body.has-drawer > main > :not(.forte-drawer, .forte-drawer-shade), body.has-drawer :is(#views, #controls) { grid-column: 1; }
@@ -1044,10 +1067,15 @@ body[data-instrument] .forte-rise-dim > input.forte-rise-switch:focus-visible { 
     box-shadow: 12px 0 40px rgb(0 0 0 / 0.55); transform: translateX(-105%); visibility: hidden;
     transition: transform 0.2s ease, visibility 0s linear 0.2s;
   }
-  body.has-drawer.drawer-open .forte-drawer { transform: none; visibility: visible; transition: transform 0.2s ease; }
-  body.has-drawer.drawer-open .forte-drawer-shade { display: block; position: fixed; z-index: 39; left: 0; right: 0; top: 0; bottom: var(--footer-h, 0px); background: rgb(0 0 0 / 0.4); }
-  body.has-drawer:not(.drawer-open) .forte-drawer:hover { background: var(--panel); }
+  body.has-drawer .forte-drawer-right {
+    left: auto; right: 0; padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 0;
+    box-shadow: -12px 0 40px rgb(0 0 0 / 0.55); transform: translateX(105%);
+  }
+  body.has-drawer .forte-drawer.is-open { transform: none; visibility: visible; transition: transform 0.2s ease; }
+  body.has-drawer .forte-drawer-shade.is-open { display: block; position: fixed; z-index: 39; left: 0; right: 0; top: 0; bottom: var(--footer-h, 0px); background: rgb(0 0 0 / 0.4); }
+  body.has-drawer .forte-drawer:not(.is-open):hover { background: var(--panel); }
   body.has-drawer .forte-drawer-head { padding: 8px 10px 6px 14px; }
+  body.has-drawer .forte-drawer-right .forte-drawer-head { padding: 8px 14px 6px 10px; }
 }
 @media (prefers-reduced-motion: reduce) { .forte-drawer { transition: none !important; } }
 }
