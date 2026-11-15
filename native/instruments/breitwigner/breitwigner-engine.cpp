@@ -43,8 +43,9 @@ void BreitWignerEngine::allNotesOff() {
 // key's velocity on the real axis, so the note starts from nothing, as a sine. Otherwise the key
 // starts a source, turning with the state, that runs while the key is held, for that time at
 // most: as strong as makes the velocity's amplitude in the whole time, at the width the state has
-// now (formed(), breitwigner-model.h). A source still running from the last strike stops. The key
-// is down again, so its key-up channel shuts.
+// now (formed(), breitwigner-model.h). A source still running from the last strike stops. What the
+// key made (|ψ| now, or the velocity a source will make) is what a press keeps making. The key is
+// down again, so its key-up channel shuts.
 void BreitWignerEngine::noteOn(int key, double velocity) {
   if (!hasParams || key < 0 || key >= KEYS) return;
   State &s = states[key];
@@ -59,9 +60,9 @@ void BreitWignerEngine::noteOn(int key, double velocity) {
   }
   s.down = true; s.open = false; s.lift = 1;
   const int n = (int)std::lround(P[p::formation] * fs);
-  if (n < 1) { s.form = 0; s.dr = s.di = 0; s.zr += velocity; return; }
-  const Lab lab = boosted(s.mass, totalWidth(s.mass, s.share, P[p::press] * s.press.p), s.gamma); // its channel shut
-  s.form = n; s.dr = velocity / formed(n / fs, lab.fwhm); s.di = 0;
+  if (n < 1) { s.form = 0; s.dr = s.di = 0; s.zr += velocity; s.made = std::sqrt(s.zr * s.zr + s.zi * s.zi); return; }
+  const Lab lab = boosted(s.mass, totalWidth(s.mass, s.share, 0), s.gamma); // its key-up channel shut
+  s.form = n; s.dr = velocity / formed(n / fs, lab.fwhm); s.di = 0; s.made = velocity;
 }
 
 // The key's source stops. Lift: how wide the key-up channel opens: half as wide for the slowest
@@ -105,19 +106,31 @@ void BreitWignerEngine::process(float *L, float *R, int n) {
       s.share = glideTo(s.share, keyShare(key, expr.slideOr(key, P[p::width]), P[p::power]), dt, GLIDE);
       s.gamma = glideTo(s.gamma, wheelG * expr.bendOf(key), dt, GLIDE);
       s.press.follow(s.down ? presses.of(key) : 0, n, fs);
-      // partial widths add: its own, the key-up channel's once it is open, the press's
-      const double channels = (s.open ? P[p::release] * s.lift : 0) + P[p::press] * s.press.p;
+      // partial widths add: its own and the key-up channel's once it is open
+      const double channels = s.open ? P[p::release] * s.lift : 0;
       const Lab lab = boosted(s.mass, totalWidth(s.mass, s.share, channels), s.gamma);
       s.f = lab.f; s.fwhm = lab.fwhm;
       if (lab.f != s.fc || lab.fwhm != s.wc) { // e^((−πΓ + 2πif)/fs): exact for a state left alone
         const double r = fd::exp(-(TAU / 2) * lab.fwhm / fs), a = TAU * lab.f / fs;
         s.ur = fd::cos(a); s.ui = fd::sin(a);
-        s.rr = r * s.ur; s.ri = r * s.ui;
+        s.rr = r * s.ur; s.ri = r * s.ui; s.r = r;
         s.k = formed(1 / fs, lab.fwhm);
         s.fc = lab.f; s.wc = lab.fwhm;
       }
       double zr = s.zr, zi = s.zi, dr = s.dr, di = s.di;
-      const double rr = s.rr, ri = s.ri, ur = s.ur, ui = s.ui, k = s.k;
+      double rr = s.rr, ri = s.ri;
+      const double ur = s.ur, ui = s.ui, k = s.k;
+      // Press: production, a beam at the state's own energy making it as it decays, in step with it.
+      // Each sample adds (1 − r)·T to |ψ| as it loses (1 − r)·|ψ|, so |ψ| goes to T = Press × p × made
+      // at the line's own rate, T + (|ψ| − T)·rⁿ over the block: the turn's radius over the block
+      // makes it so. While the key's own source runs (the Formation time), that source makes it.
+      if (s.form == 0 && s.press.on() && s.made > 0) {
+        const double m0 = std::sqrt(zr * zr + zi * zi), T = P[p::press] * s.press.p * s.made;
+        if (m0 > 0) {
+          const double g = fd::pow((T + (m0 - T) * fd::pow(s.r, n)) / m0, 1.0 / n) / s.r;
+          rr *= g; ri *= g;
+        }
+      }
       const bool heard = lab.f < 0.49 * fs; // boosted past what the sample rate carries, it turns unheard
       const int fed = std::min(n, s.form);
       int i = 0;

@@ -64,7 +64,7 @@ void TinesEngine::Voice::start(TinesEngine &eng, int key_, const VoiceData &d) {
   keyDown = true; damped = false; killing = false; dead = false;
   hammerOn = false; contactSamples = 0; Fmax = 0; peak = 0; quiet = 0; age = 0;
   yMin = 0; yMax = 0; liftK = 1;
-  press = Press{};
+  press = Press{}; sus = Sustainer{};
   setDamper(eng.P[p::damper]);
 }
 
@@ -76,7 +76,7 @@ void TinesEngine::Voice::tune(double r) {
     const double rr = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
     a1[i] = 2 * rr * std::cos(od * k); a2[i] = rr * rr;
     const double b = (k * rr * std::sin(od * k)) / od;
-    bw[i] = b * w[i]; cmp += b * w[i] * w[i];
+    bw[i] = b * w[i]; bp[i] = b * pk[i]; cmp += b * w[i] * w[i];
   }
   comp = cmp; bend = r;
 }
@@ -94,7 +94,6 @@ void TinesEngine::Voice::setDamper(double sd) {
     a1d[i] = 2 * r * std::cos(od * k); a2d[i] = r * r;
   }
   damperSigma = sd;
-  if (press.on()) setPressed();
 }
 
 // Strike the tine mm from the clamp from now on (NaN: where the data was built for), its modes
@@ -106,14 +105,18 @@ void TinesEngine::Voice::aim(double mm) {
   tune(bend);
 }
 
-// A finger on the tone bar: the fork loses FINGER/s at most, mostly in its upper modes
-constexpr double FINGER = 40, FINGER_F = 1200;
-void TinesEngine::Voice::setPressed() {
-  for (int i = 0; i < Nall; i++) {
-    const double o = om[i], s = sig[i] + press.loss(o * (0.5 / std::numbers::pi), FINGER, FINGER_F, 0.1);
-    const double r = std::exp(-s * k), od = std::sqrt(std::max(o * o - s * s, 1e-6));
-    a1p[i] = 2 * r * std::cos(od * k); a2p[i] = r * r;
-  }
+// Press: a sustainer, a driver coil beside the pickup fed from it, holding the tine's tip. Tuned
+// on the fork's fundamental (its lowest mode the pickup hears) as the hammer leaves: a full press
+// holds the tip's swing there at HOLD times what the blow gave it (forte/press.h Sustainer).
+constexpr double HOLD = 1.6;
+void TinesEngine::Voice::tuneSustainer() {
+  double top = 0;
+  for (int i = 0; i < N; i++) top = std::max(top, std::fabs(pk[i]));
+  int f = -1;
+  for (int i = 0; i < N; i++) if (std::fabs(pk[i]) >= 0.1 * top && (f < 0 || om[i] < om[f])) f = i;
+  if (f < 0) return;
+  const double B = twoPoleAmplitude(q[f], q1[f], a1[f], a2[f]);
+  sus.tune(sig[f], pk[f], om[f] / TAU, std::fabs(pk[f]) * om[f] * B, HOLD, 1 / k);
 }
 
 void TinesEngine::Voice::strike(double v) {
@@ -150,8 +153,9 @@ double TinesEngine::Voice::contactForce(double dFree) {
 }
 
 void TinesEngine::Voice::render(double *buf, int n, TinesEngine &eng) {
-  const bool pr = !damped && press.on();
-  const double *A1 = damped ? a1d.data() : pr ? a1p.data() : a1.data(), *A2 = damped ? a2d.data() : pr ? a2p.data() : a2.data();
+  const double *A1 = damped ? a1d.data() : a1.data(), *A2 = damped ? a2d.data() : a2.data();
+  const bool drive = !damped && press.on() && sus.ready(); // Press: the sustainer pushes the tip
+  if (!drive) sus.rest();
   const bool full = os == OS; // else Low's voice at the output rate
   const double rate = full ? eng.fs2 : eng.fs, gs = OUT_SCALE * rate, aP = full ? eng.aPick : eng.aPick1;
   const bool moving = pickupMoving;
@@ -164,6 +168,10 @@ void TinesEngine::Voice::render(double *buf, int n, TinesEngine &eng) {
       for (int i = 0; i < N; i++) {
         const double q0 = q[i], qn = A1[i] * q0 - A2[i] * q1[i];
         q1[i] = q0; q[i] = qn; y += pk[i] * qn;
+      }
+      if (drive) {
+        const double F = sus.force(y, press.p, rate);
+        for (int i = 0; i < N; i++) q[i] += bp[i] * F;
       }
     } else {
       double uf = 0;
@@ -183,6 +191,7 @@ void TinesEngine::Voice::render(double *buf, int n, TinesEngine &eng) {
       hammerSamples++;
       if (hammerSamples > (full ? eng.hammerMax : eng.hammerMax / OS) || (contact && F == 0 && dPrev < -2e-3)) {
         hammerOn = false;
+        tuneSustainer();
         Message m;
         m.type = msg::hammer; m.key = (int16_t)key; m.count = 2;
         m.values[0] = (float)((contactSamples / rate) * 1000); m.values[1] = (float)Fmax;
@@ -450,7 +459,7 @@ void TinesEngine::process(float *L, float *R, int n) {
       Voice &v = *voices[i];
       v.own = glideTo(v.own, expr.bendOf(v.key), m / fs, BEND_T);
       if (v.bend != bendNow * v.own) { v.tune(bendNow * v.own); v.setDamper(v.damperSigma); }
-      if (v.press.follow(v.keyDown ? presses.of(v.key) : 0, m, fs)) v.setPressed();
+      v.press.follow(v.keyDown ? presses.of(v.key) : 0, m, fs); // Press: the sustainer (render)
     }
     block(L, R, off, m);
   }

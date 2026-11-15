@@ -23,7 +23,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/gamelan/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity |
 | `Space` | sustain: lifts the damping hand |
-| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = the pairs' beat** (ombak) |
+| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = the pairs' beat** (ombak); a firm press (aftertouch, past half way) rolls a held note, eight strokes a second as hard as it is pressed |
 | MPE | a note's own slide (CC74) is its own pair's beat; bars and gongs do not bend |
 
 ## The physics

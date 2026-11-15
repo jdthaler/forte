@@ -18,7 +18,7 @@ export const INSTRUMENT = {
   modWheel: { param: 'width', max: 0.2 }, // CC1: the width, from its default up to a ρ meson's
   mpe: { bend: 24, way: 'up', slide: true }, // MPE: a note's own bend boosts its state (up only: γ ≥ 1, to γ = 4); its slide is its own width
   glide: 'a boost: its energy γM is sharper, and its life γ times longer', // what a note's own bend does
-  aftertouch: 'a firm press opens a third decay channel: the note dies while pressed', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  aftertouch: 'a firm press keeps making the state: the note swells and holds', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'a slow lift opens the key-up channel half as wide, a fast one twice as wide', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['power', 'release', 'press', 'formation', 'width'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/breitwigner), built as WebAssembly

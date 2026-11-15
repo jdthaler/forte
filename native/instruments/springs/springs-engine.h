@@ -5,6 +5,10 @@
 //          (exact two-pole recursions; frequency, group speed and bead coupling from the model)
 //       ─▶ the pickup bead at the far end of each spring, each spring panned to its own side
 //
+// Press: a sustainer on each spring's driving bead (forte/press.h Sustainer: a driver coil fed from
+// a pickup, as a reverb tank's own transducers would make one), tuned as the mallet leaves on the
+// mode the ear takes for the note, so a firm press swells the note and holds it.
+//
 // One voice per key. A key's springs (a few hundred eigenproblems and the virtual-pitch tuning: the
 // page's noteData) are built off the audio thread by forte/background.h, for the geometry the knobs
 // are at; a note whose springs are not built yet waits for them (a few ms). Voices come from a
@@ -54,7 +58,7 @@ class SpringEngine : public Engine {
   void slide(double value, int key) override { expr.setSlide(value, key); }
   // Glide: a hand stretching (or easing) that key's coil: its waves faster, every mode and echo with them
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
-  void pressure(double value, int key) override { presses.set(value, key); } // a firm press: the hammer held into the coil, muting it
+  void pressure(double value, int key) override { presses.set(value, key); } // a firm press: the sustainer on its springs, swelling and holding the note
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A key's springs its page's model built already (packKeySprings), for the next note on that
@@ -89,6 +93,13 @@ class SpringEngine : public Engine {
     double tau = 0, age = 0, fade = 1, peak = 0, level = 0, extra = 0, dampGlide = 0.03;
     double bent = 1; // its springs × this (a note's own bend: the coil stretched)
     bool fading = false, dead = false, released = false;
+    // Press: how hard its key is pressed, and each spring's sustainer on the mode it holds (drvMode,
+    // −1: none), tuned once the mallet has left (drvTune)
+    Press press;
+    std::array<Sustainer, 3> sus{};
+    std::array<int, 3> drvMode{-1, -1, -1};
+    bool drvTune = false;
+    void tuneSustainers(const SpringEngine &eng);
 
     void start(SpringEngine &eng, int key, Data::Ref r, uint64_t version);
     void strike(SpringEngine &eng, double velocity);
@@ -147,7 +158,7 @@ class SpringEngine : public Engine {
   struct Pending { int key; double velocity; bool off; double offVelocity; };
   std::array<Pending, 64> pending{};
   int nPending = 0;
-  std::vector<double> buf, force;
+  std::vector<double> buf, force, drive;
   const int pulseMax;
 };
 

@@ -64,12 +64,12 @@ await test('a page shows the switches its instrument answers to', async () => {
 });
 
 // The approved table's "Off in presets" column: what each instrument's presets turn off, as making
-// little sense on it (a struck string's or bar's bend, a damping hand on a piano, a lift on a
+// little sense on it (a struck string's or bar's bend, the swell pedal on an organ, a lift on a
 // phenomenon whose release is the recording's). Every other instrument's presets leave all on.
 const OFF_IN_PRESETS = {
-  piano: ['glide', 'press'],
-  grand: ['glide', 'press'],
-  harpsichord: ['glide', 'press'],
+  piano: ['glide'],
+  grand: ['glide'],
+  harpsichord: ['glide'],
   cimbalom: ['glide'],
   hurdygurdy: ['lift'],
   vibraphone: ['glide', 'lift'],
@@ -85,9 +85,6 @@ const OFF_IN_PRESETS = {
   gongs: ['glide'],
   chladni: ['glide'],
   organ: ['glide', 'press'],
-  tines: ['press'],
-  reeds: ['press'],
-  pianet: ['press'],
   telharmonium: ['glide'],
   cellulophone: ['glide'],
   blackhole: ['lift'],

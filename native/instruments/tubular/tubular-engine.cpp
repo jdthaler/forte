@@ -21,6 +21,7 @@ constexpr double MALLET_MAX = 0.03; // s: the longest a mallet may stay in fligh
 constexpr double DAMP_RAMP = 0.008; // s: the damper felt lands (and lifts) over this
 constexpr int POST_BLOCKS = 4;      // live view messages every few blocks
 constexpr double NYQUIST = 0.45;    // × fs: modes from here up are left out (they would alias)
+constexpr double ROLL_RATE = 6;     // strokes/s: a firm press rolls the tube, two mallets in turn (Press: forte/press.h Roll)
 
 // ---- a voice: one tube ------------------------------------------------------------------------
 
@@ -310,11 +311,14 @@ void TubularEngine::processBlock(float *L, float *R, int n) {
     Voice *v = voices[i];
     // the damper bar: on every tube not held by a key, unless the pedal is down
     double want = v->released && !sustain && !lock ? 1 / v->liftK : 0; // a slow lift lowers it gently
-    if (!v->released) want = std::max(want, presses.of(v->key)); // Press: damped as hard as the key is pressed
     if (v->damp != want) v->damp = want > v->damp ? std::min(want, v->damp + dStep) : std::max(want, v->damp - dStep);
     const double to = expr.bendOf(v->key), was = v->bent; // Glide: the tube swinging (Doppler)
     if (was != to) v->bent = glideTo(was, to, n / fs, BEND_T);
     if (v->damp != v->dampSet || v->bent != was) v->coefs(*this);
+    // Press: a firm press rolls the held tube, its strokes as hard as the key is pressed (one due
+    // while the last mallet is still on the tube is left out)
+    v->press.follow(v->released || v->fading ? 0 : presses.of(v->key), n, fs);
+    if (const double rv = v->roll.step(v->press.p, ROLL_RATE, n, fs, rng); rv > 0 && !v->malletOn) v->strike(*this, rv);
     v->render(L, R, n, *this);
   }
   int j = 0;

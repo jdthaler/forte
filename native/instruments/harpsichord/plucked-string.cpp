@@ -39,6 +39,7 @@ void PluckedString::init(const StringDesign &S_, const Partials &parts, double f
     if (i < N) { Wz[i] = W[i] * dz; sigSz[i] = parts.sigS[i]; sigBz[i] = parts.sigB[i]; }
   }
   Nz = 0; kz = gz = 0; zFelt = false; zBuff = 0;
+  sus = Sustainer{}; drvP = 0; drvAt = -1; drvTune = false; PHD.fill(0); PBD.fill(0);
   setDamping(nullptr);
 }
 
@@ -51,6 +52,7 @@ void PluckedString::setDamping(const double *ex) {
     EP[i] = ((r * h * std::sin(wd * h)) / wd) * G[i]; // −∂a₁/∂(ω²) · g
   }
   for (int p = 0; p < MAXP; p++) if (x[p] >= 0) fillPoint(p);
+  for (int i = 0; i < DRIVEN && i < N; i++) PBD[i] = Bin[i] * PHD[i];
   cDirty = true;
   if (Nz) sideSteps(zFelt, zBuff);
 }
@@ -190,7 +192,9 @@ double PluckedString::render(int n, const double *lift, bool keyDown, const doub
   double lmax = 0;
   for (int t = 0; t < n; t++) if (lift[t] > lmax) lmax = lift[t];
   const double bgz = 0.5 * (buffG[0] + buffG[n - 1]);
-  if (!needsContacts(lmax, keyDown, buffOn)) {
+  const bool drive = drvP > 0 && sus.ready(); // Press: the sustainer runs the full step below
+  if (!drive) sus.rest();
+  if (!drive && !needsContacts(lmax, keyDown, buffOn)) {
     const double r = sym ? free<true>(n, seg, stride, w0, w1, wts, gain, sym) : free<false>(n, seg, stride, w0, w1, wts, gain, sym);
     return Nz ? r + side(n, seg, stride, wts, w0, w1, gain, sym, false, bgz) : r;
   }
@@ -205,8 +209,11 @@ double PluckedString::render(int n, const double *lift, bool keyDown, const doub
   double *qq = q(), *qq1 = q1();
   double ymin = std::numeric_limits<double>::infinity(), ymax = -ymin;
   bool felt = false; // the damper felt touched the string this block
+  const int nd = drive ? std::min(DRIVEN, Nn) : 0;
   for (int t = 0; t < n; t++) {
     const double L = lift[t], bg = buffG[t];
+    double fd = 0; // Press: the sustainer's force, from the string's motion under it
+    if (nd) fd = sus.force(PHD[0] * qq[0], drvP, fs); // (it hears the fundamental alone: see tuneDrive)
     const bool kcs = kcOn && stretched;
     const double d = kcs ? dT : 0; // a₁ − ep·δT: the stretched string's partials (δT = 0: linear)
     // 1. candidates and their laws F = α − βu
@@ -245,6 +252,10 @@ double PluckedString::render(int n, const double *lift, bool keyDown, const doub
       uf[idx[0]] = u0; uf[idx[1]] = u1;
       if (m > 2) uf[idx[2]] = u2;
       if (m > 3) uf[idx[3]] = u3;
+    }
+    if (fd != 0) { // the sustainer's push, and what it moves the candidates by
+      for (int i = 0; i < nd; i++) qq1[i] += PBD[i] * fd;
+      for (int a = 0; a < m; a++) { const double *P = PHI[idx[a]].data(); double c = 0; for (int i = 0; i < nd; i++) c += P[i] * PBD[i]; uf[idx[a]] += c * fd; }
     }
     double y = 0;
     if (m) {
@@ -466,7 +477,16 @@ void PluckedString::letGo(int p, double F, double y) {
     const double Fz = (zOld[p] - P.s0) / staticCompliance(p), *PH = PHI[p].data();
     for (int i = 0; i < Nz; i++) za[i] = zb[i] = (PH[i] * Fz) / (W[i] * W[i]);
   }
+  drvAt = p; drvTune = true; // (Press: the sustainer is tuned on this pluck)
   if (onRelease) onRelease(ctx, *this, p);
+}
+
+void PluckedString::tuneDrive(double hold) {
+  drvTune = false;
+  if (drvAt < 0 || x[drvAt] < 0 || N < 1) return;
+  for (int i = 0; i < DRIVEN; i++) { PHD[i] = i < N ? nrm * std::sin(K[i] * x[drvAt]) : 0; PBD[i] = i < N ? Bin[i] * PHD[i] : 0; }
+  const double B = twoPoleAmplitude(q()[0], q1()[0], A1[0], A2[0]);
+  sus.tune(sig[0], PHD[0], W[0] / (2 * pi), std::fabs(PHD[0]) * W[0] * B, hold, fs);
 }
 
 // Stop integrating top partials that have died away (a few per call).

@@ -51,7 +51,7 @@ class KalimbaEngine : public Engine {
   void slide(double value, int key) override { own.setSlide(value, key); }
   // Glide: a fingernail pressing the tine down on its bridge, shortening it: up to a semitone sharp
   void noteBend(double ratio, int key) override { own.setBend(ratio, key); }
-  void pressure(double value, int key) override { presses.set(value, key); } // a finger resting on the tine, damping it
+  void pressure(double value, int key) override { presses.set(value, key); } // a sustainer on the tine: the note swells and holds
   void setSustain(bool on) override;
   void allNotesOff() override;
   int voiceCount() const override { return (int)voices.size(); }
@@ -68,8 +68,12 @@ class KalimbaEngine : public Engine {
     double floor = 1e-5;                 // …this far under it (Quality's, when it was plucked)
     bool released = false, damped = false, grabbed = false;
     double fing = 0;   // the fingertip's damping per sample after this lift (0: the usual; forte/lift.h)
-    Press press;       // a finger resting on it while its key is held (forte/press.h)
-    double pf = 1;     // and the level it keeps each sample for it
+    Press press;       // how hard its key is pressed (forte/press.h)
+    // Press: a sustainer, a driver coil under the steel tine fed from a pickup that hears its
+    // fundamental (mode fund), holding it at up to HOLD times the swing the thumb gave it
+    Sustainer sus;
+    int fund = 0;
+    double bf = 0; // the fundamental's input gain (a unit force's step, the mode mass-normalised)
     int touch = 0;     // samples the thumb still rests on the tine after a fast lift
     std::array<double, MAX_MODES> f{}, sg{}; // its modes' frequencies (as plucked, unbent) and losses
     double bent = 1;   // its modes × this (a note's own bend)

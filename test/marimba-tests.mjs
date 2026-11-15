@@ -205,7 +205,7 @@ test('the roll: a held key is struck again at the roll speed and keeps sounding;
   const n = e.voices[0].strokes;
   assert.ok(n >= 12 && n <= 13, `${n} strokes in a second`);
 });
-test('a key\'s own MPE slide rolls it alone; pressure rolls nothing: a Seaboard\'s finger at rest (up to half, per key or on the channel) changes nothing, bit for bit, and a firm press is the dead stroke, stilling the bar', () => {
+test('a key\'s own MPE slide rolls it alone, and so does a firm press, its strokes as hard as the key is pressed; a Seaboard\'s finger at rest (up to half, per key or on the channel) changes nothing, bit for bit', () => {
   const r = run(P(), 2, [[0, (e) => { e.noteOn(60, 0.6); e.noteOn(67, 0.6); }], [0.05, (e) => e.handle({ type: 'slide', value: 0.7, key: 60 })]]).L;
   const f = keyFreq(60), g = keyFreq(67);
   assert.ok(dB(tone(r, f, 1.5 * FS, 1.9 * FS) / tone(r, f, 0, 0.3 * FS)) > -15, 'slide: C4 rolls');
@@ -215,14 +215,18 @@ test('a key\'s own MPE slide rolls it alone; pressure rolls nothing: a Seaboard\
     const x = run(P(), 1, [on, [0.05, (e) => e.handle({ type: 'pressure', value: 0.3, key })], [0.3, (e) => e.handle({ type: 'pressure', value: 0.5, key })]]).L;
     for (let i = 0; i < x.length; i++) if (x[i] !== plain[i]) assert.fail(`pressure on ${key < 0 ? 'the channel' : 'the key'}: sample ${i} differs`);
   }
-  // the dead stroke: a firm press stills the bar; the tube it is tuned with rings on a little, on
-  // its own loss, and keeps a little of the bar moving with it
-  const bar = (msgs) => run(P(), 0.6, [[0, (e) => e.noteOn(60, 0.6)], ...msgs]).e.voices.find((v) => v.key === 60).Eb;
-  const free = bar([]);
+  // a firm press rolls the note: the first stroke a stroke's time after the press, then 12 a second
+  // (Roll speed), each 0.8 × how hard the key is pressed past half way; the note beside it is not rolled
+  const pressed = (value, key) => run(P(), 1, [on, [0.2, (e) => e.handle({ type: 'pressure', value, key })]]);
   for (const key of [60, -1]) {
-    const held = bar([[0.3, (e) => e.handle({ type: 'pressure', value: 1, key })]]);
-    assert.ok(held < 0.1 * free, `a firm press ${key < 0 ? 'on the channel' : 'on the key'}: the bar keeps ${(held / free).toExponential(1)} of its energy at 0.6 s`);
+    const { e, L } = pressed(1, key), n = e.voices.find((v) => v.key === 60).strokes;
+    assert.ok(n >= 10 && n <= 11, `a firm press ${key < 0 ? 'on the channel' : 'on the key'}: ${n} strokes (the first, then 0.8 s of a 12-a-second roll)`);
+    assert.ok(dB(tone(L, f, 0.8 * FS, FS) / tone(plain, f, 0.8 * FS, FS)) > 30, `a firm press ${key < 0 ? 'on the channel' : 'on the key'}: it keeps sounding`);
   }
+  const lone = pressed(1, 60);
+  assert.equal(lone.e.voices.find((v) => v.key === 67).strokes, 1, 'the key beside it: not rolled');
+  const half = pressed(0.75, 60).L, full = lone.L, gain = dB(tone(full, f, 0.6 * FS, FS) / tone(half, f, 0.6 * FS, FS));
+  assert.ok(gain > 3 && gain < 9, `pressed half as hard past rest: ${gain.toFixed(1)} dB softer (strokes 0.4 against 0.8)`);
 });
 test('the page’s bar data (noteData) plays exactly as the bar the engine builds itself', () => {
   for (const kind of ['marimba', 'xylophone']) {
