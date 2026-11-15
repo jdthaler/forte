@@ -3364,8 +3364,8 @@ inline const forte::FormatSegment kF1674[] = {{kNoLimit, "", "°", 1, 0, 0, fals
 inline const Case kC1674[] = {{0, "0°"}, {15, "15°"}, {30, "30°"}, {45, "45°"}, {60, "60°"}, {75, "75°"}, {90, "90°"}};
 inline const forte::FormatSegment kF1675[] = {{9.994999999999997, "", " Hz", 1, 0, 2, false, false, false, false}, {99.94999999999999, "", " Hz", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " Hz", 1, 0, 0, false, false, false, false}};
 inline const Case kC1675[] = {{0.05, "0.05 Hz"}, {0.23207944168063893, "0.23 Hz"}, {1.077217345015942, "1.08 Hz"}, {5, "5.00 Hz"}, {23.20794416806389, "23.2 Hz"}, {107.72173450159424, "108 Hz"}, {500, "500 Hz"}, {6, "6.00 Hz"}};
-inline const forte::FormatSegment kF1676[] = {{9.994999999999997, "", " Hz", 1, 0, 2, false, false, false, false}, {99.94999999999999, "", " Hz", 1, 0, 1, false, false, false, false}, {kNoLimit, "", " Hz", 1, 0, 0, false, false, false, false}};
-inline const Case kC1676[] = {{0.5, "0.50 Hz"}, {1.5811388300841895, "1.58 Hz"}, {4.999999999999999, "5.00 Hz"}, {15.811388300841896, "15.8 Hz"}, {49.999999999999986, "50.0 Hz"}, {158.113883008419, "158 Hz"}, {500, "500 Hz"}, {30, "30.0 Hz"}};
+inline const forte::FormatSegment kF1676[] = {{kNoLimit, "", " ×", 1, 0, 2, false, false, false, false}};
+inline const Case kC1676[] = {{0.1, "0.10 ×"}, {0.6000000000000001, "0.60 ×"}, {1.05, "1.05 ×"}, {1.55, "1.55 ×"}, {2.0500000000000003, "2.05 ×"}, {2.5, "2.50 ×"}, {3, "3.00 ×"}, {1.5, "1.50 ×"}};
 inline const forte::FormatSegment kF1677[] = {{kNoLimit, "", "", 1, 0, 2, false, false, false, false}};
 inline const Case kC1677[] = {{0.05, "0.05"}, {0.21, "0.21"}, {0.37, "0.37"}, {0.53, "0.53"}, {0.68, "0.68"}, {0.84, "0.84"}, {1, "1.00"}, {0.7, "0.70"}};
 inline const forte::FormatSegment kF1678[] = {{kNoLimit, "", " %", 100, 0, 0, false, false, false, false}};
@@ -5072,7 +5072,7 @@ inline const Vector kAll[] = {
   {"breitwigner.power", {"power", "", "", forte::ParamKind::continuous, 0, 5, 1, 0.05, false, false, nullptr, 0, kF1673, 1}, kC1673, 8},
   {"breitwigner.phase", {"phase", "", "", forte::ParamKind::continuous, 0, 90, 0, 1, false, false, nullptr, 0, kF1674, 1}, kC1674, 7},
   {"breitwigner.release", {"release", "", "", forte::ParamKind::continuous, 0.05, 500, 6, 0, true, false, nullptr, 0, kF1675, 3}, kC1675, 8},
-  {"breitwigner.press", {"press", "", "", forte::ParamKind::continuous, 0.5, 500, 30, 0, true, false, nullptr, 0, kF1676, 3}, kC1676, 8},
+  {"breitwigner.press", {"press", "", "", forte::ParamKind::continuous, 0.1, 3, 1.5, 0.05, false, false, nullptr, 0, kF1676, 1}, kC1676, 8},
   {"breitwigner.velocity", {"velocity", "", "", forte::ParamKind::continuous, 0.05, 1, 0.7, 0.01, false, false, nullptr, 0, kF1677, 1}, kC1677, 8},
   {"breitwigner.room", {"room", "", "", forte::ParamKind::continuous, 0, 1, 0.25, 0.01, false, false, nullptr, 0, kF1678, 1}, kC1678, 8},
   {"breitwigner.volume", {"volume", "", "", forte::ParamKind::continuous, 0, 2, 0.8, 0.01, false, false, nullptr, 0, kF1679, 2}, kC1679, 8},

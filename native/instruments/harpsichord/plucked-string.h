@@ -35,11 +35,19 @@
 //
 // The arpichordium's hook (hookOn) sits at the BUFF point, hookGap below the string: a one-sided
 // contact, F = −k(u + gap) − R u̇ while the string presses on it (F ≥ 0), which it rattles against.
+//
+// Press: a sustainer over the string where it was plucked (forte/press.h Sustainer, an EBow), on its
+// lowest DRIVEN partials: when a plectrum lets go, tuneDrive tunes it on the fundamental as the pluck
+// left it, and while drvP > 0 render pushes the string there in step with the fundamental's velocity
+// at that point. It hears the fundamental alone: near the end of the string, where the quills
+// pluck, the overtones move the point faster than the fundamental does, and a saturating loop that
+// heard them would lock onto one of them instead.
 #pragma once
 
 #include <array>
 #include <cstdint>
 
+#include "forte/press.h"
 #include "plectrum.h"
 
 namespace forte::harpsichord {
@@ -94,6 +102,9 @@ class PluckedString {
   void setSide(double kappa, int n);
   void wake();
   void silence(); // q, q1 to zero, the contacts forgotten (asleep)
+  // Press: tune the sustainer at the point of the plectrum that let go, to hold its fundamental at
+  // `hold` times the swing the pluck gave it there
+  void tuneDrive(double hold);
 
   // what a plectrum letting go reports (relInfo)
   struct Release { double F = 0, y = 0, u = 0, w = 0, s = 0, theta = 0; };
@@ -144,6 +155,14 @@ class PluckedString {
   std::array<double, NZ_MAX> za{}, zb{}, Z1{}, Z2{}, Wz{}, sigSz{}, sigBz{};
   bool zFelt = false;                 // the felt damping them (as of the last block)
   double zBuff = 0;                   // the buff's share, as of the last block
+  // Press: the sustainer (tuneDrive), as hard as drvP (0: not pushing), at plectrum point drvAt
+  // (−1: none yet); drvTune: a plectrum has let go, so the engine tunes it before the next block
+  static constexpr int DRIVEN = 6;
+  Sustainer sus;
+  double drvP = 0;
+  int drvAt = -1;
+  bool drvTune = false;
+  std::array<double, DRIVEN> PHD{}, PBD{}; // φ and b·φ of its partials at its point
 
  private:
   void fillPoint(int p);

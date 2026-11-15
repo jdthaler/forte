@@ -23,7 +23,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/steelpan/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity |
 | `Space` | sustain: keeps your hands off the notes after key-up |
-| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = roll**; MPE slide rolls one note; aftertouch does nothing (a Seaboard presses from any finger at rest) |
+| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = roll**; MPE slide rolls one note; a firm press (aftertouch, past half way) rolls a held note too, as hard as it is pressed |
 
 ## The physics
 

@@ -246,15 +246,23 @@ test('Lift: a slow lift opens the key-up channel half as wide, a fast one twice 
   near(one(undefined), 10, 1e-3, 'no release velocity'); near(one(0.5), 10, 1e-3, 'middling');
   near(one(0), 5, 1e-3, 'slowest'); near(one(1), 20, 1e-3, 'fastest');
 });
-test('Press: a firm press into a held key opens a third channel, up to Γ₃ at full pressure, on one key or the channel; a finger at rest (under half) changes nothing at all', () => {
-  const f = 440, t = at(0.1), params = P({ width: 1e-3, press: 5 });
+test('Press: a firm press into a held key keeps making its state, which builds to Press production × the amplitude it was made with, at the line\'s own rate and pitch, on one key or the channel; a finger at rest (under half) changes nothing at all', () => {
+  const f = 440, t = at(0.1), params = P({ width: 1e-3, press: 2 }), G = 0.44; // Γ = 0.44 Hz: |ψ| moves as e^(−πΓt)
+  // |ψ| from the heard part, by its envelope over whole periods (the state turns at its own pitch)
+  const env = (x, t0) => { const a = Math.round(t0 * FS), d = Math.round(FS / f) * 10; let s = 0; for (let n = a; n < a + d; n++) s += x[n] * x[n]; return Math.sqrt((2 * s) / d) / 0.3; };
   const still = play(params, [[0, 'on', 69, 1]], 0.5);
-  for (const ev of [[t, 'pressure', 1, 69], [t, 'pressure', 1]]) near(prony(play(params, [[0, 'on', 69, 1], ev], 0.5), f, t + 0.1, 0.45).fwhm, 5.44, 1e-3, ev.length > 3 ? 'its key pressed fully' : 'the channel pressed fully');
-  near(prony(play(params, [[0, 'on', 69, 1], [t, 'pressure', 0.75, 69]], 0.5), f, t + 0.1, 0.45).fwhm, 2.94, 1e-3, 'pressed half way past rest');
+  for (const ev of [[t, 'pressure', 1, 69], [t, 'pressure', 1]]) {
+    const x = play(params, [[0, 'on', 69, 1], ev], 2.5), m0 = env(still, t), want = (u) => 2 + (m0 - 2) * Math.exp(-Math.PI * G * (u - t));
+    for (const u of [0.5, 1, 2]) near(env(x, u), want(u), 0.02, `${ev.length > 3 ? 'its key' : 'the channel'} pressed fully: |ψ| at ${u} s`);
+    near(prony(x, f, 1, 1.5).f, f, 1e-6, 'at its own pitch');
+  }
+  // half way past rest: toward half as much, from above it the line decays to it and holds
+  const h = play(P({ width: 1e-2, press: 0.5 }), [[0, 'on', 69, 1], [t, 'pressure', 0.75, 69]], 2);
+  near(env(h, 1.9), 0.25, 0.02, 'pressed half way: a quarter of the strike');
   const rest = play(params, [[0, 'on', 69, 1], [t, 'pressure', 0.45, 69]], 0.5);
   assert.ok(rest.every((v, i) => v === still[i]), 'a finger at rest');
-  // let go of the press, and the channel shuts again
-  near(prony(play(params, [[0, 'on', 69, 1], [t, 'pressure', 1, 69], [at(0.2), 'pressure', 0, 69]], 0.6), f, at(0.2) + 0.1, 0.6).fwhm, 0.44, 5e-3, 'the press let go');
+  // let go of the press, and the state decays at its own width again
+  near(prony(play(params, [[0, 'on', 69, 1], [t, 'pressure', 1, 69], [at(0.2), 'pressure', 0, 69]], 0.6), f, at(0.2) + 0.1, 0.6).fwhm, G, 5e-3, 'the press let go');
 });
 test('the mod wheel and Slide are the width: the wheel takes every note from the default up to a ρ\'s 20 %, a slide one note alone', () => {
   const f = 440, w = (x) => prony(x, f, at(0.02), 0.1).fwhm / f;

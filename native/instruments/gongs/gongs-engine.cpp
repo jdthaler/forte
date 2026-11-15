@@ -31,7 +31,7 @@ constexpr double FIT_PERIODS = 1.5; // the linear tail's statistics average over
 constexpr double CLIP = 2;          // the output is soft-clipped above CLIP (towards 2·CLIP)
 constexpr int POST_SAMPLES = 12 * 128; // view messages every 12 blocks of 128
 constexpr double BEND_T = 0.02; // s: a note's own bend glides as the instruments that bend glide theirs
-constexpr double MALLET = 6.91 / 0.4; // 1/s: the mallet held against the plate (Press), at full pressure: T60 0.4 s
+constexpr double ROLL_RATE = 8;     // strokes/s: a firm press rolls the gong with soft mallets (Press: forte/press.h Roll)
 constexpr int BLOCK = 128;          // the blocks the bookkeeping is counted in (the page's)
 
 double sinc2(double t) { if (t < 1e-4) return 1 - (t * t) / 3; const double s = std::sin(t) / t; return s * s; }
@@ -176,7 +176,7 @@ void Voice::init(GongEngine &e, int key_, const double *P_, const Shell &S_) {
   full = &views[0]; lite = &views[1]; cs = full;
   vScale = g.h * g.w0; // m/s per unit of dx̄/dt̄
   setOutput(P_);
-  extra = 0; liftK = 1; press = Press{}; released = damped = killing = dead = false;
+  extra = 0; liftK = 1; press = Press{}; roll = Roll{}; released = damped = killing = dead = false;
   m = 1; h = k; calm = 0; adapt = true; tail = false; n1 = n2 = lam = tf = 0; fitting = wantFit = odd = armed = false;
   A = cf[0].A.data(); B = cf[0].B.data(); iD = cf[0].iD.data(); WD = cf[0].WD.data(); iW = cf[0].iW.data();
   nl = false; psi = 0; eps0 = 1.5; V = Vprev = V3 = V4 = defect = 0;
@@ -202,7 +202,7 @@ void Voice::setOutput(const double *P_) {
 // The exact damped recursion for steps k, k/2, k/4 and k/8 in the energy form, and the energy
 // weights W = sinc²(Ωh).
 void Voice::setDamping() {
-  const double ex = killing ? 300 : damped ? extra / liftK : press.on() ? MALLET * press.p : 0, E0 = nl ? energyD() : 0;
+  const double ex = killing ? 300 : damped ? extra / liftK : 0, E0 = nl ? energyD() : 0;
   for (int i = 0; i < N; i++) {
     const double Om = S->Om[i], s = (g.sigma[i] + ex) / g.w0;
     sg[i] = s; wd[i] = std::sqrt(std::max(Om * Om - s * s, 1e-9));
@@ -791,7 +791,9 @@ void GongEngine::process(float *L, float *R, int n) {
   }
   for (int i = 0; i < nv; i++) {
     Voice &v = *order[i];
-    if (v.press.follow(v.released || v.killing ? 0 : presses.of(v.key), n, fs) && !v.damped && !v.killing) v.setDamping();
+    // Press: a firm press rolls the held gong, its strokes as hard as the key is pressed
+    v.press.follow(v.released || v.killing ? 0 : presses.of(v.key), n, fs);
+    if (const double rv = v.roll.step(v.press.p, ROLL_RATE, n, fs, rng); rv > 0) v.strike(rv, v.P.data());
     if (const double to = expr.bendOf(v.key); v.bent != to && !v.killing) v.bend(glideTo(v.bent, to, n / fs, BEND_T)); // Glide: a hand on the rim
     const int b = v.R == 1 ? 0 : v.R == 2 ? 1 : v.R == 4 ? 2 : 3;
     if (inputs[b] > 0) v.render(buses[b].inL.data(), buses[b].inR.data(), inputs[b], *this);

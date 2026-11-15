@@ -14,7 +14,6 @@ using std::numbers::pi;
 constexpr double OUT = 0.02;        // output units per m³/s² of volume acceleration
 constexpr int MAX_VOICES = 16;      // bars sounding at once; the quietest older one fades out beyond this
 constexpr double BEND_T = 0.02;      // s: a note's own bend glides as the instruments that bend glide theirs
-constexpr double DEAD = 40;          // 1/s: the most the mallet pressed into the bar takes (Press)
 constexpr double FADE = 0.03;       // s: a stolen voice fades out over this
 constexpr double YOUNG = 0.05;      // s: a voice this young is never stolen
 constexpr double MALLET_MAX = 0.03; // s: the longest a mallet may stay in flight
@@ -154,10 +153,9 @@ void MarimbaEngine::Voice::render(float *L, float *Rt, int n, MarimbaEngine &eng
   Pair &A = pair[0], &B = pair[1];
   const bool bOn = B.on;
   double fade_ = fade;
-  const double pf = press.factor(DEAD, fs);
   for (int s = 0; s < n; s++) {
-    if (touch.on() || pf != 1) { // a mallet resting on the bar, or pressed into it
-      const double t = (touch.on() ? touch.step() : 1) * pf;
+    if (touch.on()) { // a mallet resting on the bar
+      const double t = touch.step();
       for (int i = PAIRS; i < N; i++) { q[i] *= t; q1[i] *= t; }
       A.q *= t; A.v *= t; B.q *= t; B.v *= t;
     }
@@ -232,7 +230,7 @@ void MarimbaEngine::Voice::render(float *L, float *Rt, int n, MarimbaEngine &eng
     eng.post(m);
     return;
   }
-  const bool rolling = held && eng.rollOf(*this) > ROLL_ON;
+  const bool rolling = held && (eng.rollOf(*this) > ROLL_ON || press.on());
   if (!malletOn && !rolling && age > YOUNG && E <= floor * Emax) dead = true;
 }
 
@@ -352,22 +350,23 @@ void MarimbaEngine::allNotesOff() {
   presses.clear();
 }
 
-// The roll: the wheel's, or the key's own slide. Pressure does not roll: a Seaboard sends it from
-// any finger at rest, which would roll every note (a firm press is the dead stroke instead).
+// The roll: the wheel's, or the key's own slide.
 double MarimbaEngine::rollOf(const Voice &v) const { return expr.slideOr(v.key, P[p::roll]); }
 
 // Held keys roll: the mallets strike in turn, at the roll's share of the first stroke, the strokes
-// a little uneven (±3 % in time), as a player's are.
+// a little uneven (±3 % in time), as a player's are. A firm press rolls too (forte/press.h), its
+// strokes as hard as the key is pressed (ROLL_FULL of the hardest at full press), whichever is the
+// harder.
 void MarimbaEngine::rolls(int n) {
   for (int i = 0; i < nVoices; i++) {
     Voice &v = *voices[i];
     if (!v.held || v.fading) continue;
-    const double amt = rollOf(v);
-    if (amt <= ROLL_ON) { v.rollIn = fs / P[p::rollRate]; continue; }
+    const double amt = rollOf(v), pr = ROLL_FULL * v.press.p;
+    if (amt <= ROLL_ON && !(pr > 0)) { v.rollIn = fs / P[p::rollRate]; continue; }
     if ((v.rollIn -= n) > 0) continue;
     rng = rng * 1664525u + 1013904223u;
     v.hand = !v.hand;
-    v.strike(*this, v.vel * amt);
+    v.strike(*this, std::max(amt > ROLL_ON ? v.vel * amt : 0.0, pr));
     v.rollIn += (fs / P[p::rollRate]) * (1 + 0.06 * ((rng >> 8) / 16777216.0 - 0.5));
   }
 }

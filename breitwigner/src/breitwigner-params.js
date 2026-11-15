@@ -33,10 +33,10 @@ export const GROUPS = [
     ],
   },
   {
-    title: 'Decay channels',
+    title: 'Decay and production',
     params: [
       { id: 'release', label: 'Key-up channel Γ₂', perform: true, min: 0.05, max: 500, def: 6, log: true, fmt: hz, hint: 'Letting a key go opens a second way to decay, this wide on every key (the pedal keeps it shut). Partial widths add, so the note dies sooner and its line widens: 6 Hz ends a note in about a third of a second.' },
-      { id: 'press', label: 'Press channel Γ₃', min: 0.5, max: 500, def: 30, log: true, fmt: hz, hint: 'A firm press into a held key (aftertouch) opens a third channel, up to this wide at full pressure: the note dies while it is pressed.' },
+      { id: 'press', label: 'Press production', min: 0.1, max: 3, def: 1.5, step: 0.05, fmt: (v) => `${v.toFixed(2)} ×`, hint: 'A firm press into a held key (aftertouch) keeps making its state, as a beam at its energy would: at full pressure it builds to this many times the amplitude the key made it with, and holds there while pressed. It swells at the line\'s own rate, so a narrow line slowly.' },
       { id: 'velocity', label: 'Velocity (computer keys)', perform: true, strip: true, min: 0.05, max: 1, def: 0.7, step: 0.01, fmt: (v) => v.toFixed(2), hint: 'The amplitude the state is made with.' },
     ],
   },

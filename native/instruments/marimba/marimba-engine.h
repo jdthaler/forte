@@ -7,9 +7,10 @@
 //   the bar's place along the frame
 //
 // One voice per bar: striking a ringing bar hits it where it is, and a held key rolls (the two
-// mallets in turn) as long as the roll is up. Each bar's modes (a finite-element solve, the page's
-// noteData) are built off the audio thread by forte/background.h for the instrument, the undercut
-// depth and the keyboard's tuning; a note whose bar is not built yet waits for it (a few ms).
+// mallets in turn) as long as the roll is up or the key is pressed firmly. Each bar's modes (a
+// finite-element solve, the page's noteData) are built off the audio thread by forte/background.h
+// for the instrument, the undercut depth and the keyboard's tuning; a note whose bar is not built
+// yet waits for it (a few ms).
 // Voices come from a fixed pool: nothing is allocated in process().
 #pragma once
 
@@ -51,7 +52,7 @@ class MarimbaEngine : public Engine {
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's own roll
   // Glide: a hard mallet pressed on the bar and dragged along it: up to a semitone flat
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
-  void pressure(double value, int key) override { presses.set(value, key); } // the mallet pressed into the bar: the dead stroke
+  void pressure(double value, int key) override { presses.set(value, key); } // a firm press rolls the note, as hard as it is pressed
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A bar its page's model built already (packVoiceData; the page's noteData), for the next
@@ -85,7 +86,7 @@ class MarimbaEngine : public Engine {
     bool held = false, hand = false;     // the key is down; which mallet strikes next in a roll
     double vel = 0, rollIn = 0; // the first stroke's velocity, samples to the next stroke
     double fade = 1;
-    Press press;     // the mallet pressed into the bar while its key is held: the dead stroke (forte/press.h)
+    Press press;     // how hard its key is pressed: a firm press rolls it (forte/press.h)
     LiftTouch touch; // a mallet resting on the bar a moment after a fast lift (forte/lift.h)
     bool fading = false, dead = false;
     double age = 0;

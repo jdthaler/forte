@@ -54,7 +54,7 @@
         "strikeOn": true,
         "glideOn": false,
         "slideOn": true,
-        "pressOn": false,
+        "pressOn": true,
         "liftOn": true
       }
     }

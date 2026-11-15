@@ -18,7 +18,7 @@ export const INSTRUMENT = {
   modWheel: 'strike',                   // CC1: strike point, from its default (near the centre) out to 95 % of the radius
   mpe: { bend: 0.1, way: 'up', slide: true }, // a note's own bend, a hand pressing its rim (up only, ten cents at most); its slide, where its mallet lands, at the strike
   glide: 'a hand pressing the rim, stiffening the plate: a few cents sharp', // what a note's own bend does
-  aftertouch: 'a firm press holds the mallet against the plate, muting it', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  aftertouch: 'a firm press rolls the gong with soft mallets, as hard as it is pressed', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'the hand damping the plate on release: a slow lift lands gently (a longer tail), a fast one firmly', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['mass', 'release', 'listen', 'hardness', 'strike'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/gongs), built as WebAssembly (it builds its

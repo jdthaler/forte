@@ -17,7 +17,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/grand/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity (hammer speed 0.25–6 m/s) |
 | `Space` | sustain pedal (lifts the dampers) |
-| MIDI | notes, velocity, sustain pedal (CC64) |
+| MIDI | notes, velocity, sustain pedal (CC64); a firm press (aftertouch, past half way) drives a sustainer over the held note's strings, as an EBow would: it swells and holds |
 
 ## The physics
 

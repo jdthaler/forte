@@ -58,7 +58,7 @@ class TinesEngine : public Engine {
   void noteBend(double ratio, int key) override; // one fork's spring slides: its stiffness ×r², on top of the wheel's
   // a note's own slide: where its hammer strikes (strike), from its next strike
   void slide(double value, int key) override { expr.setSlide(value, key); }
-  void pressure(double value, int key) override { presses.set(value, key); } // a finger on the tone bar: a darker, shorter note
+  void pressure(double value, int key) override { presses.set(value, key); } // a sustainer by the pickup: the note swells and holds
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A key's voice data from the page (packVoiceData), kept for that key's notes until the next
@@ -86,7 +86,7 @@ class TinesEngine : public Engine {
     uint64_t version = 0;
     bool inUse = false;
     double k = 0;
-    std::array<double, MAX_MODES> q{}, q1{}, a1{}, a2{}, a1d{}, a2d{}, a1p{}, a2p{}, w{}, w0{}, bw{}, pk{}, om{}, sig{}, dw{}, om0{};
+    std::array<double, MAX_MODES> q{}, q1{}, a1{}, a2{}, a1d{}, a2d{}, w{}, w0{}, bw{}, pk{}, bp{}, om{}, sig{}, dw{}, om0{};
     // om0: the modes unbent; bend: the ratio om is tuned to, the wheel's × the note's own (own, gliding to its key's)
     double comp = 0, bend = 1, own = 1;
     Hammer hammer{};
@@ -105,10 +105,11 @@ class TinesEngine : public Engine {
     double flux(double Y) const { const double z = 1 + std::pow(Y / wid, 2); return 1 / (z * std::sqrt(z)); }
     void retargetPickup(const Pickup &pu);
     void setDamper(double sd);
-    void tune(double r); // the modes at r × om0: a1, a2, bw, comp (then setDamper for a1d, a2d)
+    void tune(double r); // the modes at r × om0: a1, a2, bw, bp, comp (then setDamper for a1d, a2d)
     void updateDamping(const TinesEngine &eng) { damped = killing || (!keyDown && !eng.sustain && hasDamper); }
-    Press press; // a finger on the tone bar (forte/press.h): a1p, a2p while it is pressed
-    void setPressed();
+    Press press;   // how hard its key is pressed (forte/press.h)
+    Sustainer sus; // Press: a driver coil beside the pickup, fed from it, pushing the tine's tip (bp)
+    void tuneSustainer();
     // a note's own slide: where its hammer strikes (mm from the clamp; NaN: the knob's, as built)
     std::array<double, STRIKES * MAX_MODES> ws{};
     double aimed = NAN;
