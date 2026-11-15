@@ -221,6 +221,8 @@ function mount() {
   }
 
   start.addEventListener('click', () => { if (card.hidden) open_(); else shut(); start.blur(); });
+  // a reload into a new release of Forte (shared/boot.js) waits while a song plays, or its card is open
+  document.addEventListener('forte-can-reload', (e) => { if (playing || !card.hidden) e.preventDefault(); });
   close.addEventListener('click', () => { shut(); start.focus({ preventScroll: true }); });
   fold.addEventListener('click', () => {
     const f = card.classList.toggle('folded');
