@@ -126,6 +126,32 @@ a.forte-menu-item:hover { background: rgba(255, 255, 255, 0.06); }
 }
 .forte-warning a { color: #fff; }
 
+/* A new release of Forte, ready (shared/boot.js): a note at the bottom, above an instrument's keys,
+   until the page reloads, or ✕; and, for a few seconds after a reload of its own, that it did */
+.forte-update {
+  position: fixed; z-index: 60; left: 50%; transform: translateX(-50%);
+  bottom: max(16px, env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; justify-content: center;
+  width: max-content; max-width: calc(100vw - 24px); box-sizing: border-box;
+  padding: 6px 6px 6px 14px;
+  background: var(--panel, #151518); color: var(--text, #ece8e1);
+  border: 1px solid var(--accent, #f0b35a); border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  font: 13px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.forte-update:not(:has(button)) { padding-right: 14px; }
+body[data-instrument] .forte-update { bottom: calc(var(--footer-h, calc(var(--kb-h, 115px) + 52px)) + 12px); }
+.forte-update a { color: var(--accent, #f0b35a); }
+.forte-update button {
+  font: 600 12.5px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+  border-radius: 7px; padding: 7px 12px; cursor: pointer;
+  border: 1px solid transparent; background: transparent; color: var(--muted, #9a9284);
+}
+.forte-update .forte-update-go { background: var(--accent, #f0b35a); color: var(--accent-ink, #160d02); }
+.forte-update .forte-update-go:hover { filter: brightness(1.1); }
+.forte-update .forte-update-close { padding: 7px 9px; }
+.forte-update .forte-update-close:hover { color: var(--text, #ece8e1); border-color: var(--line, #2b2833); }
+
 /* How it works (shared/notes.js): a button by the title, and the README in a dialog */
 .forte-about {
   display: inline-flex; align-items: center; gap: 6px; align-self: center; flex: none;

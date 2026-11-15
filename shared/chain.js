@@ -62,6 +62,16 @@ export function createLimiter(ctx, L) {
 // −1 dB with no makeup gain, which only catches what they add up to.
 export const SUM_LIMITER = { ...LIMITER, threshold: -1, knee: 0, ratio: 20, attack: 0.001, release: 0.1, makeup: false };
 
+// Whether a page's sound still rings: its analyser hears more than −60 dBFS while its context runs.
+// A reload into a new release (shared/boot.js) waits for it, so it never cuts a note short.
+export function ringing(ctx, analyser) {
+  if (!ctx || ctx.state !== 'running' || typeof analyser?.getFloatTimeDomainData !== 'function') return false;
+  const buf = new Float32Array(analyser.fftSize);
+  analyser.getFloatTimeDomainData(buf);
+  for (const x of buf) if (Math.abs(x) > 1e-3) return true;
+  return false;
+}
+
 // Build the chain on `ctx` after `node`. Returns the nodes, `tap` (the signal before the
 // body and room, for an analyser), apply(P, trim), which ramps the gains (20 ms), and dispose(),
 // which takes it off the speakers.

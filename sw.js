@@ -5,8 +5,9 @@
 // whether or not there is a network, so a page never mixes files from two releases. The demos and
 // link pictures it leaves to the network. A new release (a new list, so a new sw.js) is
 // downloaded in the background, only the files that changed, each checked against its hash; it
-// takes over on the way to the next page when no other tab still shows the old one
-// (shared/boot.js), or once every Forte page has been closed.
+// takes over when every page open can move to it (on the way to the next page, or with a reload
+// when nobody is using a page: shared/boot.js), when the player asks for it, or once every Forte
+// page has been closed.
 
 const CACHE = 'forte-offline';
 const BASE = new URL('./', self.location.href);
@@ -44,16 +45,25 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
   await self.clients.claim(); // the first visit's page, which loaded before there was a copy
 })()));
 
-// The page asks this (waiting) release to take over as it moves to another page; it does when
-// that page is the only one open, since every open page's files would come from it from then on.
+// A page asks this (waiting) release to take over: on its way to another page, when nobody is
+// using it, or when the player pressed Reload on it (force). It does when every other page open
+// can reload now too (each says, shared/boot.js; one that doesn't answer can't), or at once for
+// Reload: every open page's files come from it from then on, and each reloads when it can.
 self.addEventListener('message', (e) => {
   if (e.data?.type !== 'forte-update') return;
   e.waitUntil((async () => {
     const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    const ok = open.length <= 1;
+    const others = open.filter((c) => c.id !== e.source?.id && c.frameType !== 'nested'); // (a frame goes with its page)
+    const ok = !!e.data.force || (await Promise.all(others.map(idle))).every(Boolean);
     if (ok) await self.skipWaiting();
     e.ports[0]?.postMessage(ok);
   })());
+});
+const idle = (client) => new Promise((done) => {
+  const ch = new MessageChannel();
+  ch.port1.onmessage = (m) => done(m.data === true);
+  client.postMessage({ type: 'forte-idle' }, [ch.port2]);
+  setTimeout(() => done(false), 800);
 });
 
 const cached = async (path, init) => {

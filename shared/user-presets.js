@@ -8,15 +8,17 @@
 //   Your presets and files…    the list (play, link, save to a file, delete), and opening a
 //                              preset file, which the plugins' Presets menu reads and writes too
 // Opening a link made that way applies its settings and takes them off the address. It also puts
-// the Scala file button under the Temperament control (shared/tuning-ui.js), and Morph, a slider
-// from one preset to another, last in the Controls panel (shared/morph.js).
+// the Scala file button under the Temperament control (shared/tuning-ui.js), and Morph, a switch
+// beside the menu that slides from its preset to another (shared/morph.js).
 //
 //   attachPresets({ instrument: INSTRUMENT, get: () => P, set: (values) => …, defaults: DEFAULTS, toast })
 // get gives the page's parameters (for the organ, P with its console); values() turns them into
 // the preset's by contract id. set takes every parameter's value by contract id and applies them
 // as choosing a preset would. defaults is the page's P before a preset's own values (a factory
 // preset is { ...defaults, ...preset.p }); without it, the parameters' defaults. toast is the
-// page's. pageState (below) hands them to a guided tour.
+// page's. pageState (below) hands them to a guided tour. It returns { params, open, copyLink,
+// scala, morphing, moved }: morphing() whether Morph is on (the menu then names the preset it
+// morphs from, so a control moved by hand leaves it, and moved() says so).
 
 import { unfocus } from './focus.js';
 import { presetParams, presetFile, readPresetFile, linkHash, readLinkHash, complete, cleanName } from './presets.js';
@@ -79,6 +81,7 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, defa
   for (const ev of ['focus', 'pointerdown', 'keydown', 'change']) sel.addEventListener(ev, note);
   // the name of the preset playing now, if the sound is still a preset's
   const current = () => {
+    if (morphing && !morphing.exact()) return ''; // a mix of two, or moved from the one the menu names
     const o = [...sel.options].find((x) => x.value === before);
     return before === '' || before === '__default' || !o ? '' : o.text;
   };
@@ -251,8 +254,9 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, defa
   const base = defaults ?? Object.fromEntries(params.map((p) => [p.id, p.def]));
   const factory = (I.presets ?? []).map((pr) => ({ name: pr.name, values: complete(params, values({ ...base, ...pr.p })) }));
   morphing = attachMorph({
-    instrument: I, params, factory, mine: () => mine, now, set, keep: I.keep,
-    shown: (key) => { // the Presets menu names the preset the morph rests on, or none
+    instrument: I, params, factory, mine: () => mine, now, set, keep: I.keep, toast,
+    naming: () => sel.value !== '',
+    shown: (key) => { // the Presets menu names the preset the morph starts from, or none
       const k = key?.startsWith('u:') ? find(key.slice(2)) : -1;
       sel.value = key === 'default' ? '__default' : key?.startsWith('f:') ? key.slice(2) : k >= 0 ? USER + k : '';
       before = sel.value;
@@ -265,5 +269,5 @@ export function attachPresets({ instrument: I, get, set, values = (P) => P, defa
   // a Scala file sets the custom temperament (shared/tuning-ui.js), as a preset would
   const scala = attachScala({ set: (v) => set({ ...now(), ...v }), toast });
 
-  return { params, open: openSheet, copyLink, scala };
+  return { params, open: openSheet, copyLink, scala, morphing: () => morphing.on(), moved: () => morphing.moved() };
 }
