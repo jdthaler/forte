@@ -1,6 +1,7 @@
 // breitwigner-engine.h — the real-time part, on the engine contract (forte/engine.h). Each key
 // has one state: a complex number, turned once a sample at its mass and shrunk at half its
-// width, exactly (breitwigner-model.h). What is heard is one of its two parts.
+// width, exactly (breitwigner-model.h), and fed by its key's source while that runs (the
+// Formation time). What is heard is one of its two parts.
 #pragma once
 
 #include <array>
@@ -48,9 +49,14 @@ class BreitWignerEngine : public Engine {
     double gamma = 1;         // its boost now
     double lift = 1;          // how wide its key-up channel opened, over the control's (Lift)
     Press press;              // how hard its key is pressed
+    double made = 0;          // |ψ| as its key last made it (a press keeps making it, up to Press × this)
+    int form = 0;             // samples its source still runs (0: none, or made at once)
+    double dr = 0, di = 0;    // its source's amplitude a second, turning with it (made real at the strike)
     double f = 0, fwhm = 0;   // in the lab, this block (Hz)
-    double rr = 1, ri = 0;    // its turn per sample, decay included
-    double fc = -1, wc = -1;  // what that turn was made for
+    double rr = 1, ri = 0, r = 1; // its turn per sample, decay included, and its decay alone
+    double ur = 1, ui = 0;    // the same turn without the decay: its source's
+    double k = 0;             // what a second of source adds in a sample, (1 − e^(−πΓ/fs))/(πΓ)
+    double fc = -1, wc = -1;  // what those were made for
   };
   // read by the tests (through the WebAssembly's hooks)
   std::array<State, KEYS> states{};

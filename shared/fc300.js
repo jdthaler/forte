@@ -1,5 +1,5 @@
-// fc300.js — a Roland FC-300 MIDI foot controller, drawn in the drawer at the left of an instrument
-// page (shared/layout.js) once one is seen: its ▼ ▲, CTL 1 and 2, five number pedals and two
+// fc300.js — a Roland FC-300 MIDI foot controller, drawn in the MIDI devices drawer at the right of an
+// instrument page (shared/layout.js) once one is seen: its ▼ ▲, CTL 1 and 2, five number pedals and two
 // expression pedals with their toe switches, each lit as it moves, with what it does on this
 // instrument. shared/midi.js opens it when an input sends the FC-300's switches (CC80–83) or comes
 // by the interface the last one came by, and hands it that input's messages.

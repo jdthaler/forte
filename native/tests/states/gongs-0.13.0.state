@@ -1,17 +1,21 @@
-forte tubular 0.2.0
+forte gongs 0.13.0
 material 0
-diameter 38.100000000000001
-wall 1.6000000000000001
-cap 120
-eta 0.0001
-fullRange 0
-hardness 1500
-mass 220
-strike 0
-speedMax 3
-damp 0.40000000000000002
-pedalLock 0
-distance 12
+thick 0.01
+rise 0.40000000000000002
+bc 0
+eta 0.00014999999999999999
+thermal 1
+radiation 1
+asym 0.5
+hardness 4
+mass 0.059999999999999998
+strike 0.10000000000000001
+strikeAngle 20
+speed 9
+release 30
+listen 0.59999999999999998
+nlvoices 4
+terms 300
 room 0.29999999999999999
 venue 1
 volume 0.80000000000000004

@@ -73,7 +73,7 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 
 | file | what |
 |---|---|
-| `boot.js` | the first script in every page's `<head>`, a classic one: it offers a reload when a page loaded a mix of two releases' files, and registers the service worker, `sw.js` at the root, which keeps a copy of the released site for working offline (on https only, so not on `localhost`). The copy is every page and everything a page loads: a page, its scripts, styles, WebAssembly, data and README, the icons; not the demos or the link pictures. Its list is `tools/offline.mjs`'s, by file type, so a new instrument needs nothing; a page that loads a new kind of file (a font, say) needs it added there, and `test/offline-tests.mjs` says so. `node tools/check-offline.mjs` opens every page offline. |
+| `boot.js` | the first script in every page's `<head>`, a classic one: it offers a reload when a page loaded a mix of two releases' files, and registers the service worker, `sw.js` at the root, which keeps a copy of the released site for working offline (on https only, so not on `localhost`). The copy is every page and everything a page loads: a page, its scripts, styles, WebAssembly, data and README, the icons; not the demos or the link pictures. Its list is `tools/offline.mjs`'s, by file type, so a new instrument needs nothing; a page that loads a new kind of file (a font, say) needs it added there, and `test/offline-tests.mjs` says so. `node tools/check-offline.mjs` opens every page offline. A new release reaches a page on the way to the next page, or by a reload as soon as nobody is using it (hidden or fresh, with nothing going on), or from **Reload** on the note it shows meanwhile; a part of a page that a reload would cut short cancels the `forte-can-reload` event on `document` while it is busy (a key or the pedal held, the sound still ringing (`chain.js` `ringing`), a song, tour or rhythm playing), and `midi.js` tells it of MIDI playing the page with `forte-activity`. |
 | `shell.js` | everything common to instrument pages: audio graph (room, volume, tone, limiter, analyser), computer keyboard and on-screen keys, MIDI (notes, velocity through the touch curve, CC64, CC66 sostenuto, CC67 soft pedal, CC1, pitch bend), parameter sidebar with presets and local storage, octave shift, toasts. See the header for the config. |
 | `in-plugin.js` | the page inside a plugin's window (its *Views* pane, `native/plugin/editor.html`): with `?plugin` in a frame of that window, the page shows only its views, and they draw what the plugin plays. `pluginAudio` stands in for the audio graph: its analyser reads the plugin's sound as Web Audio's would, and its node's port hears the engine's messages, translated by the engine class's `translate` (`wasm.js`). `shell.js` uses it by itself; the five pages with their own controls call `follow()` with how to set their parameters and play their keys. |
 | `worklet.js` | the generic AudioWorklet processor. It runs your engine's WebAssembly from the bytes the page sends, through its class's `globalThis` name. It also registers `forte-limiter`, the chain's limiter, so a page adds it before building the chain. |
@@ -89,10 +89,10 @@ what a view draws) and for tools that make the C++'s data tables (`tools/*-nativ
 | `quality.js` | the Quality setting (High, Medium, Low): how much of its physics the engine plays, for phones and older computers. One choice per browser, for every page, shown in the header beside the CPU readout (`qualityControl()`, one pill with it once the audio plays) and in no preset or link; `connectQuality(node)` sends it to the page's engine and suggests a lower setting when the audio drops out. |
 | `registry.js`, `search.js` | the instrument list behind the landing page and the menus, with the sections and the front page's filters (`FILTERS`); `search.js` is the front page's search over it (word starts, without case or accents) |
 | `presets.js`, `user-presets.js` | your own presets and shared links. `presets.js` is the format, the same in the plugins (`native/plugin/presets.cpp`): every parameter of the contract by id, in a versioned file or in a link's fragment. `user-presets.js` adds them to the Presets menu (save, link, a sheet to play, link, save to a file, delete and open files); the shell attaches it, and a page with its own state calls `attachPresets` with how to get and set its parameters by contract id (the organ's console is `CONSOLE.get` and `CONSOLE.put`) and its `DEFAULTS`. |
-| `morph.js` | Morph, the last group of controls on every page: *From* and *To* (Default settings, the instrument's presets, your own) and a slider between them; `presets.js` `morph` is the blend (a number in a straight line, or by equal ratios on a log control, on its step; a choice or a switch halfway), and the page's `keep` stays as it is. `user-presets.js` attaches it. Choosing a preset makes it From. The plugins have the same as three parameters, Morph from, Morph to and Morph (`native/plugin/plugin.cpp`), so a song can automate it. |
-| `midi.js` | Web MIDI for every page (through the shell): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen in the MIDI settings, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling; `createInput` is one source's cleaning (a device's, which follows Octave and Transpose, or a song's, which doesn't), and `pageMIDI` the page's handler, for the songs (`songs.js`); `pageMpe` decodes MPE for a page (below) and turns it into the engine's `noteBend`, `slide` and `pressure` messages; Octave and Transpose (`keyShift`, `setShift`; the MIDI status opens a menu with them, the velocity curve and MPE, in the drawer: `midiSettings`) move every MIDI key as `startMIDI` cleans it, a note-off and poly pressure going where their note-on went, so a page's own MIDI handling gets them for nothing. A foot controller is `startMIDI`'s too, so every page has it: `SWITCHES` turns CC80, 81 and 82 into CC64, 66 and 67, a device's volume pedal (CC7) moves the page's Volume control (`volumePedal`, which the shell gives, and `pedalVolume`: its top toe down, silent heel down), the expression pedal (CC11), and CC7 from a song or on a page without a Volume control, set `pedalGain`, which `chain.js` applies after the limiter, and a program change plays a preset from `#preset` (`choosePreset`; a Seaboard's preset arrows step from the preset playing instead, `riseProgram`, so they keep in step with a foot controller and the menu); a page passes its `controllers` (`controllersOf`) so that a CC its instrument maps (an organ's CC11) stays the instrument's. An FC-300's switches (CC80–83) open its section of the drawer (`fc300.js`). The plugins do the same (`native/plugin/plugin.cpp`), but for CC7, which stays a gain there. |
-| `rise.js` | a Seaboard RISE's panel, a section of the page's drawer while one is plugged in (`midi.js` opens it and hands it that input's messages): `riseModel` reads each finger's Strike, Glide, Slide, Press and Lift, the faders and the pad; `risePanel` draws them with what each moves or does here (`faders`, `mpe`, `modWheel`, `aftertouch` from the descriptor) and each dimension's Expression switch (the shell's own, kept in step with the `forte-switches` and `forte-switch` events), and under *On the RISE* its own settings, read and written over SysEx. |
-| `fc300.js` | a Roland FC-300's section of the page's drawer, once one is seen (`midi.js` opens it when an input sends CC80–83, or comes by the interface the last one came by): `footModel` reads its switches and pedals, as it comes or over SysEx; the section draws its top panel, each switch lit while down and each expression pedal as far down as it is, with what each does here; *Let Forte drive it* puts it in its System Exclusive mode, where `drive` turns each pedal into what Forte plays (every switch down only while held, ▲ ▼ and the number pedals the presets) and `face` shows the preset on its lights, display and LCD. |
+| `morph.js` | Morph, in the drawer's Presets section on every page: a switch beside the heading; on, the Presets menu is *From*, and *To* (Default settings, the instrument's presets, your own), a slider between them and Keep this mix show under it. `presets.js` `morph` is the blend (a number in a straight line, or by equal ratios on a log control, on its step; a choice or a switch halfway), and the page's `keep` stays as it is. `user-presets.js` attaches it, and while Morph is on the menu keeps naming From (`shell.js` asks it before emptying the menu). Choosing a preset makes it From, at 0 %; off goes back to From; Keep this mix goes off leaving the values. The plugins have the same as three parameters, Morph from, Morph to and Morph (`native/plugin/plugin.cpp`), so a song can automate it; their window has the switch (`editor.html`). |
+| `midi.js` | Web MIDI for every page (through the shell): `startMIDI` listens to every input and cleans each one's notes (a re-strike lets the note go first, a stray note-off is dropped, an unplugged device lets go of its notes and pedal); `resumeMIDI` turns MIDI back on, without a click, on the next page; `wheelValue` puts the mod wheel at rest on a parameter's default; `touched` applies the Soft/Normal/Hard velocity curve chosen in the MIDI settings, `SOFT_PEDAL` is CC67's velocity scale and `createSostenuto` keeps the keys CC66 holds, for pages with their own MIDI handling; `createInput` is one source's cleaning (a device's, which follows Octave and Transpose, or a song's, which doesn't), and `pageMIDI` the page's handler, for the songs (`songs.js`); `pageMpe` decodes MPE for a page (below) and turns it into the engine's `noteBend`, `slide` and `pressure` messages; Octave and Transpose (`keyShift`, `setShift`; the MIDI status opens a menu with them, the velocity curve and MPE, in the MIDI devices drawer: `midiSettings`, under `midiDevices`, the devices plugged in) move every MIDI key as `startMIDI` cleans it, a note-off and poly pressure going where their note-on went, so a page's own MIDI handling gets them for nothing. A foot controller is `startMIDI`'s too, so every page has it: `SWITCHES` turns CC80, 81 and 82 into CC64, 66 and 67, a device's volume pedal (CC7) moves the page's Volume control (`volumePedal`, which the shell gives, and `pedalVolume`: its top toe down, silent heel down), the expression pedal (CC11), and CC7 from a song or on a page without a Volume control, set `pedalGain`, which `chain.js` applies after the limiter, and a program change plays a preset from `#preset` (`choosePreset`; a Seaboard's preset arrows step from the preset playing instead, `riseProgram`, so they keep in step with a foot controller and the menu); a page passes its `controllers` (`controllersOf`) so that a CC its instrument maps (an organ's CC11) stays the instrument's. An FC-300's switches (CC80–83) open its section of the drawer (`fc300.js`). The plugins do the same (`native/plugin/plugin.cpp`), but for CC7, which stays a gain there. |
+| `rise.js` | a Seaboard RISE's panel, a section of the page's MIDI devices drawer while one is plugged in (`midi.js` opens it and hands it that input's messages): `riseModel` reads each finger's Strike, Glide, Slide, Press and Lift, the faders and the pad; `risePanel` draws them with what each moves or does here (`faders`, `mpe`, `modWheel`, `aftertouch` from the descriptor) and each dimension's Expression switch (the shell's own, kept in step with the `forte-switches` and `forte-switch` events), and under *On the RISE* its own settings, read and written over SysEx. |
+| `fc300.js` | a Roland FC-300's section of the page's MIDI devices drawer, once one is seen (`midi.js` opens it when an input sends CC80–83, or comes by the interface the last one came by): `footModel` reads its switches and pedals, as it comes or over SysEx; the section draws its top panel, each switch lit while down and each expression pedal as far down as it is, with what each does here; *Let Forte drive it* puts it in its System Exclusive mode, where `drive` turns each pedal into what Forte plays (every switch down only while held, ▲ ▼ and the number pedals the presets) and `face` shows the preset on its lights, display and LCD. |
 | `fc300-sysex.js` | the FC-300's System Exclusive mode, from Roland's MIDI implementation in its manual: Roland's RQ1 and DT1 with their checksum on its Foot Controller model (00 00 20), the mode it is in and into that mode, each pedal's report read (`event`), its lights, its three-digit display and its LCD. Bytes only: `fc300.js` does the sending. Its stored pedal settings are in a bulk-dump format Roland doesn't document, which nothing here writes. |
 | `rise-sysex.js` | the RISE's settings over SysEx, as ROLI Dashboard reads and writes them (the protocol [GRAB](https://github.com/demixme/GRAB) decoded): the identify message and its reply parsed, one setting's `3D` message, the MIDI-mode, Press, octave and transpose RPNs and NRPNs, and `forForte()`, what *Set up for Forte* sends. Bytes only: `rise.js` does the sending. |
 | `mpe.js` | MPE (MIDI Polyphonic Expression), message for message as the plugins' `forte/mpe.h`: zones from the MPE Configuration Message, member channels' bend (±48 semitones unless RPN 0 says otherwise), pressure and CC74, the Auto/On/Off mode, and `bendRatio`, a note's bend along the keyboard's tuning. |
@@ -141,7 +141,7 @@ export const INSTRUMENT = {
                                         // pressing a string behind the bridge only sharpens it)
   glide: 'a finger pressing the string behind the bridge: up to a semitone sharp', // what a note's own
                                         // bend does, when it isn't simply a bend (the RISE's panel says it)
-  aftertouch: 'a hand pressed against the gong damps it', // what pressing into a held key does (any aftertouch, MPE
+  aftertouch: 'a firm press rolls the gong, as hard as it is pressed', // what pressing into a held key does (any aftertouch, MPE
                                         // pressure: a Seaboard's Press), as the RISE's panel says it; leave it out when
                                         // the engine ignores pressure (test/mpe-tests.mjs checks both ways)
   lift: 'a slow lift lets the damper settle softly', // what a slow or a fast release does (release velocity: a
@@ -239,13 +239,18 @@ an Osmose) bends, slides and presses each note alone. `shared/mpe.js` and the pl
   from where it landed, towards either end of the key (`slideFrom`; a host's per-note brightness
   likewise from its first value), so a finger resting mid-key leaves the note as the computer
   keys play it;
-* `pressure(value, key)`, which per-key pressure already was. The struck and plucked engines
-  take it as a hand, palm, mallet or felt held against what rings (`forte/press.h`): `Presses`
-  keeps each key's and the channel's, counting only a press past half way (`PRESS_FROM`: a
-  Seaboard sends some from a finger at rest) and the rest as none to full; each held note's
-  `Press` glides there over 10 ms and adds its loss (`loss` weighs it by frequency, the upper
-  partials first). Unpressed, a note plays bit for bit as before. An engine whose press shapes
-  a held note rather than damping it (a brighter beam, a stronger field, a deeper trap) keeps
+* `pressure(value, key)`, which per-key pressure already was. A press makes a note more, never
+  less. The struck and plucked engines take it through `forte/press.h`: `Presses` keeps each
+  key's and the channel's, counting only a press past half way (`PRESS_FROM`: a Seaboard sends
+  some from a finger at rest) and the rest as none to full, and each held note's `Press` glides
+  there over 10 ms. What it does is a player's or a device's that keeps a struck note going: a
+  `Sustainer` (an EBow over a string, a driver coil by a tine's, reed's or spring's pickup, a
+  bow on a bar) senses the velocity at its point through a band-pass on the note and pushes in
+  step through an amplifier that saturates at p·F, tuned as the strike leaves so that a full
+  press holds the fundamental at a few times its swing then (it swells or decays there over its
+  own decay time); the mallet instruments `Roll`, striking again as hard as the key is pressed.
+  Unpressed, a note plays bit for bit as before. An engine whose press shapes a held note (a
+  brighter beam, a stronger field, a deeper trap) keeps
   `Pressures` instead, the pressure as it comes, and glides toward `1 + k·p` over `PRESS_GLIDE`;
   one whose press sets something off (an echo train, aftershocks, matter falling in) uses
   `Presses`, so a finger at rest fires nothing. Both `reset(key)` on a new note.
@@ -403,21 +408,30 @@ and say which in the footer help.
   with every group off, the panel keeps its toggles. Other code can add
   its own tools to either bar: `barTools('views')` or
   `barTools('controls')` from `layout.js` is the element to append to.
-- **The drawer** (`#forte-drawer`), at the left: what every instrument
+- **The drawers.** At the left (`#forte-drawer`), what every instrument
   has alike, each section folding (the browser remembers which). First the
   page's Presets menu (`.preset-row`, moved here from `#controls`, its
   Reset hidden; the menu gains "Default settings", which presses the
-  page's `#reset`); then Morph, a Seaboard RISE's panel while one is plugged in (`rise.js`), a Roland FC-300's once one is seen (`fc300.js`),
-  the groups every instrument has (Output, Tuning and Expression, moved
-  here from the Controls panel by their `<summary>`), and the MIDI settings
-  (`midi.js` `midiSettings`; the MIDI status opens them). Wider than 1100px
-  it is a column beside the views and the controls, its chevron folding it
-  to a rail (open at first in Discover, folded in Perform, as remembered);
-  narrower, the rail stays and the drawer opens over the views; on a phone
-  it is a sheet opened from a button at the left of the header. Over the
-  page it stops above the keys, which stay playable. Other code adds a
-  section with a `forte-drawer` event on `document` (`{ section, element }`)
-  and opens one with `{ section }`.
+  page's `#reset`), with Morph's switch at its head and, while it is on,
+  To and the slider under it (`morph.js`); then the groups every instrument has
+  (Output, Tuning and Expression, moved here from the Controls panel by
+  their `<summary>`). At the right (`#forte-midi`), only where the browser
+  has Web MIDI, the MIDI devices: those plugged in, each with a lamp that
+  lights as it sends (`midi.js` `midiDevices`; with none, why, and MIDI
+  off its *Enable MIDI*), a Seaboard RISE's panel while one is plugged in
+  (`rise.js`), a Roland FC-300's once one is seen (`fc300.js`), and the
+  MIDI settings (`midiSettings`); the MIDI status opens it. Wider than
+  1100px each is a column beside the views and the controls, its chevron
+  folding it to a rail (the presets' open at first in Discover, the MIDI
+  devices' once a device is plugged in, both folded in Perform; then as
+  remembered); narrower, the rails stay and a drawer opens over the views;
+  on a phone each is a sheet, the presets' opened from a button at the
+  left of the header, the MIDI devices' from the MIDI status. Over the
+  page one opens at a time, and stops above the keys, which stay
+  playable. Other code adds a section with a `forte-drawer` event on
+  `document` (`{ section, element }`; `devices`, `rise`, `fc300` and
+  `midi` go in the MIDI devices drawer, the rest at the left) and opens
+  one with `{ section }`.
 - **Sharing the height.** The handle on the controls' bar's top edge (or
   the bar itself, where it has nothing to tap) drags the line between the
   views and the controls, down to nothing for either: a panel dragged

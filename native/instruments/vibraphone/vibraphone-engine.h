@@ -50,7 +50,7 @@ class VibraphoneEngine : public Engine {
   void slide(double value, int key) override { own.setSlide(value, key); }
   // Glide: a hard mallet pressed on the bar and dragged along it: up to a semitone flat
   void noteBend(double ratio, int key) override { own.setBend(ratio, key); }
-  void pressure(double value, int key) override { presses.set(value, key); } // the mallet held against the bar, damping it while its key is held
+  void pressure(double value, int key) override { presses.set(value, key); } // a bow drawn on the bar's end: the note swells and holds
   void setSustain(bool on) override { sustain = on; }
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
@@ -82,6 +82,15 @@ class VibraphoneEngine : public Engine {
     double Fmax = 0, lastContactMs = 0;
     bool released = false;
     double damp = 0, dampSet = -1;
+    // Press (forte/press.h): a bow drawn across the bar's end, a sustainer there (its friction feeds
+    // the bar's motion in step with it until the bow's grip saturates), tuned on the fundamental
+    // once the mallet has left (tuneNow), at its decay with its tube (sigEff); we: each mode's
+    // weight at the bow (the end's middle, where the torsion modes are still)
+    Press press;
+    Sustainer sus;
+    bool tuneNow = false;
+    double sigEff = 0, we0 = 0;
+    std::array<double, MAX_MODES> we{};
     double bent = 1; // its modes × this (a note's own bend)
     double touch = 0, touchLeft = 0; // a mallet resting on the bar after a fast lift: how hard, for how many more samples (forte/lift.h)
     double fade = 1;

@@ -14,7 +14,7 @@
 // wheels, aftertouch, bend, MPE and Panic reach every one.
 
 import { INSTRUMENTS, SECTIONS, FORTE_VERSION, byId, trimGain, paramsStore } from '../../shared/registry.js';
-import { createChain, createLimiter, SUM_LIMITER } from '../../shared/chain.js';
+import { createChain, createLimiter, SUM_LIMITER, ringing } from '../../shared/chain.js';
 import { createKeyboard } from '../../shared/keyboard.js';
 import { startMIDI, resumeMIDI, pageMIDI, touched, SOFT_PEDAL, wheelValue, pageMpe, controllersOf, controlled, rangeWarning, shiftOf } from '../../shared/midi.js';
 import { connectQuality, qualityControl } from '../../shared/quality.js';
@@ -335,7 +335,11 @@ function initMIDI() {
 pageMIDI({ onMIDI, controllers: ccs }); // a song from a MIDI file (shared/songs.js) plays as a keyboard would
 
 // ---- audio ----------------------------------------------------------------------------------------------
-let ctx = null, bus = null, starting = null;
+let ctx = null, bus = null, starting = null, heard = null; // heard: the analyser on the sum
+// a reload into a new release of Forte (shared/boot.js) waits while a key or a pedal is held, or the sound rings
+document.addEventListener('forte-can-reload', (e) => {
+  if (held.size || parts.some((s) => s.sounding.size || s.latched.size || s.sustain) || ringing(ctx, heard)) e.preventDefault();
+});
 function start() {
   if (ctx) { if (ctx.state !== 'running') ctx.resume(); return Promise.resolve(ctx); }
   if (starting) return starting;
@@ -350,7 +354,7 @@ function start() {
     const analyser = c.createAnalyser(); analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0.55;
     limiter.connect(analyser);
     spectrum.setAnalyser(analyser);
-    bus = master; ctx = c;
+    bus = master; ctx = c; heard = analyser;
     if (c.state !== 'running') await c.resume();
     const btn = $('#start');
     btn.textContent = `Audio on · ${(c.sampleRate / 1000).toFixed(1)} kHz`; btn.classList.add('running');

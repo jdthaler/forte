@@ -19,7 +19,7 @@ constexpr double FADE = 1.0 / 480; // per-sample fade for retired voices (5 ms a
 constexpr double GLIDE = 0.015;    // s: the pickup follows its knobs through two such lags (critically damped)
 constexpr double XFADE = 0.02;     // s: switching the valve combo in or out crossfades over this
 constexpr double DUCK = 0.01;      // s: a pickup switch fades out over this, then back in
-constexpr double HAND = 25;       // 1/s: the most a hand on the reed adds to its loss (Press)
+constexpr double HOLD = 1.6;      // Press: a full press holds the fundamental at this times the swing its pluck gave it
 constexpr double RETACK = 0.95;    // a re-pressed key fires once its dropped pad has re-tacked this much of its disc …
 constexpr double RETACK_MAX = 0.15; // s … or after this long at most
 constexpr double BEND_T = 0.02;    // s: the pitch wheel's glide, and a note's own bend's
@@ -138,6 +138,7 @@ void PianetEngine::noteOn(int key, double velocity) {
 }
 
 void PianetEngine::startNote(int key, double velocity, Voice *v) {
+  v->tuned = false; v->sus.rest(); // Press: the sustainer tunes itself on this pluck
   if (v->own != expr.bendOf(key)) { v->own = expr.bendOf(key); v->p.retune(bendNow * v->own, v->sleep); } // pressed again: at the key's own bend
   v->held = false; v->posted = false; v->sleep = false; v->quiet = 0;
   Pluck &p = v->p;
@@ -246,7 +247,17 @@ void PianetEngine::processBlock(float *L, float *R, int n) {
     if (v.pending && ((p.hv == 0 && p.F <= 0 && p.a >= RETACK * PAD.a0) || (v.wait += n2) > waitMax)) {
       v.pending = false; p.press(v.pressVel); v.sleep = false; v.quiet = 0;
     }
-    if (v.hand.follow(p.down ? presses.of(v.key) : 0, n, fs)) { p.muted(HAND * v.hand.p); v.sleep = false; }
+    // Press: the sustainer, once the pad has let the reed go and while the key is down, tuned on the
+    // reed's fundamental (mode 0) as it is let go
+    v.press.follow(p.down ? presses.of(v.key) : 0, n, fs);
+    if (p.released && !v.tuned && p.N > 0) {
+      v.tuned = true;
+      const ReedMode &md = p.kr->modes[0];
+      const double w = TAU * md.f * p.bend, B = twoPoleAmplitude(p.q[0], p.q1[0], p.A1[0], p.A2[0]);
+      v.sus.tune(md.sigma, md.phiT, md.f * p.bend, std::fabs(md.phiT) * w * B, HOLD, fs2);
+    }
+    const bool drive = p.down && p.released && v.press.on() && v.sus.ready();
+    if (drive) v.sleep = false; else v.sus.rest();
     const bool gliding = v.g != v.gT || v.g1 != v.gT || v.ye != v.yeT || v.ye1 != v.yeT;
     if (v.sleep && !gliding) { if (es) for (int s = 0; s < n2; s++) dCs[s] += v.dC; continue; }
     if (gliding) glide(v, n2, es);
@@ -256,6 +267,7 @@ void PianetEngine::processBlock(float *L, float *R, int n) {
       p.stop = es ? INFINITY : g; // the T's pole piece sits in the reed's path
       for (int s = 0; s < n2; s++) {
         const double y = p.step();
+        if (drive) p.push(v.sus.force(y, v.press.p, fs2));
         if (v.dying) { fade -= FADE; if (fade < 0) fade = 0; }
         if (es) { dC = fade * (esCap(y, g, ye) - c0); dCs[s] += dC; }
         else { const double phi = emFlux(y, g); mono[s] += fade * pol * (phiPrev - phi); phiPrev = phi; }

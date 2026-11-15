@@ -23,7 +23,7 @@ const SPAN = 6;                       // s of the decay law on screen
 const traces = new Map();             // key → [{ t, db, gap }]: its |ψ|² over the last SPAN seconds
 const births = new Map();             // key → { t, db, fwhm }: its last strike, as the frames saw it
 const TURNS = 1.5;                    // the Amplitude view's slow motion: turns a second
-let spin = null;                      // the last key's state, replayed slowly: { key, r, th, trail, last }
+let spin = null;                      // the last key's state, replayed slowly: { key, r, th, fed, trail, last }
 
 const live = () => (now() - frame.at < 0.5 ? frame.states : []); // (frames stop when the audio does)
 const db = (amp) => 20 * Math.log10(Math.max(amp, 1e-9));        // |ψ|² in dB
@@ -64,10 +64,15 @@ function marks() {
   spectrum.set(0, ringing.length ? ringing.map((s) => ({ f: s.f, alpha: 0.25 + 0.6 * Math.min(1, s.amp) })) : [{ f: model.key(focus, shell.P).mass, alpha: 0.35 }]);
 }
 
-// the last key's state starts its slow-motion life again
+// the last key's state starts its slow-motion life again: made at once, or fed by its source for
+// the Formation time's turns (fed, in radians), as though its key were held that long
 function reborn() {
-  spin = { key: focus, r: 1, th: (shell.P.phase * Math.PI) / 180, trail: [], last: now() };
+  const fed = 2 * Math.PI * model.key(focus, shell.P).mass * shell.P.formation;
+  spin = { key: focus, r: fed > 0 ? 0 : 1, th: 0, fed, trail: [], last: now() };
 }
+// |ψ| after turning through θ (radians), at rate = Γ/2M a radian, fed for the first `fed` of them
+// (breitwigner-model.h: formed()), 1 when its source stops
+const radius = (th, rate, fed) => (th < fed ? Math.expm1(-rate * th) / Math.expm1(-rate * fed) : Math.exp(-rate * (th - fed)));
 
 function update() {
   const k = model.key(focus, shell.P);
@@ -194,16 +199,17 @@ animate(() => {
   const { ctx, w, h } = fit($('#argand'));
   ctx.clearRect(0, 0, w, h);
   const gauge = 22, R = Math.max(4, Math.min((w - gauge) / 2, h / 2) - 10), cx = (w - gauge) / 2, cy = h / 2;
-  const k = model.key(focus, shell.P), phase = (shell.P.phase * Math.PI) / 180;
+  const k = model.key(focus, shell.P), fed = 2 * Math.PI * k.mass * shell.P.formation;
   ctx.strokeStyle = css('--grid'); ctx.fillStyle = css('--muted'); ctx.font = '10px system-ui, sans-serif';
   ctx.beginPath(); ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy); ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke();
   ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * Math.PI); ctx.stroke();
   ctx.textAlign = 'left'; ctx.fillText('Re ψ', cx + R - 26, cy + 12); ctx.fillText('Im ψ', cx + 4, cy - R + 10);
-  // its whole life as the controls have it: r = e^(−(Γ/2M)θ), to a hundredth or forty turns
-  const rate = k.share / 2, turns = Math.min(40, Math.log(100) / (2 * Math.PI * rate)), N = Math.ceil(turns * 90);
+  // its whole life as the controls have it: out while its source feeds it (the Formation time),
+  // then in, r = e^(−(Γ/2M)θ), to a hundredth; forty turns at most
+  const rate = k.share / 2, turns = Math.min(40, fed / (2 * Math.PI) + Math.log(100) / (2 * Math.PI * rate)), N = Math.ceil(turns * 90);
   ctx.beginPath();
   for (let i = 0; i <= N; i++) {
-    const th = (2 * Math.PI * turns * i) / N, r = R * Math.exp(-rate * th), x = cx + r * Math.cos(phase + th), y = cy - r * Math.sin(phase + th);
+    const th = (2 * Math.PI * turns * i) / N, r = R * radius(th, rate, fed), x = cx + r * Math.cos(th), y = cy - r * Math.sin(th);
     if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y);
   }
   ctx.strokeStyle = css('--accent'); ctx.globalAlpha = 0.28; ctx.stroke(); ctx.globalAlpha = 1;
@@ -212,8 +218,9 @@ animate(() => {
   const t = now(), dth = 2 * Math.PI * TURNS * Math.min(0.1, t - spin.last);
   spin.last = t;
   const mine = live().find((s) => s.key === spin.key), per = mine ? mine.fwhm / mine.f : model.key(spin.key, shell.P).share;
-  if (spin.r > 0.004) {
-    spin.r *= Math.exp((-per / 2) * dth); spin.th += dth;
+  if (spin.th < spin.fed || spin.r > 0.004) {
+    spin.r = spin.th < spin.fed ? radius(spin.th + dth, per / 2, spin.fed) : spin.r * Math.exp((-per / 2) * dth); // fed, then left alone
+    spin.th += dth;
     spin.trail.push([spin.r * Math.cos(spin.th), spin.r * Math.sin(spin.th)]);
     if (spin.trail.length > 6000) spin.trail.shift();
   }

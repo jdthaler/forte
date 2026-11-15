@@ -120,6 +120,8 @@ async function mount(t) {
   };
 
   let at = -1, saved = null, timers = [], pressed = new Set(), pedal = false, playing = false, marked = [];
+  // a reload into a new release of Forte (shared/boot.js) waits for the tour's end
+  document.addEventListener('forte-can-reload', (e) => { if (saved) e.preventDefault(); });
   const kept = (v) => (v && 'volume' in v ? { volume: v.volume } : {});
   const space = (on) => { pedal = on; window.dispatchEvent(new KeyboardEvent(on ? 'keydown' : 'keyup', { code: 'Space', key: ' ' })); };
 

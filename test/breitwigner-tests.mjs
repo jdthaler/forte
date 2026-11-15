@@ -90,23 +90,37 @@ test('the line is the Fourier transform of the decay: |∫ e^(−Γt/2) e^(−iM
   near(peak, 1 / (a * a), 1e-6, 'the peak is 1/(Γ/2)²');
   for (const f of [90, 97.5, 99, 102.5, 104, 120]) near(ft(f) / peak, M.line(f, f0, G), 1e-5, `at ${f} Hz`);
 });
-test('what is heard is one real part, so its spectrum is the line and its mirror image at −M: the closed form against the integral done numerically, at 0°, 45° and 90°', () => {
-  const f0 = 100, G = 12, a = Math.PI * G, w = TAU * f0, dt = 2e-6, T = 1;
-  for (const deg of [0, 45, 90]) {
-    const ph = (deg * Math.PI) / 180;
-    const ft = (f) => { // Simpson's rule on e^(−at) sin(wt + φ) e^(−2πift)
+// A note's envelope over its velocity: made at once (T = 0), or formed by a source that runs for T
+// seconds while the key is held, then left alone: (1 − e^(−at))/(1 − e^(−aT)), then e^(−a(t − T)),
+// with a = πΓ (the solution of dψ/dt = (iω − a)ψ + s·e^(iωt), written here).
+const envelope = (t, a, T) => (T > 0 && t < T ? Math.expm1(-a * t) / Math.expm1(-a * T) : Math.exp(-a * (t - T)));
+test('what is heard is one real part, so its spectrum is the line and its mirror image at −M: the closed form against the integral done numerically, made at once and formed over 5 ms, 50 ms and 0.5 s', () => {
+  const f0 = 100, G = 12, a = Math.PI * G, w = TAU * f0, dt = 2e-6;
+  for (const T of [0, 0.005, 0.05, 0.5]) {
+    const ft = (f) => { // Simpson's rule on envelope(t) sin(wt) e^(−2πift), to where it is e^(−56) (T on the grid)
       let re = 0, im = 0;
-      const N = Math.round(T / dt);
+      const N = 2 * Math.round((T + 1.5) / dt / 2);
       for (let i = 0; i <= N; i++) {
-        const t = i * dt, s = Math.exp(-a * t) * Math.sin(w * t + ph) * (i === 0 || i === N ? 1 : i % 2 ? 4 : 2) * (dt / 3);
+        const t = i * dt, s = envelope(t, a, T) * Math.sin(w * t) * (i === 0 || i === N ? 1 : i % 2 ? 4 : 2) * (dt / 3);
         re += s * Math.cos(TAU * f * t); im -= s * Math.sin(TAU * f * t);
       }
       return 4 * a * a * (re * re + im * im);
     };
-    for (const f of [20, 88, 100, 106, 150, 400]) near(M.heard(f, f0, G, ph), ft(f), 1e-6, `${deg}° at ${f} Hz`);
+    for (const f of [21.3, 87.1, 99.4, 100, 105.3, 151.7, 403.9]) near(M.heard(f, f0, G, T), ft(f), 1e-5, `formed over ${T} s, at ${f} Hz`);
   }
   // near a narrow line's peak the mirror image is far away, and what is heard is the plain line
   for (const d of [-2, -0.5, 0, 0.5, 2]) near(M.heard(1000 + d, 1000, 1, 0), M.line(1000 + d, 1000, 1), 3e-3, `a 0.1 % line, ${d} Hz off`);
+});
+test('time and energy: a source T long carries energies about 1/T wide, so a formed line is the Breit–Wigner line times sinc²(π(f − M)T): a short source leaves the line as it is, one longer than the lifetime narrows it to 0.886/T', () => {
+  const f0 = 1000, G = 2, sinc2 = (x) => (x === 0 ? 1 : (Math.sin(x) / x) ** 2);
+  for (const T of [0.001, 0.1, 1, 4]) for (const d of [-2.7, -1.1, -0.3, 0.2, 0.7, 2.3]) {
+    const f = f0 + d, got = M.heard(f, f0, G, T) / M.heard(f0, f0, G, T);
+    near(got, M.line(f, f0, G) * sinc2(Math.PI * d * T), 2e-3, `T = ${T} s, ${d} Hz off`);
+  }
+  // where it crosses half its height: the line's own width for a short source, 0.886/T for a long one
+  const half = (T) => { let lo = 0, hi = 3 * G; for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (M.heard(f0 + m, f0, G, T) > M.heard(f0, f0, G, T) / 2) lo = m; else hi = m; } return 2 * lo; };
+  near(half(0.001), G, 1e-3, 'formed in a millisecond'); near(half(4), 0.886 / 4, 0.02, 'formed over four seconds');
+  near(M.formed(1e-3, 0), 1e-3, 1e-12, 'a short source makes s·t'); near(M.formed(10, 2), 1 / (2 * Math.PI), 1e-12, 'a long one s/πΓ: formation balances decay');
 });
 test('from key to key: Γ ∝ M (the same Γ/M) at power 1, the same Γ in hertz at 0, and an octave multiplies Γ by 2ⁿ (32 by Sargent\'s rule, n = 5); never past twice the mass', () => {
   for (const key of [21, 57, 69, 81, 108]) {
@@ -156,12 +170,12 @@ test('the presets are real resonances: Γ/M from the Particle Data Group\'s mass
 });
 
 console.log('engine');
-test('every sample of a note is the closed form, 0.3 v e^(−πΓt) sin(2πMt + φ): a φ, a Z and a ρ, on A1, A4 and C8, at 0°, 30° and 90°', () => {
-  for (const [width, key, phase, vel] of [[PARTICLES.phi, 69, 0, 0.7], [PARTICLES.Z, 33, 30, 1], [PARTICLES.rho, 108, 90, 0.4], [PARTICLES.jpsi, 69, 0, 0.9]]) {
-    const x = note(key, P({ width, phase }), 0.5, { vel }), f = keyFreq(key), G = width * f, ph = (phase * Math.PI) / 180;
+test('every sample of a note is the closed form, 0.3 v e^(−πΓt) sin(2πMt), or with a Formation time T the envelope that rises to v in T and then decays: a φ, a Z, a ρ and a J/ψ, on A1, A4 and C8', () => {
+  for (const [width, key, T, vel] of [[PARTICLES.phi, 69, 0, 0.7], [PARTICLES.Z, 33, 0, 1], [PARTICLES.rho, 108, 0, 0.4], [PARTICLES.jpsi, 69, 0, 0.9], [PARTICLES.phi, 69, 0.2, 0.7], [PARTICLES.Z, 33, 0.031, 1], [PARTICLES.rho, 108, 0.3, 0.4], [PARTICLES.jpsi, 21, 0.45, 0.9]]) {
+    const x = note(key, P({ width, formation: T }), 0.5, { vel }), f = keyFreq(key), a = Math.PI * width * f, Tn = Math.round(T * FS) / FS;
     let worst = 0;
-    for (let n = 0; n < x.length; n++) worst = Math.max(worst, Math.abs(x[n] - OUT * vel * Math.exp((-Math.PI * G * n) / FS) * Math.sin((TAU * f * n) / FS + ph)));
-    assert.ok(worst < 2e-7, `Γ/M ${width.toPrecision(3)} on key ${key} at ${phase}°: off by ${worst}`);
+    for (let n = 0; n < x.length; n++) worst = Math.max(worst, Math.abs(x[n] - OUT * vel * envelope(n / FS, a, Tn) * Math.sin((TAU * f * n) / FS)));
+    assert.ok(worst < 2e-7, `Γ/M ${width.toPrecision(3)} on key ${key}, formed over ${T} s: off by ${worst}`);
   }
 });
 test('on pitch: every third key sounds within 0.01 ¢ of its note', () => {
@@ -195,23 +209,56 @@ test('the spectrum of a note is the Breit–Wigner line: a Z on A4 is 12.0 Hz wi
 test('width times lifetime: for every preset, the line\'s width read from the sound times the time its |ψ|² takes to fall by e is 1/2π', () => {
   for (const preset of PRESETS) {
     const params = P(preset.p), key = 69, f = keyFreq(key), k = M.key(key, params), sec = Math.min(1.5, Math.max(0.05, 14 * k.tau));
-    const x = note(key, params, sec, { vel: 1 });
+    // a formed state from where its source stops: the key let go with the pedal down, which keeps the key-up channel shut
+    const t0 = params.formation ? at(Math.min(params.formation, 0.05)) : 0;
+    const x = play(params, [[0, 'pedal', true], [0, 'on', key, 1], ...(t0 ? [[t0, 'off', key]] : [])], t0 + sec);
     // |ψ|² by its two parts: the note and a copy a quarter of a period later stand in for them
     const d = Math.round(FS / (4 * f)), env = (n) => x[n] * x[n] + x[n + d] * x[n + d];
-    const n0 = d, n1 = Math.round(Math.min(sec * 0.8, 3 * k.tau) * FS);
+    const n0 = Math.round(t0 * FS) + d, n1 = Math.round((t0 + Math.min(sec * 0.8, 3 * k.tau)) * FS);
     let s0 = 0, s1 = 0;
     const W = Math.max(8, Math.round((4 * FS) / f)); // averaged over four periods
     for (let i = 0; i < W; i++) { s0 += env(n0 + i); s1 += env(n1 + i); }
     const tau = (n1 - n0) / FS / Math.log(s0 / s1);
-    const width = prony(x, f, 0, sec).fwhm;
+    const width = prony(x, f, t0, t0 + sec).fwhm;
     near(TAU * width * tau, 1, 0.02, preset.name);
   }
 });
-test('Phase at birth: at 0° a note starts from nothing, at 90° at its peak, whose click raises the far tail (16 times at four times the mass)', () => {
-  const sine = note(69, P({ phase: 0 }), 1, { vel: 1 }), cosine = note(69, P({ phase: 90 }), 1, { vel: 1 });
-  assert.equal(sine[0], 0); near(cosine[0], OUT, 1e-6, 'starts at its peak');
-  near(power(cosine, 1760) / power(sine, 1760), 16, 0.02, 'the tail at 4M');
-  near(M.heard(1760, 440, DEFAULTS.width * 440, Math.PI / 2) / M.heard(1760, 440, DEFAULTS.width * 440, 0), 16, 1e-3, 'as the model has it');
+test('Formation time: no click at any length. The strike is the sharpest onset there is; above 2 kHz a Z on A4 formed over 5 ms has under 1 % of its energy, over 50 ms under 0.01 %, and its spectrum is what is heard by the closed form, within 0.1 % across ±5Γ', () => {
+  const f0 = 440, G = PARTICLES.Z * f0, Z = (T) => note(69, P({ width: PARTICLES.Z, formation: T }), 1, { vel: 1 });
+  const high = (x) => { let e = 0; for (let f = 2000; f < 20000; f += 13) e += power(x, f); return e; };
+  const struck = high(Z(0)), formed = Z(0.005);
+  for (const [T, most] of [[0.005, 1e-2], [0.05, 1e-4]]) {
+    const ratio = high(T === 0.005 ? formed : Z(T)) / struck;
+    assert.ok(ratio < most, `formed over ${T * 1000} ms, above 2 kHz: ${ratio.toExponential(2)} of the strike's`);
+  }
+  const top = power(formed, f0);
+  for (const d of [-5, -3, -1, -0.5, 0.5, 1, 3, 5]) near(power(formed, f0 + d * G) / top, M.heard(f0 + d * G, f0, G, 0.005) / M.heard(f0, f0, G, 0.005), 1e-3, `${d} Γ off`);
+});
+test('Formation time and Press: a press while the key\'s source runs changes nothing; once the source stops, the press keeps the state at Press production × the velocity', () => {
+  const f = 440, T = 0.2, vel = 0.5, params = P({ width: 1e-2, formation: T, press: 1.6 }); // Γ = 4.4 Hz: settles in a few tenths of a second
+  const env = (x, t0) => { const a = Math.round(t0 * FS), d = Math.round(FS / f) * 10; let s = 0; for (let n = a; n < a + d; n++) s += x[n] * x[n]; return Math.sqrt((2 * s) / d) / OUT; };
+  const plain = play(params, [[0, 'on', 69, vel]], 1.2), pressed = play(params, [[0, 'on', 69, vel], [at(0.05), 'pressure', 1, 69]], 1.2);
+  const n = Math.round(T * FS);
+  assert.ok(pressed.subarray(0, n).every((v, i) => v === plain[i]), 'while its source runs');
+  near(env(pressed, 1.1), 1.6 * vel, 0.02, 'held by the press');
+  assert.ok(env(plain, 1.1) < 0.02 * vel, `left alone it has decayed: ${env(plain, 1.1)}`);
+});
+test('Formation time: the source runs while the key is held, for T at most. Let go early, the note decays from what it has made, at its own width and the key-up channel\'s; a ρ fed for a second holds steady, formation balancing decay, until its key comes up', () => {
+  const f = 440, G = 1e-3 * f, a = Math.PI * G, T = 1, up = at(0.25), vel = 0.8;
+  const x = play(P({ width: 1e-3, formation: T, release: 20 }), [[0, 'on', 69, vel], [up, 'off', 69]], 0.4); // (until it is 90 dB down)
+  const made = envelope(up, a, T), b = Math.PI * (G + 20);
+  let worst = 0;
+  for (let n = 0; n < x.length; n++) {
+    const t = n / FS, env = t < up ? envelope(t, a, T) : made * Math.exp(-b * (t - up));
+    worst = Math.max(worst, Math.abs(x[n] - OUT * vel * env * Math.sin(TAU * f * t)));
+  }
+  assert.ok(worst < 2e-7, `let go at ${up.toFixed(3)} s, a quarter of its formation: off by ${worst}`);
+  near(made, (1 - Math.exp(-a * up)) / (1 - Math.exp(-a * T)), 1e-12, 'what it had made');
+  // the ρ on A2: 21 Hz wide, it settles in a few of its 15 ms lifetimes and holds until let go
+  const rho = play(P({ width: PARTICLES.rho, formation: 1 }), [[0, 'on', 45, 1], [at(0.6), 'off', 45]], 0.8);
+  const level = (t0, t1) => { const a0 = Math.round(t0 * FS), a1 = Math.round(t1 * FS); return Math.sqrt(2 * rho.subarray(a0, a1).reduce((s, v) => s + v * v, 0) / (a1 - a0)); };
+  for (const t of [0.15, 0.3, 0.5]) near(level(t, t + 0.05), OUT, 2e-3, `held, at ${t} s`);
+  assert.ok(level(0.7, 0.75) < 1e-4 * OUT, `let go: ${level(0.7, 0.75)}`);
 });
 test('Strike: the amplitude is the velocity, and amplitudes add: a second strike in step doubles the note, one half a turn late cancels it', () => {
   const soft = note(60, P(), 0.2, { vel: 0.35 }), hard = note(60, P(), 0.2, { vel: 0.7 });
@@ -246,15 +293,23 @@ test('Lift: a slow lift opens the key-up channel half as wide, a fast one twice 
   near(one(undefined), 10, 1e-3, 'no release velocity'); near(one(0.5), 10, 1e-3, 'middling');
   near(one(0), 5, 1e-3, 'slowest'); near(one(1), 20, 1e-3, 'fastest');
 });
-test('Press: a firm press into a held key opens a third channel, up to Γ₃ at full pressure, on one key or the channel; a finger at rest (under half) changes nothing at all', () => {
-  const f = 440, t = at(0.1), params = P({ width: 1e-3, press: 5 });
+test('Press: a firm press into a held key keeps making its state, which builds to Press production × the amplitude it was made with, at the line\'s own rate and pitch, on one key or the channel; a finger at rest (under half) changes nothing at all', () => {
+  const f = 440, t = at(0.1), params = P({ width: 1e-3, press: 2 }), G = 0.44; // Γ = 0.44 Hz: |ψ| moves as e^(−πΓt)
+  // |ψ| from the heard part, by its envelope over whole periods (the state turns at its own pitch)
+  const env = (x, t0) => { const a = Math.round(t0 * FS), d = Math.round(FS / f) * 10; let s = 0; for (let n = a; n < a + d; n++) s += x[n] * x[n]; return Math.sqrt((2 * s) / d) / 0.3; };
   const still = play(params, [[0, 'on', 69, 1]], 0.5);
-  for (const ev of [[t, 'pressure', 1, 69], [t, 'pressure', 1]]) near(prony(play(params, [[0, 'on', 69, 1], ev], 0.5), f, t + 0.1, 0.45).fwhm, 5.44, 1e-3, ev.length > 3 ? 'its key pressed fully' : 'the channel pressed fully');
-  near(prony(play(params, [[0, 'on', 69, 1], [t, 'pressure', 0.75, 69]], 0.5), f, t + 0.1, 0.45).fwhm, 2.94, 1e-3, 'pressed half way past rest');
+  for (const ev of [[t, 'pressure', 1, 69], [t, 'pressure', 1]]) {
+    const x = play(params, [[0, 'on', 69, 1], ev], 2.5), m0 = env(still, t), want = (u) => 2 + (m0 - 2) * Math.exp(-Math.PI * G * (u - t));
+    for (const u of [0.5, 1, 2]) near(env(x, u), want(u), 0.02, `${ev.length > 3 ? 'its key' : 'the channel'} pressed fully: |ψ| at ${u} s`);
+    near(prony(x, f, 1, 1.5).f, f, 1e-6, 'at its own pitch');
+  }
+  // half way past rest: toward half as much, from above it the line decays to it and holds
+  const h = play(P({ width: 1e-2, press: 0.5 }), [[0, 'on', 69, 1], [t, 'pressure', 0.75, 69]], 2);
+  near(env(h, 1.9), 0.25, 0.02, 'pressed half way: a quarter of the strike');
   const rest = play(params, [[0, 'on', 69, 1], [t, 'pressure', 0.45, 69]], 0.5);
   assert.ok(rest.every((v, i) => v === still[i]), 'a finger at rest');
-  // let go of the press, and the channel shuts again
-  near(prony(play(params, [[0, 'on', 69, 1], [t, 'pressure', 1, 69], [at(0.2), 'pressure', 0, 69]], 0.6), f, at(0.2) + 0.1, 0.6).fwhm, 0.44, 5e-3, 'the press let go');
+  // let go of the press, and the state decays at its own width again
+  near(prony(play(params, [[0, 'on', 69, 1], [t, 'pressure', 1, 69], [at(0.2), 'pressure', 0, 69]], 0.6), f, at(0.2) + 0.1, 0.6).fwhm, G, 5e-3, 'the press let go');
 });
 test('the mod wheel and Slide are the width: the wheel takes every note from the default up to a ρ\'s 20 %, a slide one note alone', () => {
   const f = 440, w = (x) => prony(x, f, at(0.02), 0.1).fwhm / f;
@@ -331,7 +386,7 @@ test('as wide as it goes: Γ/M 100 % on the top key with Γ ∝ M⁵ is capped a
   const x = note(108, P({ width: 1, power: 5 }), 0.05, { vel: 1 });
   assert.ok(x.every(Number.isFinite));
   assert.ok(x.subarray(48).every((v) => Math.abs(v) < 1e-5), 'gone');
-  near(prony(note(108, P({ width: 1, power: 5, phase: 90 }), 0.01, { vel: 1 }), keyFreq(108), 0, 0.001).fwhm, 2 * keyFreq(108), 0.02, 'its width');
+  near(prony(note(108, P({ width: 1, power: 5 }), 0.01, { vel: 1 }), keyFreq(108), 0, 0.001).fwhm, 2 * keyFreq(108), 0.02, 'its width');
 });
 test('CPU: all 88 states ringing at once render more than 20 times faster than real time', () => {
   const e = new Engine(FS), bL = new Float32Array(BL), bR = new Float32Array(BL);

@@ -1,16 +1,17 @@
-forte kalimba 0.5.0
-back 1.1200000000000001
-thick 1.2
-t60 6
-damping 0.80000000000000004
+forte celesta 0.7.0
+thick 1.5
+eta 0.000020000000000000002
 fullRange 0
-pluck 0.90000000000000002
-thumb 0.59999999999999998
-ring 1
-box 0.88
-hole 25
-cover 0
-buzz 2
+boxes 1
+gap 12
+detune 0
+hardness 200
+mass 4
+strike 0.29999999999999999
+across 0.10000000000000001
+speedMax 2.5
+damp 0.14999999999999999
+pedalLock 0
 room 0.25
 venue 1
 volume 0.80000000000000004
@@ -32,5 +33,5 @@ strikeOn 1
 glideOn 0
 slideOn 1
 pressOn 1
-liftOn 0
-preset 11
+liftOn 1
+preset 13

@@ -1,4 +1,4 @@
-forte harpsichord 0.10.0
+forte harpsichord 0.11.0
 build 3
 manual 1
 coupler 1
@@ -46,6 +46,6 @@ cents11 0
 strikeOn 1
 glideOn 0
 slideOn 1
-pressOn 0
+pressOn 1
 liftOn 1
 preset 22

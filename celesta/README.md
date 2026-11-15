@@ -21,7 +21,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/celesta/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity |
 | `Space` | damper pedal: lifts every damper felt |
-| MIDI | notes, velocity, damper pedal (CC64), sostenuto (CC66), soft pedal (CC67), mod wheel: the hammer felt |
+| MIDI | notes, velocity, damper pedal (CC64), sostenuto (CC66), soft pedal (CC67), mod wheel: the hammer felt; a firm press (aftertouch, past half way) drives a sustainer on the held note's bar: it holds |
 
 The real celesta's compass is the four octaves C4–C8 (written an octave lower);
 **Full range** opens A0–C8.

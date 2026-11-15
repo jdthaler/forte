@@ -21,6 +21,9 @@ constexpr double QUIET = 4e-6;          // N: a string whose bridge force stays 
 constexpr double DROP = 1e-6;           // N: top partials below this stop being integrated
 constexpr double RAMP = 0.02;           // s: the buff's leather and the soundboard switch glide over this
 constexpr double KNOCK_COUPLING = 0.04; // share of a knock's impulse that reaches the board at the bridge
+// Press: a full press holds a string's fundamental at HOLD times the swing its pluck gave it
+// (plucked-string.h, forte/press.h Sustainer)
+constexpr double HOLD = 1.6;
 static const double FAST_FALL = fallSpeed(1);
 constexpr int CHOIRS[3] = {FRONT, BACK, FOUR};
 
@@ -30,7 +33,7 @@ void HarpsichordEngine::Voice::start(HarpsichordEngine &e, int k, Data::Ref r) {
   eng = &e; inUse = true; key = k; version = e.version; ref = r;
   e.data.acquire(r);
   has.fill(false); lifts.fill(false); sleep.fill(false); quiet.fill(0); nList = 0;
-  lift = 0; V = 0.3; vDown = fallSpeed(DEFAULT_RELEASE); keyDown = false; pending = false; hand = Press{};
+  lift = 0; V = 0.3; vDown = fallSpeed(DEFAULT_RELEASE); keyDown = false; pending = false; pressing = Press{};
   bent = e.expr.bendOf(k); // bent before it was struck
   top = ACTION::top + rowGap(ROW_FOUR, e.mp);
   knockT = -1; knockAmp = 0; knockN = std::max(2, (int)std::floor(ACTION::knock * e.fs + 0.5));
@@ -65,6 +68,7 @@ void HarpsichordEngine::Voice::press(double vel) {
       list[nList++] = ch;
     }
     st.wake(); sleep[ch] = false; quiet[ch] = 0;
+    st.sus = Sustainer{}; st.drvTune = false; // (Press: tuned again on this pluck)
     const int rows[2] = {ch, ROW_LUTE};
     for (int i = 0; i < (ch == BACK ? 2 : 1); i++) {
       const int row = rows[i], p = row == ROW_LUTE ? PT::LUTE : PT::MAIN;
@@ -134,11 +138,8 @@ void HarpsichordEngine::Voice::render(int n) {
     bent = glideTo(bent, to, n / e.fs, BEND_T);
     for (int i = 0; i < nList; i++) strings[list[i]].retune(bent);
   }
-  // Press: the hand's buff, gliding across the block, on every choir; the stop's on the back 8′ too
-  const double h0 = hand.p;
-  hand.follow(keyDown && !killing ? e.presses.of(key) : 0, n, e.fs);
-  const bool held = h0 > 0 || hand.p > 0;
-  if (held) for (int t = 0; t < n; t++) { const double ht = h0 + (hand.p - h0) * (t + 1) / n; e.handBuf[t] = std::max(ht, e.buffBuf[t]); }
+  // Press: each string's sustainer, while the key is held
+  pressing.follow(keyDown && !killing ? e.presses.of(key) : 0, n, e.fs);
   for (int i = 0; i < nList; i++) {
     const int ch = list[i];
     PluckedString &st = strings[ch];
@@ -147,7 +148,9 @@ void HarpsichordEngine::Voice::render(int n) {
     st.kcOn = e.P[p::kc] != 0;
     st.hookOn = e.mp.hooks; // (only a virginal's bass strings have a hook)
     st.setSide(e.P[p::side], e.sideModes()); // (Quality: fewer sideways partials, none at Low)
-    const double pk = st.render(n, lifted ? lb : e.zeroBuf.data(), keyDown && lifted, held ? e.handBuf.data() : ch == BACK ? e.buffBuf.data() : e.zeroBuf.data(), e.seg.data(), BLOCK, w[ch].data(), w0[ch], w1[ch], 1,
+    if (st.drvTune) st.tuneDrive(HOLD);
+    st.drvP = pressing.p;
+    const double pk = st.render(n, lifted ? lb : e.zeroBuf.data(), keyDown && lifted, ch == BACK ? e.buffBuf.data() : e.zeroBuf.data(), e.seg.data(), BLOCK, w[ch].data(), w0[ch], w1[ch], 1,
                                sy ? sb[ch].data() + 1 : nullptr);
     if (pk > pk0) pk0 = pk;
     if (!(pk < 1e4) || !std::isfinite(st.q()[0])) {

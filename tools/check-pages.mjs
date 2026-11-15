@@ -9,7 +9,9 @@
 // height, that every view shows in Perform, with the presets and More controls in the keyboard
 // bar instead of the controls' bar, and the screen kept awake there once audio runs, and not in
 // Discover), that the drawer opens (from its rail, or on a phone from the header), plays a preset
-// and folds away again, and that the keys fold away and come back, at every size, the guided tour (Tour in the header, each step showing its views, and every control
+// and folds away again, that the MIDI devices drawer is there only where the browser has Web MIDI,
+// opens from its rail with the devices and the MIDI settings in sight and folds away again, and
+// that the keys fold away and come back, at every size, the guided tour (Tour in the header, each step showing its views, and every control
 // as it was once it ends; on the desktop and the phone), Songs (♪ in the header; a song plays its
 // keys and stops when closed; on the desktop and the phone), what a screen reader finds (every
 // control named in words, the views' canvases named, sliders' values said as shown; on the desktop
@@ -108,6 +110,7 @@ const COUNT = () => {
     viewsOn: n('.forte-view-toggles button[aria-pressed="true"]'),
     mode: [...document.querySelectorAll('.forte-views-bar .forte-mode button')].filter((e) => e.checkVisibility()).length,
     drawerPresets: n('#forte-drawer [data-drawer="presets"]'),
+    midiDrawer: n('#forte-midi'),
     listen: n('button[data-src]'),
     quality: [...document.querySelectorAll('header #quality')].filter((e) => e.checkVisibility()).length,
     tour: [...document.querySelectorAll('body > header .forte-tour-start')].filter((e) => e.checkVisibility()).length,
@@ -232,7 +235,7 @@ const DRAWER = () => ({
 });
 async function drawerAndKeys(tab) {
   const out = [];
-  const opener = (await tab.locator('.forte-drawer-open').isVisible().catch(() => false)) ? '.forte-drawer-open' : '.forte-drawer-fold';
+  const opener = (await tab.locator('.forte-drawer-open').isVisible().catch(() => false)) ? '.forte-drawer-open' : '#forte-drawer .forte-drawer-fold';
   const was = await tab.evaluate(DRAWER);
   if (!was.open) { await tab.locator(opener).click(CLICK).catch(() => {}); await tab.waitForTimeout(350); }
   const s = await tab.evaluate(DRAWER);
@@ -245,7 +248,7 @@ async function drawerAndKeys(tab) {
     const menu = await tab.evaluate(() => document.querySelector('#preset')?.value);
     if (menu !== v) out.push(`a preset from the drawer doesn't play (the menu says "${menu}")`);
   }
-  await tab.locator('.forte-drawer-fold').click(CLICK).catch(() => {});
+  await tab.locator('#forte-drawer .forte-drawer-fold').click(CLICK).catch(() => {});
   await tab.waitForTimeout(350);
   const f = await tab.evaluate(DRAWER);
   if (f.open || f.presets) out.push(`the drawer doesn't fold away (the Presets menu still shown)`);
@@ -261,6 +264,33 @@ async function drawerAndKeys(tab) {
   await fold.click(CLICK).catch(() => {});
   await tab.waitForTimeout(250);
   if (!(await tab.evaluate(KEYS))) out.push('the keys don\'t come back');
+  return out;
+}
+
+// The MIDI devices drawer (shared/layout.js), where the browser has Web MIDI: it opens from its
+// rail (or a phone's MIDI status, once MIDI is on: not here), with the devices plugged in (MIDI
+// off: its button) and the MIDI settings in sight, and folds away again, as it was left.
+const MIDI_DRAWER = () => ({
+  open: document.body.classList.contains('midi-open'),
+  w: Math.round(document.querySelector('#forte-midi')?.getBoundingClientRect().width ?? 0),
+  devices: document.querySelector('#forte-midi .forte-midi-devices')?.checkVisibility() ? 1 : 0,
+  settings: document.querySelector('#forte-midi #touch')?.checkVisibility() ? 1 : 0,
+});
+async function midiDrawer(tab) {
+  const out = [];
+  const rail = tab.locator('#forte-midi .forte-drawer-fold');
+  if (!(await rail.isVisible().catch(() => false))) return out; // a phone: from the MIDI status, once MIDI is on
+  const was = await tab.evaluate(MIDI_DRAWER);
+  if (!was.open) { await rail.click(CLICK).catch(() => {}); await tab.waitForTimeout(350); }
+  const s = await tab.evaluate(MIDI_DRAWER);
+  if (!s.open || s.w < 200 || !s.devices || !s.settings) out.push(`the MIDI devices drawer doesn't open with the devices and the settings in sight (${s.w}px wide, the devices ${s.devices ? 'shown' : 'hidden'}, the settings ${s.settings ? 'shown' : 'hidden'})`);
+  if (await tab.evaluate(WIDE) > 0) out.push('scrolls sideways with the MIDI devices drawer open');
+  await rail.click(CLICK).catch(() => {});
+  await tab.waitForTimeout(350);
+  const f = await tab.evaluate(MIDI_DRAWER);
+  if (f.open || f.settings) out.push('the MIDI devices drawer doesn\'t fold away (the settings still shown)');
+  if (await tab.evaluate(WIDE) > 0) out.push('scrolls sideways with the MIDI devices drawer folded');
+  if (was.open) { await rail.click(CLICK).catch(() => {}); await tab.waitForTimeout(350); }
   return out;
 }
 
@@ -435,6 +465,8 @@ async function viewPage(browser, url, page, size, at) {
     if (name === 'desktop' && counts.views) broken.push(...await remembered(tab));
     step('opening the drawer and folding the keys');
     if (counts.drawerPresets) broken.push(...await drawerAndKeys(tab));
+    step('opening the MIDI devices drawer');
+    if (counts.midiDrawer) broken.push(...await midiDrawer(tab));
     step('starting audio');
     if (await click('#start')) {
       await tab.waitForTimeout(500); await sideways('audio started');
@@ -476,6 +508,9 @@ function failures(r, instrument, combine = false) {
   if (!c.views) f.push('no toggles for the views');
   if (!c.mode) f.push('no Discover | Perform in the views\' bar');
   if (!c.drawerPresets) f.push('no presets in the drawer');
+  const midi = !SIZES.find((s) => s.name === r.size)?.ios; // (iOS sizes: no Web MIDI)
+  if (midi && !c.midiDrawer) f.push('no MIDI devices drawer, with Web MIDI');
+  if (!midi && c.midiDrawer) f.push('a MIDI devices drawer, without Web MIDI');
   if (!c.quality) f.push('no Quality choice in the header');
   if (!c.tour && !combine) f.push('no Tour in the header (a guided tour: shared/tour.js)');
   if (!c.songs) f.push('no ♪ Songs in the header (shared/songs.js)');

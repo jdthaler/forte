@@ -64,7 +64,7 @@ void SteelPanEngine::retune(Note &v) {
 
 void SteelPanEngine::coefs(Note &v) {
   const double w1 = TAU * v.nm.m[0].f;
-  const double mute = v.damped ? sigmaFromT60(v.touch > 0 ? STICK_T60 : P[p::mute] * v.liftK) : v.press.on() ? sigmaFromT60(STICK_T60) * v.press.p : 0;
+  const double mute = v.damped ? sigmaFromT60(v.touch > 0 ? STICK_T60 : P[p::mute] * v.liftK) : 0;
   for (int i = 0; i < kModes; i++) {
     if (i >= v.nm.count) { v.a1[i] = v.a2[i] = v.b[i] = v.out[i] = 0; v.w[i] = 1; continue; }
     const Mode &m = v.nm.m[i];
@@ -168,8 +168,7 @@ void SteelPanEngine::allNotesOff() {
   focus = -1;
 }
 
-// The roll: the wheel's, or the key's own slide. Pressure does nothing: a Seaboard sends it from any
-// finger at rest, which would roll every note.
+// The roll: the wheel's, or the key's own slide (a firm press rolls too: process, forte/press.h).
 double SteelPanEngine::rollOf(const Note &v) const { return expr.slideOr(v.key, P[p::roll]); }
 
 int SteelPanEngine::voiceCount() const {
@@ -247,19 +246,12 @@ void SteelPanEngine::process(float *L, float *R, int n) {
   for (int i = 0; i < n; i++) L[i] = R[i] = 0;
   if (couplingsDirty) rebuildCouplings();
   for (int i : live) if (Note &v = notes[i]; v.touch > 0 && (v.touch -= n) <= 0) { v.touch = 0; damp(v, false); } // the stick lifts off
-  // Press: the stick held into a note, as hard as its key is pressed, stills it and the notes beside
-  // it that were only ringing along (as a hand laid on it does)
+  // Press: how hard each held note's key is pressed (a firm press rolls it: below)
   for (int i : live) {
     Note &v = notes[i];
-    double want = v.held ? presses.of(v.key) : 0;
-    if (!v.struck && !v.held) {
-      Neighbour nb[8];
-      for (int j = 0, m = neighbours(v.key, (int)P[p::layout], nb); j < m; j++)
-        if (const Note &u = notes[nb[j].key - KEY_MIN]; u.active && u.held) want = std::max(want, presses.of(u.key));
-    }
+    v.press.follow(v.held ? presses.of(v.key) : 0, n, fs);
     const double to = expr.bendOf(v.key), was = v.bent; // Glide: a hand on the note's rim
-    if (was != to) v.bent = glideTo(was, to, n / fs, BEND_T);
-    if ((v.press.follow(want, n, fs) && !v.damped) || v.bent != was) coefs(v);
+    if (was != to) { v.bent = glideTo(was, to, n / fs, BEND_T); coefs(v); }
   }
   for (int s = 0; s < n; s++) {
     for (const Coupling &c : couplings) {
@@ -290,11 +282,11 @@ void SteelPanEngine::process(float *L, float *R, int n) {
         v.y2[p] = v.y1[p]; v.y1[p] = y; v.F[p] = 0;
       }
       l += v.gl * out; r += v.gr * out;
-      if (v.held) { // a roll: the sticks strike again while the key is down
-        const double amt = rollOf(v);
-        if (amt > 0.005 && --v.rollIn <= 0) {
+      if (v.held) { // a roll: the sticks strike again while the key is down (the roll's, or a firm press's)
+        const double amt = rollOf(v), pr = ROLL_FULL * v.press.p;
+        if ((amt > 0.005 || pr > 0) && --v.rollIn <= 0) {
           rng = rng * 1664525u + 1013904223u;
-          strike(v, v.vel * amt * (v.hand ? 0.85 : 1));
+          strike(v, std::max(amt > 0.005 ? v.vel * amt : 0.0, pr) * (v.hand ? 0.85 : 1));
           v.hand = !v.hand;
           v.rollIn = (fs / P[p::rollRate]) * (1 + 0.06 * ((rng >> 8) / 16777216.0 - 0.5));
         }
@@ -311,7 +303,7 @@ void SteelPanEngine::process(float *L, float *R, int n) {
     v.age += n;
     double e = 0;
     for (int p = 0; p < v.run; p++) e = std::max(e, std::fabs(v.y1[p]) + std::fabs(v.y2[p]));
-    const bool rolling = v.held && rollOf(v) > 0.005;
+    const bool rolling = v.held && (rollOf(v) > 0.005 || v.press.on());
     if (!std::isfinite(e)) e = 0; // a numerical failure: let it go
     if (e < quiet && v.age > GRACE && !rolling) {
       v.active = false; v.struck = false;

@@ -52,7 +52,7 @@ class PianetEngine : public Engine {
   void allNotesOff() override;
   void bend(double value) override; // every reed's stiffness ×r², its notes ×r
   void noteBend(double ratio, int key) override; // one reed's stiffness ×r², on top of the wheel's
-  void pressure(double value, int key) override { presses.set(value, key); } // a hand muting the reed by the pickup
+  void pressure(double value, int key) override { presses.set(value, key); } // a sustainer at the tip: the note swells and holds
   void slide(double value, int key) override { expr.setSlide(value, key); } // where its pad grabs the reed, at its next touch
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
@@ -74,7 +74,9 @@ class PianetEngine : public Engine {
     int quiet = 0;
     bool pending = false; // a re-press waiting for its pad to land and re-tack
     double pressVel = 0;
-    Press hand; // a hand on the reed (forte/press.h), while its key is down
+    Press press;   // how hard its key is pressed (forte/press.h), while it is down
+    Sustainer sus; // Press: a driver coil under the reed's tip, fed from a pickup on its fundamental
+    bool tuned = false; // the sustainer is tuned (on the reed as its pad let it go)
     int wait = 0;
     double fade = 1;
     bool dying = false, dead = false;

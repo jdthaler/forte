@@ -410,31 +410,31 @@
     ]
    ],
    "summary": {
-    "peak": -13.58,
-    "rms": -27.75,
+    "peak": -11.05,
+    "rms": -19.18,
     "env": [
      -17.98,
      -20.92,
      -23.94,
      -26.91,
-     -38.5,
-     -120,
-     -120,
-     -120,
-     -120,
-     -120,
-     -120,
-     -120,
-     -120,
-     -120,
-     -120,
-     -120,
-     -120,
-     -120
+     -24.02,
+     -19.33,
+     -17.03,
+     -15.65,
+     -14.82,
+     -14.29,
+     -15.18,
+     -18.14,
+     -21.14,
+     -28.96,
+     -48.38,
+     -67.76,
+     -87,
+     -106.56
     ],
     "partial": 261.668,
     "centroid": 262,
-    "decay": -55.71
+    "decay": 14.1
    }
   },
   {
@@ -879,7 +879,7 @@
    }
   },
   {
-   "name": "preset: Born at its peak: the Z as a cosine",
+   "name": "preset: Formed slowly: the η′ swells for 0.3 s, then rings",
    "preset": 9,
    "seconds": 1.6,
    "events": [
@@ -897,33 +897,76 @@
    ],
    "summary": {
     "peak": -13.56,
-    "rms": -35.14,
+    "rms": -19.86,
     "env": [
-     -23.14,
-     -42.77,
-     -62.22,
-     -81.82,
-     -101.46,
-     -120,
-     -120,
-     -120,
-     -120,
-     -120,
-     -120,
+     -30.76,
+     -22.31,
+     -18.07,
+     -16.65,
+     -16.75,
+     -16.92,
+     -17.07,
+     -17.17,
+     -17.34,
+     -17.49,
+     -23.39,
+     -39.98,
+     -56.5,
+     -72.93,
+     -89.51,
+     -106.15
+    ],
+    "partial": 261.658,
+    "centroid": 262,
+    "decay": 4.51
+   }
+  },
+  {
+   "name": "preset: A ρ fed while held: a steady tone, formation balancing decay",
+   "preset": 10,
+   "seconds": 1.6,
+   "events": [
+    [
+     0,
+     "on",
+     60,
+     0.7
+    ],
+    [
+     1,
+     "off",
+     60
+    ]
+   ],
+   "summary": {
+    "peak": -13.56,
+    "rms": -18.64,
+    "env": [
+     -17.02,
+     -16.54,
+     -16.57,
+     -16.58,
+     -16.54,
+     -16.57,
+     -16.58,
+     -16.55,
+     -16.57,
+     -16.59,
+     -31.56,
      -120,
      -120,
      -120,
      -120,
      -120
     ],
-    "partial": 261.607,
+    "partial": 261.673,
     "centroid": 262,
-    "decay": -195.25
+    "decay": -0.02
    }
   },
   {
    "name": "preset: Sargent's rule: Γ ∝ M⁵, a bass that rings under a treble of ticks",
-   "preset": 10,
+   "preset": 11,
    "seconds": 1.6,
    "events": [
     [
@@ -966,7 +1009,7 @@
   },
   {
    "name": "preset: One lifetime for every key: Γ the same in hertz",
-   "preset": 11,
+   "preset": 12,
    "seconds": 1.6,
    "events": [
     [

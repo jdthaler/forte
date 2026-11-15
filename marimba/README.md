@@ -22,7 +22,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/marimba/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity (the mallet's speed, up to 3 m/s by default) |
 | `Space` | holds the keys down: held notes keep rolling (a marimba has no dampers) |
-| MIDI | notes, velocity, CC64 (holds the keys); **mod wheel = roll**; MPE slide rolls one note; aftertouch does nothing (a Seaboard presses from any finger at rest) |
+| MIDI | notes, velocity, CC64 (holds the keys); **mod wheel = roll**; MPE slide rolls one note; a firm press (aftertouch, past half way) rolls a held note too, as hard as it is pressed |
 
 ## The physics
 
@@ -207,8 +207,10 @@ wheel), struck again at that fraction of the first stroke's velocity,
 **Roll speed** strokes a second (both mallets together; 12 by default),
 each stroke up to 3 % early or late, the second mallet landing 3 % of the
 length nearer the centre and on the other side of the centre line.
-Aftertouch on one key, or its own MPE slide, rolls it alone. Letting go of
-the key ends the roll; the bar then rings away by itself (tested: the
+A note's own MPE slide rolls it alone, and so does a firm press into a
+held key (aftertouch past half way, so a finger at rest rolls nothing): its
+strokes as hard as the key is pressed, up to 0.8 of the hardest at full
+press, whichever is the harder. Letting go of the key ends the roll; the bar then rings away by itself (tested: the
 strokes counted, the rolled note held, the released one dying).
 
 ### 8. The engine

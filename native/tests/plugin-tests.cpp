@@ -312,16 +312,34 @@ TEST("plugin: Morph takes every parameter part way from one preset to another, k
   back.param(0, in.id("Morph"), 0);
   in.run(128, 128, back);
   CHECK(std::fabs(in.value("Ring time") - 1) < 1e-12 && in.value("Preset") == 0);
-  // choosing a preset: where Morph ends puts it at 100 %; any other is where it starts now, at 0 %
-  Events to;
-  to.param(0, in.id("Preset"), 1);
-  in.run(128, 128, to);
-  CHECK(in.value("Morph") == 1 && in.value("Morph from") == 0);
-  Events from;
-  from.param(0, in.id("Morph to"), 0);
-  from.param(1, in.id("Preset"), 1);
-  in.run(128, 128, from);
-  CHECK(in.value("Morph from") == 1 && in.value("Morph") == 0 && std::fabs(in.value("Ring time") - 6) < 1e-12);
+  // choosing a preset makes it where Morph starts now, at 0 %, even Morph to's (the window's menu is From)
+  Events at;
+  at.param(0, in.id("Morph"), 0.5);
+  at.param(1, in.id("Preset"), 1);
+  in.run(128, 128, at);
+  CHECK(in.value("Morph from") == 1 && in.value("Morph to") == 1 && in.value("Morph") == 0 && std::fabs(in.value("Ring time") - 6) < 1e-12);
+  // Keep this mix (the window's): Morph back at 0, every value where Morph put it, and the host told
+  auto bridge = (const forte::EditorBridge *)in.p->get_extension(in.p, forte::kEditorBridge);
+  Events mix;
+  mix.param(0, in.id("Morph to"), 0);
+  mix.param(1, in.id("Morph"), 0.5);
+  in.run(128, 128, mix);
+  CHECK(std::fabs(in.value("Ring time") - std::sqrt(6.0)) < 1e-9);
+  bridge->call(in.p, "[\"keepMix\"]");
+  Events kept;
+  in.run(128, 128, kept);
+  CHECK(in.value("Morph") == 0 && in.value("Morph from") == 1 && std::fabs(in.value("Ring time") - std::sqrt(6.0)) < 1e-9);
+  bool zero = false;
+  for (auto &e : kept.out) zero |= e.param_id == in.id("Morph") && e.value == 0;
+  CHECK(zero);
+  // at 100 %, the mix is Morph to's preset, where the morph starts now
+  Events whole;
+  whole.param(0, in.id("Morph"), 1);
+  in.run(128, 128, whole);
+  bridge->call(in.p, "[\"keepMix\"]");
+  Events kept2;
+  in.run(128, 128, kept2);
+  CHECK(in.value("Morph") == 0 && in.value("Morph from") == 0 && std::fabs(in.value("Ring time") - 1) < 1e-12);
   char text[64];
   CHECK(in.params->value_to_text(in.p, in.id("Morph"), 0.4, text, sizeof text) && std::string(text) == "40 %");
   CHECK(in.params->value_to_text(in.p, in.id("Morph to"), 1, text, sizeof text) && std::string(text) == "Long ring");

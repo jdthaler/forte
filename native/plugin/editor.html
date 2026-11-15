@@ -8,9 +8,10 @@
      set the custom temperament. In the Forte app up to four instruments play at once, as on the
      site's Combinations page (plugin.cpp, Suite): a card under the header for each gives its keys,
      octave, level and on/off, and picks whose controls the window shows. At the left, as on the
-     site's pages (shared/layout.js), a drawer with what every instrument has alike: Morph, Output,
-     Tuning, Expression, MIDI and CPU, each folding (the Presets menu stays in the header); its
-     chevron folds it to a rail. The keys fold
+     site's pages (shared/layout.js), a drawer with what every instrument has alike: Presets (Morph's
+     switch, and while it is on To, the slider and Keep this mix; the Presets menu stays in the
+     header, and names the preset Morph starts from), Output, Tuning, Expression, MIDI and CPU, each
+     but Presets folding; its chevron folds it to a rail. The keys fold
      away from the button at the left of their bar. Above the controls, the instrument's views (the shown part's):
      its own page from the site, served from the plugin (editor.h), in a frame that shows only them
      (shared/in-plugin.js), fed by the plugin's sound and its engine's messages; the Views button
@@ -146,6 +147,34 @@
   #drawer-body > details > summary::after { content: "▾"; color: var(--muted); }
   #drawer-body > details:not([open]) > summary::after { content: "▸"; }
   #drawer-body .param select { width: 100%; }
+  /* Presets: Morph's switch, a slide switch as on the site's pages (shared/layout.css), and while it
+     is on, To, the slider and Keep this mix */
+  #drawer-body > .presets { border-top: 1px solid var(--line); padding: 4px 0 8px; }
+  .presets-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 0 3px; }
+  .presets-head h3 { margin: 0; font-size: 13px; font-weight: 600; }
+  .morph-switch { display: inline-flex; align-items: center; gap: 8px; }
+  .morph-switch > span { color: var(--muted); cursor: pointer; }
+  .morph-switch.on > span { color: var(--accent); text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 45%, transparent); }
+  .slide {
+    position: relative; width: 42px; height: 22px; padding: 0; flex: none; cursor: pointer; border: 1px solid #060608; border-radius: 7px;
+    background: linear-gradient(180deg, #08080a, #141417); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.75), 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+  .slide > i {
+    position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border: 1px solid #060608; border-radius: 5px;
+    background: repeating-linear-gradient(90deg, transparent 0 4px, rgb(0 0 0 / 0.35) 4px 5px, rgb(255 255 255 / 0.07) 5px 6px) center / 12px 8px no-repeat,
+      linear-gradient(180deg, #4a4a52, #2e2e35 50%, #222228);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16), 0 1px 3px rgb(0 0 0 / 0.8); transition: left 0.14s ease;
+  }
+  .slide[aria-checked="true"] {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 22%, #08080a), color-mix(in srgb, var(--accent) 34%, #141417));
+    box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.75), 0 0 8px color-mix(in srgb, var(--accent) 30%, transparent), 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+  .slide[aria-checked="true"] > i { left: 50%; }
+  .morph[hidden] { display: none; }
+  .morph .from { margin: 2px 0 2px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .morph .from b { color: var(--text); font-weight: 600; }
+  .morph .keep { width: 100%; margin-top: 6px; }
+  .morph .keep:disabled { opacity: 0.45; cursor: default; }
   body.drawer-folded #drawer { width: 34px; overflow: hidden; cursor: pointer; }
   body.drawer-folded #drawer:hover { background: #1b1b20; }
   body.drawer-folded .drawer-head { flex-direction: column-reverse; justify-content: flex-end; gap: 12px; padding: 7px 4px; }
@@ -348,7 +377,7 @@ function control(i, compact) {
   box.append(row);
   if (p.kind === 'choice') {
     const el = document.createElement('select');
-    if (p.id === 'morphFrom' || p.id === 'morphTo') el.className = 'display'; // a menu of presets: lit, as #preset
+    if (p.id === 'morphTo') el.className = 'display'; // a menu of presets: lit, as #preset
     p.choices.forEach((c, k) => { const o = document.createElement('option'); o.value = k; o.textContent = c; el.appendChild(o); });
     el.addEventListener('change', () => { set(i, +el.value); el.blur(); });
     box.append(el);
@@ -378,6 +407,7 @@ function show(i, x, text) {
   values[i] = x;
   if (D.compass && i === D.compass[2] && (was > 0.5) !== (x > 0.5)) rebound();
   if (D.params[i].id === 'temperament') temperamentShown();
+  if (i === D.presets || i === morph.from || i === morph.t) morphShown(i, was);
   for (const c of controls.get(i) || []) {
     if (c.el.type === 'checkbox') c.el.checked = x > 0.5;
     else if (c.el.tagName === 'SELECT') c.el.value = String(Math.round(x));
@@ -429,6 +459,7 @@ function build() {
   });
   const root = $('#groups');
   for (const [title, list] of groups) {
+    if (title === 'Morph') { buildMorph(list); continue; } // with the presets, at the top of the drawer
     if (DRAWER.includes(title)) { // in the drawer, each a section that folds
       const det = section(title, title === 'Output' || title === 'Morph');
       for (const i of list) { const [box, c] = control(i); det.appendChild(box); register(i, c); boxes.set(D.params[i].id, box); }
@@ -611,22 +642,25 @@ function learn(m) {
 // ---- the drawer: what every instrument has alike, as on the site's pages (shared/layout.js) ------
 // The groups every instrument has, in this order (the Presets menu stays in the header, by the
 // instrument's name), each a section that folds as last left; the chevron folds the drawer to a rail (a narrow window starts so).
-const DRAWER = ['Morph', 'Output', 'Tuning', 'Expression', 'MIDI', 'CPU'];
+const DRAWER = ['Presets', 'Output', 'Tuning', 'Expression', 'MIDI', 'CPU'];
 const drawerBody = $('#drawer-body');
 const opened = () => prefs.sections ?? (prefs.sections = {});
 function section(title, open) {
   const det = document.createElement('details'), sum = document.createElement('summary');
   sum.textContent = title;
   det.append(sum);
-  det.dataset.title = title;
   det.open = opened()[title] ?? open;
   det.addEventListener('toggle', () => { opened()[title] = det.open; keep(); });
-  // in the drawer's order, whichever comes first
+  return place(det, title);
+}
+// in the drawer's order, whichever comes first
+function place(sec, title) {
+  sec.dataset.title = title;
   const rank = (t) => DRAWER.indexOf(t);
   const after = [...drawerBody.children].find((c) => rank(c.dataset.title) > rank(title));
-  drawerBody.insertBefore(det, after ?? null);
+  drawerBody.insertBefore(sec, after ?? null);
   $('#drawer').hidden = false;
-  return det;
+  return sec;
 }
 function buildDrawer() {
   const fold = $('#drawer-fold');
@@ -652,6 +686,69 @@ function buildDrawer() {
   keysBtn.addEventListener('click', () => { const on = !document.body.classList.contains('keys-folded'); prefs.keys = !on; keep(); keysFolded(on); keysBtn.blur(); if (!on) layoutKeys(); });
 }
 
+// ---- Morph, with the presets (plugin.cpp: Morph from, Morph to, Morph; shared/morph.js on the site's
+// pages): a switch at the top of the drawer. Off, the Presets menu plays one preset; on, it is the
+// one Morph starts from (Morph from, which choosing a preset sets), and To and the slider show.
+// Switched off, Morph goes back to 0, the sound the From preset's again; Keep this mix puts it at 0
+// leaving the sound as it is (keepMix). The switch is the window's (kept per instrument), and turns
+// on by itself when Morph moves from 0 (a song's automation).
+const morph = { from: -1, to: -1, t: -1, on: false, sw: null, body: null, keep: null };
+function buildMorph(list) {
+  for (const i of list) morph[{ morphFrom: 'from', morphTo: 'to', morph: 't' }[D.params[i].id] ?? 'x'] = i;
+  if (morph.from < 0 || morph.to < 0 || morph.t < 0) return;
+  const sec = document.createElement('div');
+  sec.className = 'presets';
+  sec.innerHTML = `<div class="presets-head"><h3>Presets</h3><div class="morph-switch"><span id="morph-label">Morph</span><button type="button" class="slide" role="switch" aria-checked="false" aria-labelledby="morph-label" title="Morph from the preset in the Presets menu to another"><i></i></button></div></div><div class="morph" hidden><p class="from" title="The preset in the Presets menu">From <b></b></p></div>`;
+  morph.sw = sec.querySelector('.slide');
+  morph.body = sec.querySelector('.morph');
+  for (const i of [morph.to, morph.t]) { const [box, c] = control(i); morph.body.appendChild(box); register(i, c); boxes.set(D.params[i].id, box); }
+  morph.body.querySelector('label').textContent = 'To';
+  morph.keep = document.createElement('button');
+  morph.keep.className = 'keep';
+  morph.keep.textContent = 'Keep this mix';
+  morph.body.appendChild(morph.keep);
+  place(sec, 'Presets');
+  const switched = () => {
+    morph.sw.setAttribute('aria-checked', String(morph.on));
+    sec.querySelector('.morph-switch').classList.toggle('on', morph.on);
+    morph.body.hidden = !morph.on;
+    menu.title = morph.on ? 'Morph from' : 'Preset';
+    (prefs.morph ??= {})[D.slug] = morph.on; keep();
+    morphShown(morph.t);
+  };
+  morph.turn = (on) => {
+    if (on === morph.on) return;
+    morph.on = on;
+    if (!on && values[morph.t] > 0) set(morph.t, 0); // back to the From preset
+    switched();
+  };
+  morph.sw.addEventListener('click', () => { morph.turn(!morph.on); morph.sw.blur(); });
+  sec.querySelector('.morph-switch span').addEventListener('click', () => morph.turn(!morph.on));
+  morph.keep.addEventListener('click', () => {
+    morph.keep.blur();
+    if (!(values[morph.t] > 0)) return;
+    forte('keepMix');
+    morph.on = false;
+    switched();
+    toast(values[morph.t] >= 1 ? `Playing “${D.params[morph.to].choices[Math.round(values[morph.to])] ?? ''}”` : 'Kept the mix. Save it from the Presets menu to play it again later.');
+  });
+  morph.on = !!prefs.morph?.[D.slug];
+  switched();
+}
+// a change of Preset, Morph from or Morph: the menu names From while Morph is on; Morph moving from
+// 0 (automation) switches it on
+function morphShown(i, was) {
+  if (i === morph.t && morph.sw) {
+    if (!morph.on && values[i] > 0 && was !== undefined && !(was > 0)) morph.turn(true);
+    morph.keep.disabled = !(values[i] > 0);
+    morph.keep.title = values[i] > 0 ? 'Switch Morph off, keeping the sound as it is now' : 'At 0 % the sound is the From preset: move the slider to make a mix';
+  }
+  if (i === morph.from && morph.sw) morph.body.querySelector('.from b').textContent = D.params[i].choices[Math.round(values[i])] ?? '';
+  if (D.presets < 0) return;
+  const k = morph.on ? values[morph.from] : values[D.presets];
+  if (i !== morph.t || morph.on) menu.value = String(Math.round(k));
+}
+
 // ---- presets: the instrument's (its Preset parameter), then your own, then saving them -----------
 const menu = $('#preset');
 const mineGroup = document.createElement('optgroup'), saveGroup = document.createElement('optgroup');
@@ -661,7 +758,6 @@ const mineValue = (u) => `u${u[2]}:${u[1]}`; // a preset of yours: its place in 
 function buildPresets() {
   if (D.presets >= 0) {
     D.params[D.presets].choices.forEach((c, k) => menu.appendChild(option(c, k)));
-    register(D.presets, { el: menu });
   } else menu.appendChild(option('Presets…', ''));
   mineGroup.label = 'Your presets';
   saveGroup.label = 'Save';
@@ -695,7 +791,7 @@ async function refreshMine() {
   mineGroup.replaceChildren(...mine.map((u) => option(u[0], mineValue(u))));
   if (mine.length) menu.insertBefore(mineGroup, saveGroup); else mineGroup.remove();
   if ([...menu.options].some((o) => o.value === was)) menu.value = was;
-  else if (D.presets >= 0) menu.value = String(Math.round(values[D.presets]));
+  else if (D.presets >= 0) menu.value = String(Math.round(values[morph.on ? morph.from : D.presets]));
   if (menu.value !== 'save' && menu.value !== 'folder') before = menu.value;
 }
 
@@ -1191,8 +1287,12 @@ function mockForte() {
     { id: 'tuningRoot', label: 'Temperament root', group: 'Tuning', kind: 'choice', perform: false, def: 0, choices: ['C', 'C♯', 'D'] },
     { id: 'cents1', label: 'Minor 2nd (custom)', group: 'Tuning', kind: 'continuous', perform: false, def: 0.5, choices: [] },
     { id: 'cents2', label: 'Major 2nd (custom)', group: 'Tuning', kind: 'continuous', perform: false, def: 0.5, choices: [] },
+    { id: 'morphFrom', label: 'Morph from', group: 'Morph', kind: 'choice', perform: false, def: 0, choices: ['Default settings', 'Bright', 'Dark'] },
+    { id: 'morphTo', label: 'Morph to', group: 'Morph', kind: 'choice', perform: false, def: 1, choices: ['Default settings', 'Bright', 'Dark'] },
+    { id: 'morph', label: 'Morph', group: 'Morph', kind: 'continuous', perform: false, def: 0, choices: [] },
     { id: 'preset', label: 'Preset', group: '', kind: 'choice', perform: false, def: 0, choices: ['Default settings', 'Bright', 'Dark'] },
   ];
+  const at = (id) => params.findIndex((p) => p.id === id), [FROM, TO, T] = ['morphFrom', 'morphTo', 'morph'].map(at);
   const v = params.map((p) => p.def), keys = new Set(), P = params.findIndex((p) => p.id === 'preset');
   let mine = [{ name: 'Soft glass', file: 'Soft glass.json', v: params.map((p) => p.def) }];
   let pedal = false, miss = [0, -1, 0, 127, false, 0, 0];
@@ -1252,7 +1352,13 @@ function mockForte() {
       if (suite.parts.length < 2) Object.assign(suite.parts[0], whole);
       keep(); return true;
     }
-    if (m === 'set') { v[a[0]] = a[1]; sent[a[0]] = a[1]; return { x: a[1], text: text(a[0]) }; }
+    if (m === 'set') {
+      v[a[0]] = a[1]; sent[a[0]] = a[1];
+      if (a[0] === P) { v[FROM] = a[1]; v[T] = 0; } // where Morph starts now, as plugin.cpp has it
+      if (a[0] === T && (a[1] <= 0 || a[1] >= 1)) v[P] = a[1] <= 0 ? v[FROM] : v[TO];
+      return { x: a[1], text: text(a[0]) };
+    }
+    if (m === 'keepMix') { if (v[T] >= 1) v[FROM] = v[TO]; v[T] = 0; return null; }
     if (m === 'note') {
       // the part shown's keys, as the plugin's noteOn has them: past them, a miss (missValue)
       const shown = INSTRUMENTS.find((x) => x.slug === suite.parts[suite.focus].slug), closed = shown.slug === 'mock' && !v[4];

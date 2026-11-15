@@ -24,7 +24,8 @@ FORTE_EXPORT void breitwigner_boosted(double mass, double fwhm, double gamma, do
   out[0] = lab.f; out[1] = lab.fwhm; out[2] = speed(gamma);
 }
 FORTE_EXPORT double breitwigner_line(double f, double f0, double fwhm) { return line(f, f0, fwhm); }
-FORTE_EXPORT double breitwigner_heard(double f, double f0, double fwhm, double phase) { return heard(f, f0, fwhm, phase); }
+FORTE_EXPORT double breitwigner_formed(double t, double fwhm) { return formed(t, fwhm); }
+FORTE_EXPORT double breitwigner_heard(double f, double f0, double fwhm, double formation) { return heard(f, f0, fwhm, formation); }
 // REF_KEY, SHARE_MAX, BOOST_SEMITONES
 FORTE_EXPORT double breitwigner_constant(int i) {
   static constexpr double c[] = {REF_KEY, SHARE_MAX, BOOST_SEMITONES};

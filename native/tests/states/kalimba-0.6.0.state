@@ -1,9 +1,16 @@
-forte breitwigner 0.1.0
-width 0.002
-power 0
-phase 0
-release 6
-press 30
+forte kalimba 0.6.0
+back 1.1200000000000001
+thick 1.2
+t60 6
+damping 0.80000000000000004
+fullRange 0
+pluck 0.90000000000000002
+thumb 0.59999999999999998
+ring 1
+box 0.88
+hole 25
+cover 0
+buzz 2
 room 0.25
 venue 1
 volume 0.80000000000000004
@@ -22,8 +29,8 @@ cents9 0
 cents10 0
 cents11 0
 strikeOn 1
-glideOn 1
+glideOn 0
 slideOn 1
 pressOn 1
-liftOn 1
+liftOn 0
 preset 11

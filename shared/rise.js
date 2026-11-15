@@ -1,5 +1,5 @@
-// rise.js — a ROLI Seaboard RISE, drawn in the drawer at the left of an instrument page (shared/layout.js)
-// while one is plugged in (as PhuzzBox draws its pedal at the left): its three touch faders and its XY pad, with the controls they
+// rise.js — a ROLI Seaboard RISE, drawn in the MIDI devices drawer at the right of an instrument page
+// (shared/layout.js) while one is plugged in (as PhuzzBox draws its pedal on its board): its three touch faders and its XY pad, with the controls they
 // move on this instrument; its keywave, a dot for each finger where it glides, slides and presses;
 // and the five dimensions of its touch (Strike, Glide, Slide, Press, Lift), each lit while it comes
 // in, with what it does on this instrument. shared/midi.js opens it when a Seaboard connects and
@@ -364,7 +364,7 @@ export function risePanel() {
   const show = () => {
     const any = inputs.size > 0;
     if (any && !aside.isConnected) {
-      // a section of the page's drawer (shared/layout.js), or without one at the left of the page
+      // a section of the page's MIDI devices drawer (shared/layout.js), or without one at the left of the page
       if (document.querySelector('#forte-drawer')) document.dispatchEvent(new CustomEvent('forte-drawer', { detail: { section: 'rise', element: aside } }));
       else { const main = document.querySelector('body > main'); if (!main) return; main.prepend(aside); }
       setFolded(folded);

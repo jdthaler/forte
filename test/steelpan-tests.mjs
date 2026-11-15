@@ -311,7 +311,7 @@ test('a hand on the note: key-up mutes it; Let notes ring and the sustain pedal 
   assert.ok(drop({}, [[0, 'sustain', 0, true]]) > -25, 'sustain pedal');
 });
 const same = (x, y, what) => { for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) assert.fail(`${what}: sample ${i} differs`); };
-test('a roll: while the key is down the sticks keep striking; pressure rolls nothing: a Seaboard\'s finger at rest (up to half) changes nothing, bit for bit, and a firm press holds the stick into the note, muting it', () => {
+test('a roll: while the key is down the sticks keep striking, and a firm press rolls the note too, as hard as it is pressed; a Seaboard\'s finger at rest (up to half) changes nothing, bit for bit', () => {
   const key = 64, ev = [[0, 'on', key, 0.7]], early = (x) => rms(x, 0, 4800), late = (x) => rms(x, Math.round(1.4 * FS), Math.round(1.5 * FS));
   const still = play(P({ letRing: true }), 1.5, ev).L, rolled = play(P({ letRing: true, roll: 0.6 }), 1.5, ev).L;
   const pressed = play(P({ letRing: true }), 1.5, [...ev, [0.05, 'pressure', key, 0.3], [0.2, 'pressure', key, 0.5]]).L;
@@ -319,11 +319,17 @@ test('a roll: while the key is down the sticks keep striking; pressure rolls not
   assert.ok(dB(late(rolled) / early(rolled)) > -12, `roll: ${dB(late(rolled) / early(rolled)).toFixed(1)} dB`);
   same(pressed, still, 'pressure on the key');
   same(play(P({ letRing: true }), 1.5, [...ev, [0.05, 'pressure', -1, 0.5]]).L, still, 'pressure on the channel');
-  const mid = (x) => rms(x, Math.round(0.3 * FS), Math.round(0.4 * FS));
+  // a firm press rolls the note: it keeps sounding, louder the harder it is pressed (strokes 0.8 ×
+  // how hard past half way), and stops rolling when the press does
   for (const k of [key, -1]) {
     const firm = play(P({ letRing: true }), 1.5, [...ev, [0.1, 'pressure', k, 1]]).L;
-    assert.ok(dB(mid(firm) / mid(still)) < -30, `a firm press ${k < 0 ? 'on the channel' : 'on the key'}: ${dB(mid(firm) / mid(still)).toFixed(1)} dB at 0.3 s`);
+    assert.ok(dB(late(firm) / early(firm)) > -12, `a firm press ${k < 0 ? 'on the channel' : 'on the key'}: ${dB(late(firm) / early(firm)).toFixed(1)} dB after 1.4 s`);
   }
+  const full = play(P({ letRing: true }), 1.5, [...ev, [0.1, 'pressure', key, 1]]).L, half = play(P({ letRing: true }), 1.5, [...ev, [0.1, 'pressure', key, 0.75]]).L;
+  const gain = dB(late(full) / late(half));
+  assert.ok(gain > 3 && gain < 9, `pressed half as hard past rest: ${gain.toFixed(1)} dB softer`);
+  const eased = play(P({ letRing: true }), 1.5, [...ev, [0.1, 'pressure', key, 1], [0.5, 'pressure', key, 0]]).L;
+  assert.ok(dB(late(eased) / early(eased)) < -30, 'the press let go: it rings away');
   const released = play(P({ letRing: true, roll: 0.6 }), 1.5, [...ev, [0.5, 'off', key]]).L;
   assert.ok(dB(late(released) / early(released)) < -20, 'and stops with the key');
 });
