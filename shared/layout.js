@@ -744,7 +744,8 @@ if (presets) {
 }
 // ---------------------------------------------------------------------------
 // the drawers, each folding to a rail. At the left of every instrument page, what every
-// instrument has alike: the Presets menu (in Perform it goes above the keys instead), Morph, and
+// instrument has alike: the Presets menu (in Perform it goes above the keys instead) with Morph's
+// switch at its head and, while Morph is on, To and its slider under it (shared/morph.js), and
 // the Output, Tuning and Expression groups (moved here from the Controls panel, which keeps the
 // instrument's own). At the right, where the browser has Web MIDI, the MIDI devices: those
 // plugged in, each with a lamp that lights as it plays (shared/midi.js midiDevices), a Seaboard
@@ -760,11 +761,11 @@ if (presets) {
 
 const narrowQuery = matchMedia(inPlugin ? 'not all' : '(max-width: 1099px)'); // as shared/layout.css
 const drawerMode = () => (phoneQuery.matches ? 'sheet' : narrowQuery.matches ? 'over' : 'docked');
-// the groups every instrument has, by their titles, in the drawer's order (Morph: shared/morph.js)
+// the groups every instrument has, by their titles, in the drawer's order
 const SHARED = ['output', 'tuning', 'expression'];
 // each drawer's sections: their place in it, and whether each starts open (a key not in either
 // goes last in the presets' drawer, open). A controller's panel comes after the devices plugged in.
-const LEFT = { presets: [10, true], morph: [20, false], output: [40, true], tuning: [50, false], expression: [60, false] };
+const LEFT = { presets: [10, true], output: [40, true], tuning: [50, false], expression: [60, false] };
 const RIGHT = { devices: [10, true], rise: [30, true], fc300: [35, true], midi: [70, true] };
 const SIDE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5"/></svg>';
 const PANEL = '<svg viewBox="0 0 18 16" aria-hidden="true"><rect x="1.5" y="2" width="15" height="12" rx="2"/><path d="M6.5 2v12M3.4 5.2h1.4M3.4 7.6h1.4M3.4 10h1.4"/></svg>';
@@ -857,13 +858,12 @@ function details(name) {
   return det;
 }
 // the groups every instrument has, from the Controls panel into the drawer (each time the page
-// builds controls: Morph comes once the presets are ready)
+// builds controls)
 function placeDrawer() {
   if (!drawer || !sidebar) return;
   for (const det of sidebar.querySelectorAll('details.group')) {
     const name = det.querySelector('summary')?.textContent.trim().toLowerCase() ?? '';
-    const key = det.classList.contains('forte-morph') ? 'morph' : SHARED.includes(name) ? name : null;
-    if (key) drawer.section(key, det);
+    if (SHARED.includes(name)) drawer.section(name, det);
   }
 }
 if (mainEl && sidebar && !inPlugin) {
@@ -883,11 +883,13 @@ if (mainEl && sidebar && !inPlugin) {
     (header.querySelector('.brand') ?? header).prepend(opener);
     drawer.openers.push(opener);
   }
-  // the presets, first: the page's own menu (placeTools puts it here in Discover)
+  // the presets, first: a head (Morph puts its switch there), the page's own menu (placeTools
+  // puts it here in Discover), then To and the slider while Morph is on (shared/morph.js)
   if (presets) {
     const name = presets.querySelector('select')?.getAttribute('aria-label');
-    const sec = el('div', 'forte-drawer-presets');
-    sec.append(el('h3', '', !name || name === 'Preset' ? 'Presets' : name));
+    const sec = el('div', 'forte-drawer-presets'), top = el('div', 'forte-drawer-presets-head');
+    top.append(el('h3', '', !name || name === 'Preset' ? 'Presets' : name));
+    sec.append(top, el('div', 'forte-drawer-menu'));
     drawer.section('presets', sec);
   }
   // the MIDI devices, where there is Web MIDI: those plugged in, then the MIDI settings
@@ -935,7 +937,7 @@ if (mainEl && sidebar && !inPlugin) {
 let kbTools = null, restack = () => {};
 function placeTools() {
   const perf = performing() && !!kbTools && !sidewaysQuery.matches;
-  const home = drawerBody?.querySelector('[data-drawer="presets"]') ?? bars.controls?.tools;
+  const home = drawerBody?.querySelector('[data-drawer="presets"] .forte-drawer-menu') ?? bars.controls?.tools;
   if (presets && home) (perf ? kbTools : home).appendChild(presets);
   const f = bars.controls?.fold;
   if (f) (perf ? kbTools : bars.controls.bar).appendChild(f);

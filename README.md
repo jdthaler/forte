@@ -355,7 +355,7 @@ messages, on the pages, in the plugins and in the Forte app:
 | On the FC-300 | It sends | In Forte |
 |---|---|---|
 | EXP 1 | CC7, volume | on the pages, moves the Volume control across its whole range (toe down: its top; heel down: silent); in the plugins, turns the instrument down; full until it moves |
-| EXP 2 | CC1, the mod wheel | on the pages, the Morph slider (heel down: its From preset; toe down: its To one), whatever the instrument; in the plugins, whatever the mod wheel moves (on the Electric Grand, Tine and Reed Pianos, the tremolo). A keyboard's mod wheel, and a Seaboard RISE's pad (Y), still move the mod wheel's control |
+| EXP 2 | CC1, the mod wheel | on the pages, the Morph slider (heel down: its From preset; toe down: its To one), switching Morph on, whatever the instrument; in the plugins, whatever the mod wheel moves (on the Electric Grand, Tine and Reed Pianos, the tremolo). A keyboard's mod wheel, and a Seaboard RISE's pad (Y), still move the mod wheel's control |
 | CTL 1 | CC80 | the sustain pedal (or what Space is: hold, the Leslie) |
 | CTL 2 | CC81 | the sostenuto pedal |
 | EXP 1's toe switch | CC82 | the soft pedal (the Ribbon Piano's una corda, the Regal's tremulant) |
@@ -413,8 +413,8 @@ Explanations wait behind ⓘ buttons. The button at the left of that bar
 folds the keys away when a MIDI keyboard is doing the playing (the computer
 keys still play), and brings them back.
 
-**The drawer** holds, from the top, the **Presets** menu, then Morph and the
-groups every instrument has: Output (the room, the venue and the volume),
+**The drawer** holds, from the top, the **Presets** menu with its Morph switch,
+then the groups every instrument has: Output (the room, the venue and the volume),
 Tuning and Expression. Each folds away, and the page remembers which. On a desktop it is a column at the left, which its
 chevron folds to a thin rail (a tap on the rail opens it again); in a
 narrower window or on an iPad held upright it opens over the views from that
@@ -427,13 +427,17 @@ these settings* makes a link that opens the page playing them, to send
 to someone. *Your presets and files…* lists yours, and saves them to a
 file or opens one: the plugins read and write the same files.
 
-**Morph**, under the presets in the drawer, slides from one preset to another:
-pick *From* and *To* (Default settings, the instrument's presets or your
-own) and move the slider. Every setting the two give goes part of the way,
-a number smoothly and a choice or a switch halfway across; volume, the room
-and the tuning stay as you have them. Choosing a preset from the Presets
-list makes it the one you morph from. A Roland FC-300's EXP 2 pedal moves
-the slider (heel down *From*, toe down *To*).
+**Morph**, the switch beside the Presets heading, slides from one preset to
+another. Switched on, the Presets menu becomes *From*, and *To* (Default
+settings, the instrument's presets or your own) and a slider appear under
+it. Every control the two presets set moves part of the way as you slide, a
+number smoothly and a choice or a switch halfway across; volume, the room
+and the tuning stay as you have them. Choosing a preset from the menu makes
+it *From*, with the slider back at 0 %. Switching Morph off goes back to the
+*From* preset; **Keep this mix** switches it off and leaves the controls
+where the slider put them, a new mix to change or save. A Roland FC-300's
+EXP 2 pedal moves the slider (heel down *From*, toe down *To*), switching
+Morph on.
 
 **Tuning**, in the drawer, is the same on every instrument: the
 **pitch** standard (A = 440 Hz, or 415 for baroque pitch, 392, 422.5, 430,
@@ -540,7 +544,7 @@ A plugin's window also shows the instrument's views from its page: press **Views
 the pedal, and they draw what the plugin plays, whether the notes come from the DAW, a MIDI
 keyboard or the window's keys.
 
-In a plugin's window (and the Forte app's) the drawer at the left holds Morph, Output, Tuning, Expression, MIDI and CPU, as a page's two do (the host has the MIDI devices, so there is no drawer of them), and the keys fold away from the button at the left of their bar. Its Presets menu has your own presets too: *Save these settings…* writes
+In a plugin's window (and the Forte app's) the drawer at the left holds Presets (the Morph switch, with To, the slider and Keep this mix; the Presets menu itself stays at the top of the window), Output, Tuning, Expression, MIDI and CPU, as a page's two do (the host has the MIDI devices, so there is no drawer of them), and the keys fold away from the button at the left of their bar. Its Presets menu has your own presets too: *Save these settings…* writes
 one as a file in a presets folder for that instrument (`~/Library/Audio/Presets/Forte/<id>` on a
 Mac, `%APPDATA%\Forte\Presets\<id>` on Windows, `~/.local/share/forte/presets/<id>` on
 Linux), and *Open the presets folder* shows it, so a file saved on the site can go there too.
@@ -550,7 +554,8 @@ folder.
 
 **Morph** is in every plugin too, as three parameters kept with the project: *Morph from* and
 *Morph to* (the instrument's presets) and *Morph*, the slider, which a DAW can automate to sweep
-from one preset to the other.
+from one preset to the other. The window's Morph switch shows them, and turns on by itself when
+the song moves Morph.
 
 **Quality** (in the CPU group) is in every plugin too, kept with the project and in no preset.
 A VST3 or CLAP host that bounces or freezes a track offline gets High whatever it says; the AU
