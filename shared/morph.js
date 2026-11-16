@@ -13,8 +13,9 @@
 //   Off again puts the slider back at the top: the sound is the top one's once more. Keep this mix
 //          switches it off leaving the sound and the controls where the slider put them, a new mix
 //          to change or save
-// An FC-300's EXP 2 moves the slider, heel down the top and toe down the bottom, switching Morph
-// on (shared/midi.js morphControl).
+// An FC-300's EXP 2 moves the slider, toe down the top and heel down the bottom (Jesse,
+// 2026-11-16: the way the foot leans), switching Morph on as it leaves the toe (shared/midi.js
+// morphControl).
 // What a preset leaves alone when chosen (the page's `keep`: volume, room, venue, the tuning…)
 // stays as it is. The switch, the two ends and the slider are kept in this browser, per
 // instrument; they are in no preset or link. A plugin has the same as parameters
@@ -51,10 +52,10 @@ export function attachMorph({ instrument: I, params, book, now, set, keep = [], 
   const det = el('div', 'forte-morph');
   det.innerHTML = `<p class="forte-morph-from" title="The top: the preset in the Presets menu">From <b></b></p>
     <div class="param forte-morph-fade" data-placed>
-      <div class="forte-fader" role="slider" tabindex="0" aria-label="Morph" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-describedby="forte-morph-hint"><i></i></div>
+      <div class="forte-fader" id="forte-morph-t" role="slider" tabindex="0" aria-label="Morph" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-describedby="forte-morph-hint"><i></i></div>
       <button type="button" class="forte-morph-swap" title="Swap the top and the bottom: the slider turns over with them, so the sound stays as it is">${SWAP}Swap</button>
       <button type="button" class="forte-info" aria-label="About Morph" aria-expanded="false" aria-controls="forte-morph-hint">i</button>
-      <div class="hint" id="forte-morph-hint">Slide down from the preset at the top, the Presets menu, to the one at the bottom: every setting the two give moves part of the way, a number smoothly and a choice or a switch halfway down. Volume, the room and the tuning stay as you have them. Choosing a preset from the Presets menu puts it at the top. Moving a control yourself makes the top the sound as it is then, a custom configuration unless it is a preset’s, with the slider at the top. Swap trades the top and the bottom, leaving the sound as it is. Switching Morph off goes back to the top; Keep this mix switches it off and leaves the controls where the slider put them, to change or save as they are. An FC-300’s EXP 2 pedal moves the slider: heel down is the top, toe down the bottom.</div>
+      <div class="hint" id="forte-morph-hint">Slide down from the preset at the top, the Presets menu, to the one at the bottom: every setting the two give moves part of the way, a number smoothly and a choice or a switch halfway down. Volume, the room and the tuning stay as you have them. Choosing a preset from the Presets menu puts it at the top. Moving a control yourself makes the top the sound as it is then, a custom configuration unless it is a preset’s, with the slider at the top. Swap trades the top and the bottom, leaving the sound as it is. Switching Morph off goes back to the top; Keep this mix switches it off and leaves the controls where the slider put them, to change or save as they are. An FC-300’s EXP 2 pedal moves the slider: toe down is the top, heel down the bottom.</div>
     </div>
     <select id="forte-morph-to" class="forte-display" aria-label="Morph to: the bottom" title="Morph to: the bottom"></select>
     <button type="button" class="forte-morph-keep">Keep this mix</button>`;
@@ -223,8 +224,9 @@ export function attachMorph({ instrument: I, params, book, now, set, keep = [], 
     slide(clamp01(Math.round(t * 1000) / 1000));
   });
   fader.addEventListener('dblclick', () => slide(0));
-  // an FC-300's EXP 2 (shared/midi.js): heel down the top, toe down the bottom; it switches Morph on as it moves
-  morphControl((v) => { const t = clamp01(v / 127); if (state.on || t > 0) slide(t); });
+  // an FC-300's EXP 2 (shared/midi.js): toe down (127) the top, heel down (0) the bottom; it switches
+  // Morph on as it leaves the toe
+  morphControl((v) => { const t = clamp01(1 - v / 127); if (state.on || t > 0) slide(t); });
 
   refresh();
   return {

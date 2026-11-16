@@ -217,7 +217,7 @@ export function fc300Panel() {
     morphed();
   };
   // EXP 2 moves the page's Morph (shared/midi.js footMorph), which comes once the presets are ready
-  const MORPH = 'Morph: heel down its From preset, toe down its To one';
+  const MORPH = 'Morph: toe down the top preset, heel down the bottom one';
   const morphed = () => { const t = document.querySelector('#forte-morph-t') ? MORPH : meaning.exp2; if (rows.exp2.dd.textContent !== t) rows.exp2.dd.textContent = t; };
   const slug = document.body.dataset.instrument;
   if (slug) {

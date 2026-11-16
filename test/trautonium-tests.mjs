@@ -252,6 +252,27 @@ test('release: a lifted key goes silent within 10 lift times; pressed again it i
   const x = run(e, 0.1);
   assert.ok(x.every((v) => v === 0), 'silent');
 });
+test('lift: a slow lift slides the pitch down a semitone (f ∝ 1/R, 6 % more R); pressed again, the key lands back on its pitch', () => {
+  const held = (rel) => {
+    const e = engine(P()), out = [];
+    for (let i = 0; i < 5; i++) {
+      e.noteOn(60, 0.8); run(e, 0.15);
+      out.push(cents(e.voices[0].f, keyFreq(60)));
+      e.noteOff(60, rel); run(e, 0.12); // struck again before the lift has died away
+    }
+    return { out, e };
+  };
+  for (const rel of [undefined, 0, 0.3, 0.5, 1]) {
+    const { out, e } = held(rel);
+    assert.equal(e.voices.length, 1, `release velocity ${rel}: one voice`);
+    for (const c of out) assert.ok(Math.abs(c) < 0.01, `release velocity ${rel}: held at ${out.map((x) => x.toFixed(1)).join(', ')} ¢, not on C4`);
+  }
+  const e = engine(P());
+  e.noteOn(60, 0.8); run(e, 0.15);
+  e.noteOff(60, 0); run(e, 3 * DEFAULTS.lift * 2 + 0.01); // the slowest lift slides over three of its (doubled) lift times
+  const c = cents(e.voices[0].f, keyFreq(60)), want = -1200 * Math.log2(1.06);
+  assert.ok(Math.abs(c - want) < 0.1, `slowest lift: ${c.toFixed(2)} ¢, not ${want.toFixed(2)}`);
+});
 test('every key speaks within a period of its note and the press (the lamps start in step)', () => {
   for (const k of [21, 40, 60, 84, 108]) {
     const e = engine(P());

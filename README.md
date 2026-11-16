@@ -376,7 +376,7 @@ messages, on the pages, in the plugins and in the Forte app:
 | On the FC-300 | It sends | In Forte |
 |---|---|---|
 | EXP 1 | CC7, volume | on the pages, moves the Volume control across its whole range (toe down: its top; heel down: silent); in the plugins, turns the instrument down; full until it moves |
-| EXP 2 | CC1, the mod wheel | on the pages, the Morph slider (heel down: the top preset; toe down: the bottom one), switching Morph on, whatever the instrument; in the plugins, whatever the mod wheel moves (on the Electric Grand, Tine and Reed Pianos, the tremolo). A keyboard's mod wheel, and a Seaboard RISE's pad (Y), still move the mod wheel's control |
+| EXP 2 | CC1, the mod wheel | on the pages, the Morph slider (toe down: the top preset; heel down: the bottom one), switching Morph on as it leaves the toe, whatever the instrument; in the plugins, whatever the mod wheel moves (on the Electric Grand, Tine and Reed Pianos, the tremolo). A keyboard's mod wheel, and a Seaboard RISE's pad (Y), still move the mod wheel's control |
 | CTL 1 | CC80 | the sustain pedal (or what Space is: hold, the Leslie) |
 | CTL 2 | CC81 | the sostenuto pedal |
 | EXP 1's toe switch | CC82 | the soft pedal (the Ribbon Piano's una corda, the Regal's tremulant) |
@@ -467,7 +467,7 @@ configuration*, unless it is a preset's), the slider back at the top.
 so the sound stays as it is. Switching Morph off goes back to the top;
 **Keep this mix** switches it off and leaves the controls where the slider
 put them, a new mix to change or save. A Roland FC-300's EXP 2 pedal moves
-the slider (heel down the top, toe down the bottom), switching Morph on.
+the slider (toe down the top, heel down the bottom), switching Morph on.
 
 **Tuning**, in the drawer, is the same on every instrument: the
 **pitch** standard (A = 440 Hz, or 415 for baroque pitch, 392, 422.5, 430,
