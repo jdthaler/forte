@@ -1,11 +1,12 @@
 // Press (native/core/include/forte/press.h): Strike sets a note's attack, Press the level it holds
-// at. On the struck and plucked instruments pressing a held key makes its note more, never less: a
-// sustainer swells and holds the strings, tines, reeds, springs and steel bars (an EBow, a driver
-// coil by a pickup) at the level the hardest strike gives them, a bow the vibraphone's bars; the
-// mallet instruments roll; the Breit-Wigner Keyboard keeps making its state. A finger resting on a
-// key (pressure up to half way: a Seaboard sends some) plays exactly as no press at all. On the
-// instruments whose notes hold (a bow, a breath, a current), a note's own pressure (MPE) takes its
-// level over from the strike once it comes.
+// at. On the struck and plucked instruments pressing a held key makes its note more, never less,
+// and strikes it no more: a sustainer swells and holds the strings, tines, reeds, springs, steel
+// bars and the steel pan's notes (an EBow, a driver coil by a pickup) at the level the hardest
+// strike gives them, a bow the mallet instruments' bars, gongs, tubes and bells; the Breit-Wigner
+// Keyboard keeps making its state, and the Quantum Keyboard's pump stays on, refilling its packet.
+// A finger resting on a key (pressure up to half way: a Seaboard sends some) plays exactly as no
+// press at all. On the instruments whose notes hold (a bow, a breath, a current), a note's own
+// pressure (MPE) takes its level over from the strike once it comes.
 // Run: node test/press-tests.mjs
 
 import assert from 'node:assert/strict';
@@ -18,10 +19,10 @@ async function test(name, fn) {
 
 const fs = 24000, AT = 0.3, END = 2.5;
 const HOW = {
-  sustainer: ['piano', 'grand', 'harpsichord', 'tines', 'reeds', 'pianet', 'celesta', 'kalimba', 'springs'],
-  bow: ['vibraphone'],
-  roll: ['marimba', 'steelpan', 'gongs', 'carillon', 'tubular', 'gamelan'],
+  sustainer: ['piano', 'grand', 'harpsichord', 'tines', 'reeds', 'pianet', 'celesta', 'kalimba', 'springs', 'steelpan'],
+  bow: ['vibraphone', 'marimba', 'gamelan', 'gongs', 'tubular', 'carillon'],
   production: ['breitwigner'],
+  pump: ['quantum'],
 };
 // the instruments whose notes hold, whose own pressure sets the level (forte/press.h Held)
 const HELD = ['voice', 'brass', 'clavicylinder', 'chladni', 'cristal', 'saw', 'resonator', 'ondes', 'trautonium', 'cellulophone', 'telharmonium',
@@ -62,10 +63,11 @@ const keyOf = (I) => {
   return key;
 };
 
-// The grand's and the vibraphone's notes ring so long that a press brings them to its level over
-// seconds, and a harpsichord's two choirs of strings, each held, sum as their phases fall; the
-// rest have settled by the last second.
-const SETTLED = ['piano', 'reeds', 'celesta', 'kalimba', 'springs', 'breitwigner', ...HOW.roll];
+// The grand's, the vibraphone's, the tubular bells' and the carillon's notes ring so long that a
+// press brings them to its level over seconds, a harpsichord's two choirs of strings, each held,
+// sum as their phases fall, and a bowed gong's strike tone shares what the bow gives it with the
+// gong's other modes (its nonlinearity) as it swells; the rest have settled by the last second.
+const SETTLED = ['piano', 'reeds', 'celesta', 'kalimba', 'springs', 'breitwigner', 'quantum', 'marimba', 'steelpan', 'gamelan'];
 await test(`Strike sets the attack, Press the level: under a full press a soft strike (0.3) and a hard one (1) hold within 1 dB: ${SETTLED.join(', ')}`, async () => {
   const wrong = [];
   for (const id of SETTLED) {

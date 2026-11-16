@@ -73,8 +73,8 @@ bool QuantumEngine::Voice::start(const QuantumEngine &eng, int k, double vel, co
   // across C2–C7, the keyboard it was first drawn on; the keys beyond sit at its ends
   const double pan = std::max(-1.0, std::min(1.0, (2.0 * (k - 36)) / (96 - 36) - 1)) * 0.6, a = ((pan + 1) * pi) / 4;
   gl = fd::cos(a); gr = fd::sin(a); // keyPan(key)
-  released = quench = stolen = dead = false; liftK = 1;
-  coh = folded = false; lam = 0; gain = 1; dcB = dcC = 0;
+  released = quench = stolen = dead = false; liftK = 1; press = {};
+  coh = folded = false; lam = 0; gain = 1; pop = 1; dcB = dcC = 0;
   s0 = 0; s1 = S; active = NP; // the states rotated, and the pairs summed (see trim)
   const double x = eng.expr.slideOr(k, NAN); // a slide starts there
   slid = x == x; deph = slid ? x : eng.P[p::dephase];
@@ -170,6 +170,9 @@ bool QuantumEngine::Voice::cohere(const QuantumEngine &eng, Voice &old) {
     mag[s] = std::sqrt((Rr[s] + 1) * (Rr[s] + 1) + Ri[s] * Ri[s]);
   }
   coh = true; folded = false;
+  double cc = 0, cb = 0;
+  for (int s = 0; s < S; s++) { const double c2 = pkt.c[first + s] * pkt.c[first + s]; cc += c2; cb += c2 * mag[s] * mag[s]; }
+  pop = cc > 0 ? cb / cc : 1;
   double wmax = 0, bmax = 0;
   for (int g = 0; g < G; g++) for (int i = ga[g], q = gw[g]; i < gb[g]; i++, q++) {
     wmax = std::max(wmax, std::fabs(w[q]));
@@ -226,6 +229,23 @@ void QuantumEngine::Voice::bend(const QuantumEngine &eng, int n) {
   }
 }
 
+// Press: the pump held on, a drive with a line on each level's own energy, each in step with its
+// level: it adds to every amplitude as T₁ takes from it, so the packet keeps its shape, its
+// collapses and its revivals, and its amplitude b, the square root of its population (env·pop: the
+// coherences are products of two amplitudes), follows b' = −(b − b_p)/τ. b_p = √(OUT·p) is the
+// amplitude a strike as hard as the key is pressed launches (env = OUT·velocity). Above b_p the drive
+// holds at what keeps b_p, so the packet settles to it at its own rate, τ = 2T₁ (a press only ever
+// slows its decay); below, the drive is servoed on the packet's population and swells it within
+// ATTACK_T (forte/press.h). Exact over the block's m decaying samples (from the pump's centre on):
+// b goes to b_p + (b − b_p)·aᵐ, env by the same factor each sample.
+double QuantumEngine::Voice::held(const QuantumEngine &eng, int n) const {
+  const int m = (int)std::clamp<int64_t>(count + n + 1, 0, n);
+  const double b = std::sqrt(env * pop), bp = std::sqrt(OUT * press.p), own = std::sqrt(r1);
+  if (m == 0 || !(b > 0)) return r1;
+  const double a = b < bp ? std::min(own, fd::exp(-1 / (eng.fs * ATTACK_T))) : own;
+  return fd::pow((bp + (b - bp) * fd::pow(a, m)) / b, 2.0 / m);
+}
+
 // Exact phases from the sample counter: aₙ = e^(−iθₙ·count), at a bent well's levels
 // e^(−iθₙ·(count + warp)).
 void QuantumEngine::Voice::sync() {
@@ -246,6 +266,7 @@ void QuantumEngine::Voice::render(T *L, T *R, int n) {
   const int64_t c0 = count;
   sync();
   double e = env;
+  const double r = rb;
   for (int t = 0; t < n; t++) {
     const int64_t c = ++count;
     const bool dec = c >= 0; // decoherence clocks start at the pump's centre
@@ -271,7 +292,7 @@ void QuantumEngine::Voice::render(T *L, T *R, int n) {
     else acc -= dc;
     const double v = e * ramp * acc;
     L[t] = (T)(L[t] + gl * v); R[t] = (T)(R[t] + gr * v);
-    if (dec) e *= r1;
+    if (dec) e *= r;
   }
   env = e;
   lam += gdt * (double)std::max<int64_t>(0, count - std::max<int64_t>(c0 + 1, 0) + 1);
@@ -288,6 +309,7 @@ void QuantumEngine::Voice::renderCoherent(T *L, T *R, int n) {
   const double *ar = fold ? re.data() : xr.data(), *ai = fold ? im.data() : xi.data();
   const bool off = truthy(dc) || dcB != 0 || dcC != 0;
   double e = env;
+  const double r = rb;
   for (int t = 0; t < n; t++) {
     const int64_t c = ++count;
     const bool dec = c >= 0;
@@ -321,7 +343,7 @@ void QuantumEngine::Voice::renderCoherent(T *L, T *R, int n) {
     }
     const double v = e * acc;
     L[t] = (T)(L[t] + gl * v); R[t] = (T)(R[t] + gr * v);
-    if (dec) e *= r1;
+    if (dec) e *= r;
   }
   env = e;
   lam += gdt * (double)std::max<int64_t>(0, count - std::max<int64_t>(c0 + 1, 0) + 1);
@@ -412,6 +434,7 @@ void QuantumEngine::setParams(const double *v) {
 
 void QuantumEngine::noteOn(int key, double velocity) {
   if (!hasParams) return;
+  presses.reset(key); // a new note's own pressure starts at none
   if (offered && offered->key == key) { startNote(key, velocity, {}, std::move(offered)); return; }
   const Data::Ref r = data.get(key, version);
   if (r) { startNote(key, velocity, r, nullptr); return; }
@@ -516,6 +539,7 @@ void QuantumEngine::setSustain(bool on) {
 
 void QuantumEngine::allNotesOff() {
   nPending = 0;
+  presses.clear();
   for (int i = 0; i < nVoices; i++) { Voice *v = voices[i]; data.release(v->ref); v->ref = {}; v->own.reset(); v->pk = nullptr; v->inUse = false; v->dead = true; }
   nVoices = 0;
 }
@@ -526,7 +550,12 @@ void QuantumEngine::render(T *L, T *R, int n) {
   if (hasParams && nPending) retryPending();
   for (int i = 0; i < nVoices; i++) {
     Voice &v = *voices[i];
-    v.dephase(*this, n); v.bend(*this, n); v.render(L, R, n);
+    v.dephase(*this, n); v.bend(*this, n);
+    // Press: while its key is held (and the voice not stolen), the pump held on (held())
+    const bool down = !v.released && !v.stolen;
+    v.press.follow(down ? presses.of(v.key) : 0, n, fs);
+    v.rb = down && v.press.on() ? v.held(*this, n) : v.r1;
+    v.render(L, R, n);
     v.warp += n * (v.bent - 1);
   }
   int j = 0; // drop finished voices in place (no allocation; an offered packet goes with its voice)

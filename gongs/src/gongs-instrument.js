@@ -4,21 +4,25 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './gongs-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { EXPRESSION, offInPresets } from '../../shared/expression.js';
+import { expression, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
+// what makes little sense on it: off by default and in its presets (shared/expression.js)
+const OFF = ['glide'];
+
 export const INSTRUMENT = {
   id: 'gongs',
-  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: offInPresets(PRESETS, ['glide']), // its presets turn off what makes little sense on it (shared/expression.js)
+  groups: [...GROUPS, expression(OFF)], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
+  presets: offInPresets(PRESETS, OFF), // its presets, with them off too
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: A0–C8
   space: 'sustain',                     // Space and CC64: a damper pedal, sent to the engine
   modWheel: 'strike',                   // CC1: strike point, from its default (near the centre) out to 95 % of the radius
   mpe: { bend: 0.1, way: 'up', slide: true }, // a note's own bend, a hand pressing its rim (up only, ten cents at most); its slide, where its mallet lands, at the strike
   glide: 'a hand pressing the rim, stiffening the plate: a few cents sharp', // what a note's own bend does
-  aftertouch: 'a firm press rolls the gong with soft mallets, as hard as it is pressed', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
+  aftertouch: 'a firm press: a bow on the gong holds its note as loud as the press', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'the hand damping the plate on release: a slow lift lands gently (a longer tail), a fast one firmly', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['mass', 'release', 'listen', 'hardness', 'strike'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/gongs), built as WebAssembly (it builds its

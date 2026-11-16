@@ -20,7 +20,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/quantum/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity |
 | `Space` | sustain pedal (released notes keep their lifetime T₁) |
-| MIDI | notes, velocity, sustain pedal (CC64), **mod wheel = dephasing rate** |
+| MIDI | notes, velocity, sustain pedal (CC64), **mod wheel = dephasing rate**, **pressure = the pump held on** (aftertouch, MPE) |
 
 With **Coherent restrike** on, striking a key again while its packet still rings sends a second,
 phase-locked pulse into the same atom, and the two pulses interfere (Ramsey fringes; see below).
@@ -199,6 +199,27 @@ processes act on the density matrix ρ_mn:
   fundamental at the revival, < 10⁻⁶ for the 3rd harmonic, and a 97 %
   intact attack.
 
+**Press: the pump held on.** Pressing into a held key (aftertouch, or a Seaboard's Press: past half
+way, as on Forte's other struck instruments) keeps the pump on, as a weak drive with a line on each
+level's own energy, each in step with its level. In the weak-field limit each line adds to its
+level's amplitude in proportion to the line, so the drive refills the packet as T₁ drains it and
+leaves its shape alone: the same collapses, fractional revivals and revivals, held. With the
+packet's amplitude b (the square root of its population) and b_p the amplitude a strike as hard as
+the key is pressed launches,
+
+  db/dt = −(b − b_p)/τ.
+
+So **Strike sets the attack, and Press the level the note holds at**: a full press holds the note
+at the level a strike at full velocity launches, however hard it was struck, and half way past rest
+at half that. Below b_p the drive's strength is servoed on the packet's population and swells it
+with τ = 0.1 s; above it, the drive gives what keeps b_p, so the note settles there at its own rate,
+τ = 2T₁, and a press never makes it decay faster than it would alone. A press is no new strike: no
+pulse is sent, so nothing new is launched, and a restruck key's packet (Coherent restrike) is held
+as it is. Letting the key go ends the drive, and the release quenches the note as before. The tests
+check b against the closed form b_p + (b₀ − b_p)e^(−t/τ) to 10⁻⁹ at every block, the output
+against the unpressed note's times one smooth gain in every well and with dephasing, and a finger
+at rest (pressure up to half way) against no press, sample for sample.
+
 **Coherent restrike: Ramsey fringes.** Normally a restruck key excites a fresh packet in another
 atom, and the two add incoherently: their powers add. With *Coherent restrike (Ramsey fringes)*
 on, the second strike is the second pulse of a phase-locked pair on the *same* atom, as in
@@ -317,7 +338,7 @@ quantum/src/quantum-waves.js           the views' grid for each well around the 
 quantum/src/quantum-wasm.js            the C++ engine and model as WebAssembly (quantum/wasm/quantum.wasm)
 native/instruments/quantum/            the C++: spectra, matrix elements, packets, time scales, eigenfunctions
                                        (Numerov / closed forms) and the engine (plugins and WebAssembly)
-test/quantum-tests.mjs                 node test/quantum-tests.mjs (33 tests, ~20 s)
+test/quantum-tests.mjs                 node test/quantum-tests.mjs (46 tests, ~30 s)
 tools/render-quantum.mjs               node tools/render-quantum.mjs → examples/quantum/
 ```
 
@@ -337,6 +358,11 @@ tools/render-quantum.mjs               node tools/render-quantum.mjs → example
   launched by pulses shorter than 1/30 of a period and start percussively.
   That is physical (a sudden kick), but it is heard as a tick on the lowest
   notes.
+* **Press's drive** is idealised: a line on every level, each locked to its level's own phase, its
+  strength servoed. Locked to the levels, it refills their populations and leaves the phases between
+  them to dephasing, which still decays each coherence as e^(−Γ_φ(m−n)²t); a drive locked to the
+  pump's clock alone would also feed new coherence into a dephased packet. Its swell below the
+  press's level is the servo's 0.1 s, not a time the well sets.
 * **T₁** removes population uniformly. A real radiative *cascade* (n → n−1)
   would lower n̄ and glide the pitch. Here the decay goes to states outside
   the band, as it mostly does for low-l Rydberg states.

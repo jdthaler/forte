@@ -8,11 +8,12 @@
      set the custom temperament. In the Forte app up to four instruments play at once, as on the
      site's Combinations page (plugin.cpp, Suite): a card under the header for each gives its keys,
      octave, level and on/off, and picks whose controls the window shows. At the left, as on the
-     site's pages (shared/layout.js), a drawer with what every instrument has alike: Presets (Morph's
-     switch, and while it is on the top's menu, the slider running down to the bottom's with Swap
-     beside it, and Keep this mix; the Presets menu stays in the header, names the preset the sound
-     is or says Custom configuration, and with Morph on names the top), Output, Tuning, Expression,
-     MIDI and CPU, each but Presets folding; its chevron folds it to a rail. The keys fold
+     site's pages (shared/layout.js), Global settings, a drawer with what every instrument has alike:
+     Presets (Morph's switch, and while it is on the top's menu, the slider running down to the
+     bottom's with Swap beside it, and Keep this mix; the Presets menu stays in the header, names the
+     preset the sound is or says Custom configuration, and with Morph on names the top), Output,
+     Velocity (the computer keys' and the MIDI keys' velocity curve), Tuning, Expression, MIDI (MPE,
+     Transpose, Octave) and CPU, each but Presets folding; its chevron folds it to a rail. The keys fold
      away from the button at the left of their bar. Above the controls, the instrument's views (the shown part's):
      its own page from the site, served from the plugin (editor.h), in a frame that shows only them
      (shared/in-plugin.js), fed by the plugin's sound and its engine's messages; the Views button
@@ -295,8 +296,8 @@
 </header>
 <section id="parts" hidden aria-label="The instruments, each on its own keys"></section>
 <div id="middle">
-<aside id="drawer" hidden aria-label="Settings">
-  <div class="drawer-head"><b>Settings</b><button id="drawer-fold" class="fold" aria-controls="drawer-body"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5"/></svg></button></div>
+<aside id="drawer" hidden aria-label="Global settings">
+  <div class="drawer-head"><b>Global settings</b><button id="drawer-fold" class="fold" aria-controls="drawer-body"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5"/></svg></button></div>
   <div id="drawer-body"></div>
 </aside>
 <div id="stage">
@@ -464,7 +465,7 @@ function build() {
   const groups = new Map();
   D.params.forEach((p, i) => {
     if (i === D.presets) return;
-    const g = p.group || 'Sound';
+    const g = VELOCITY.includes(p.id) ? 'Velocity' : p.group || 'Sound'; // the computer keys' and the MIDI keys', together in the drawer
     if (!groups.has(g)) groups.set(g, []);
     groups.get(g).push(i);
   });
@@ -472,7 +473,7 @@ function build() {
   for (const [title, list] of groups) {
     if (title === 'Morph') { buildMorph(list); continue; } // with the presets, at the top of the drawer
     if (DRAWER.includes(title)) { // in the drawer, each a section that folds
-      const det = section(title, title === 'Output' || title === 'Morph');
+      const det = section(title, title === 'Output' || title === 'Velocity');
       for (const i of list) { const [box, c] = control(i); det.appendChild(box); register(i, c); boxes.set(D.params[i].id, box); }
       continue;
     }
@@ -653,7 +654,8 @@ function learn(m) {
 // ---- the drawer: what every instrument has alike, as on the site's pages (shared/layout.js) ------
 // The groups every instrument has, in this order (the Presets menu stays in the header, by the
 // instrument's name), each a section that folds as last left; the chevron folds the drawer to a rail (a narrow window starts so).
-const DRAWER = ['Presets', 'Output', 'Tuning', 'Expression', 'MIDI', 'CPU'];
+const DRAWER = ['Presets', 'Output', 'Velocity', 'Tuning', 'Expression', 'MIDI', 'CPU'];
+const VELOCITY = ['velocity', 'touch']; // the computer keys' velocity (the instrument's), the MIDI keys' curve (plugin.cpp touchParam)
 const drawerBody = $('#drawer-body');
 const opened = () => prefs.sections ?? (prefs.sections = {});
 function section(title, open) {
@@ -678,7 +680,7 @@ function buildDrawer() {
   const folded = (on) => {
     document.body.classList.toggle('drawer-folded', on);
     fold.setAttribute('aria-expanded', String(!on));
-    fold.title = on ? 'Settings' : 'Fold the settings away';
+    fold.title = on ? 'Global settings' : 'Fold the global settings away';
     fold.setAttribute('aria-label', fold.title);
   };
   folded(typeof prefs.drawer === 'boolean' ? !prefs.drawer : innerWidth < 760);
@@ -1358,6 +1360,7 @@ function mockForte() {
   const params = [
     { id: 'strike', label: 'Strike position', group: 'Hammer', kind: 'continuous', perform: true, def: 0.3, choices: [] },
     { id: 'hardness', label: 'Hardness', group: 'Hammer', kind: 'continuous', perform: false, def: 0.5, choices: [] },
+    { id: 'velocity', label: 'Velocity (computer keys)', group: 'Hammer', kind: 'continuous', perform: true, def: 0.6, choices: [] },
     { id: 'material', label: 'Material', group: 'Bar', kind: 'choice', perform: false, def: 0, choices: ['Rosewood', 'Aluminium', 'Glass'] },
     { id: 'damp', label: 'Damping', group: 'Bar', kind: 'continuous', perform: false, def: 0.4, choices: [] },
     { id: 'fullRange', label: 'Full range', group: 'Bar', kind: 'toggle', perform: false, def: 0, choices: [] },
@@ -1375,6 +1378,8 @@ function mockForte() {
     { id: 'morphTo', label: 'Morph to', group: 'Morph', kind: 'choice', perform: false, def: 1, choices: ['Default settings', 'Bright', 'Dark', 'Custom configuration'] },
     { id: 'morph', label: 'Morph', group: 'Morph', kind: 'continuous', perform: false, def: 0, choices: [] },
     { id: 'preset', label: 'Preset', group: '', kind: 'choice', perform: false, def: 0, choices: ['Default settings', 'Bright', 'Dark'] },
+    { id: 'touch', label: 'Velocity curve', group: 'MIDI', kind: 'choice', perform: false, def: 1, choices: ['Soft', 'Normal', 'Hard'] },
+    { id: 'mpe', label: 'MPE', group: 'MIDI', kind: 'choice', perform: false, def: 0, choices: ['Auto', 'On', 'Off'] },
   ];
   const at = (id) => params.findIndex((p) => p.id === id), [FROM, TO, T] = ['morphFrom', 'morphTo', 'morph'].map(at), CUSTOM = 3;
   const v = params.map((p) => p.def), keys = new Set(), P = params.findIndex((p) => p.id === 'preset');

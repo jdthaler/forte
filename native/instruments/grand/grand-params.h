@@ -122,41 +122,41 @@ inline const ParamInfo kParams[p::count] = {
   {"cents10", "Minor 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents10, 1},
   {"cents11", "Major 7th (custom)", "Tuning", ParamKind::continuous, -100, 100, 0, 0.01, false, false, nullptr, 0, kFormat_cents11, 1},
   {"strikeOn", "Strike: how hard a key goes down", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
-  {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
-  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
-  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
+  {"glideOn", "Glide: a note’s own pitch bend", "Expression", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
+  {"slideOn", "Slide: a note’s own slide (CC74)", "Expression", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
+  {"pressOn", "Press: pressing into a held key", "Expression", ParamKind::toggle, 0, 1, 0, 1, false, false, nullptr, 0, nullptr, 0},
   {"liftOn", "Lift: how fast a key comes up", "Expression", ParamKind::toggle, 0, 1, 1, 1, false, false, nullptr, 0, nullptr, 0},
 };
 
-inline const PresetValue kPreset0[] = {{p::glideOn, 0}};
-inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::mount, 1}, {p::listen, 1}};
-inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::mount, 1}, {p::listen, 0}};
-inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::scale, 1}, {p::stringing, 1}};
-inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::stiffness, 0}};
-inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::detune, 10}};
-inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::stringing, 2}, {p::mount, 1}, {p::listen, 0}, {p::tilt, 20}, {p::pickH, 0.6}};
-inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::strike, 0.5}};
-inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::rIn, 22}};
-inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::bass, 4}, {p::mid, -5}, {p::treble, 7}};
-inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::tremDepth, 0.6}, {p::tremRate, 5.5}};
-inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::hardness, 4}};
-inline const PresetValue kPreset12[] = {{p::glideOn, 0}, {p::strike, 0.03}};
-inline const PresetValue kPreset13[] = {{p::glideOn, 0}, {p::sympathy, 0.8}};
+inline const PresetValue kPreset0[] = {{p::glideOn, 0}, {p::slideOn, 0}, {p::pressOn, 0}};
+inline const PresetValue kPreset1[] = {{p::glideOn, 0}, {p::slideOn, 0}, {p::pressOn, 0}, {p::mount, 1}, {p::listen, 1}};
+inline const PresetValue kPreset2[] = {{p::glideOn, 0}, {p::slideOn, 0}, {p::pressOn, 0}, {p::mount, 1}, {p::listen, 0}};
+inline const PresetValue kPreset3[] = {{p::glideOn, 0}, {p::slideOn, 0}, {p::pressOn, 0}, {p::scale, 1}, {p::stringing, 1}};
+inline const PresetValue kPreset4[] = {{p::glideOn, 0}, {p::slideOn, 0}, {p::pressOn, 0}, {p::stiffness, 0}};
+inline const PresetValue kPreset5[] = {{p::glideOn, 0}, {p::slideOn, 0}, {p::pressOn, 0}, {p::detune, 10}};
+inline const PresetValue kPreset6[] = {{p::glideOn, 0}, {p::slideOn, 0}, {p::pressOn, 0}, {p::stringing, 2}, {p::mount, 1}, {p::listen, 0}, {p::tilt, 20}, {p::pickH, 0.6}};
+inline const PresetValue kPreset7[] = {{p::glideOn, 0}, {p::slideOn, 0}, {p::pressOn, 0}, {p::strike, 0.5}};
+inline const PresetValue kPreset8[] = {{p::glideOn, 0}, {p::slideOn, 0}, {p::pressOn, 0}, {p::rIn, 22}};
+inline const PresetValue kPreset9[] = {{p::glideOn, 0}, {p::slideOn, 0}, {p::pressOn, 0}, {p::bass, 4}, {p::mid, -5}, {p::treble, 7}};
+inline const PresetValue kPreset10[] = {{p::glideOn, 0}, {p::slideOn, 0}, {p::pressOn, 0}, {p::tremDepth, 0.6}, {p::tremRate, 5.5}};
+inline const PresetValue kPreset11[] = {{p::glideOn, 0}, {p::slideOn, 0}, {p::pressOn, 0}, {p::hardness, 4}};
+inline const PresetValue kPreset12[] = {{p::glideOn, 0}, {p::slideOn, 0}, {p::pressOn, 0}, {p::strike, 0.03}};
+inline const PresetValue kPreset13[] = {{p::glideOn, 0}, {p::slideOn, 0}, {p::pressOn, 0}, {p::sympathy, 0.8}};
 inline const Preset kPresets[] = {
-  {"CP-70", kPreset0, 1},
-  {"Same strings on a soundboard, heard by microphones", kPreset1, 3},
-  {"Same strings on a soundboard, through the piezo", kPreset2, 3},
-  {"Concert-grand scale (long bass strings)", kPreset3, 3},
-  {"Ideal flexible strings (harmonic)", kPreset4, 2},
-  {"Honky-tonk unisons (10 ¢)", kPreset5, 2},
-  {"Weinreich: one string, tilted bridge, soundboard", kPreset6, 6},
-  {"Struck at the middle (odd partials)", kPreset7, 2},
-  {"Low-impedance preamp (thin bass)", kPreset8, 2},
-  {"Stage EQ: bright and scooped", kPreset9, 4},
-  {"Stereo tremolo", kPreset10, 3},
-  {"Hard, worn felt: a bright clank", kPreset11, 2},
-  {"Struck near the end: every partial bright", kPreset12, 2},
-  {"Strong sympathetic resonance (hold the pedal)", kPreset13, 2},
+  {"CP-70", kPreset0, 3},
+  {"Same strings on a soundboard, heard by microphones", kPreset1, 5},
+  {"Same strings on a soundboard, through the piezo", kPreset2, 5},
+  {"Concert-grand scale (long bass strings)", kPreset3, 5},
+  {"Ideal flexible strings (harmonic)", kPreset4, 4},
+  {"Honky-tonk unisons (10 ¢)", kPreset5, 4},
+  {"Weinreich: one string, tilted bridge, soundboard", kPreset6, 8},
+  {"Struck at the middle (odd partials)", kPreset7, 4},
+  {"Low-impedance preamp (thin bass)", kPreset8, 4},
+  {"Stage EQ: bright and scooped", kPreset9, 6},
+  {"Stereo tremolo", kPreset10, 5},
+  {"Hard, worn felt: a bright clank", kPreset11, 4},
+  {"Struck near the end: every partial bright", kPreset12, 4},
+  {"Strong sympathetic resonance (hold the pedal)", kPreset13, 4},
 };
 inline const uint16_t kKeep[] = {p::volume, p::room, p::venue, p::maxFreq, p::pitch, p::temperament, p::tuningRoot, p::cents1, p::cents2, p::cents3, p::cents4, p::cents5, p::cents6, p::cents7, p::cents8, p::cents9, p::cents10, p::cents11};
 inline const Controller kControllers[] = {{107, p::bass}, {109, p::mid}, {111, p::treble}, {113, p::tremRate}, {114, p::tremDepth}};

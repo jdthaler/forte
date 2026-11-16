@@ -4,14 +4,17 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './pulsars-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { EXPRESSION, offInPresets } from '../../shared/expression.js';
+import { expression, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
+// what makes little sense on it: off by default and in its presets (shared/expression.js)
+const OFF = ['lift'];
+
 export const INSTRUMENT = {
   id: 'pulsars',
-  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: offInPresets(PRESETS, ['lift']), // its presets turn off what makes little sense on it (shared/expression.js)
+  groups: [...GROUPS, expression(OFF)], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
+  presets: offInPresets(PRESETS, OFF), // its presets, with them off too
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: all 88, A0–C8 (past the fastest known pulsar, and past break-up, the same design carries on)
   space: 'hold',                        // Space and CC64 latch the keys down: a pulsar keeps spinning; the host sends the noteOffs on release

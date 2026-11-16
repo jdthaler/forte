@@ -153,7 +153,12 @@ it further, up to fully down (a note struck at 0.3 and leaned on fully gets
 1/0.3 louder). The pressure rises in the *finger's press* time, which a hard
 key halves and a soft one makes one and a half times as long, and falls in
 the *finger's lift* time when the key is released; then the wire leaves the
-rail and the lamps stop. The volume pedal (CC11) scales everything. All the
+rail and the lamps stop. How fast the key comes up (a keyboard's release
+velocity, a Seaboard's Lift) scales that time from a half to twice, and a
+slow lift also lets the pitch fall, by up to a semitone at the slowest: as
+the wire leaves the rail its contact resistance adds up to 6 % to the
+wire's, and f ∝ 1/R. A key pressed again before its note dies lands back on
+its own pitch. The volume pedal (CC11) scales everything. All the
 lamps of a manual start at their extinction voltage when the finger lands,
 as if they had just fired together, so a note speaks within one period (and
 its press), with its dividers in step.
@@ -219,8 +224,9 @@ tools/render-trautonium.mjs                     node tools/render-trautonium.mjs
   charging current through it is left out). Sala's could also be switched to
   low-pass.
 * **The finger's pressure is a smooth press and lift** set by the velocity
-  and aftertouch; it changes the loudness only (a lightly pressed wire's
-  contact resistance would also pull the pitch flat). Sala's later
+  and aftertouch; while the key is held it changes the loudness only (a
+  lightly pressed wire's contact resistance would also pull the pitch flat;
+  only a slow lift does). Sala's later
   instruments had envelope generators and a noise source, not modelled here.
 * **One loudspeaker**: the output is mono, before the room.
 

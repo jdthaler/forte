@@ -32,7 +32,7 @@
     {"id":"glideOn","kind":"toggle","def":true},
     {"id":"slideOn","kind":"toggle","def":true},
     {"id":"pressOn","kind":"toggle","def":true},
-    {"id":"liftOn","kind":"toggle","def":true}
+    {"id":"liftOn","kind":"toggle","def":false}
   ],
   "presets": [
     {"name":"CMS crystal, 50 GeV electrons","values":{"liftOn":false}},

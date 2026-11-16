@@ -1,9 +1,9 @@
 // press.h — Press (aftertouch, MPE pressure: engine.h pressure, a Seaboard's Press) as the struck
-// and plucked engines take it: pressing a held key harder makes its note more, never less. The
-// strings, tines, reeds, springs and the celesta's and kalimba's steel have a sustainer on them (an
-// EBow over a string, a driver coil by a pickup: Sustainer), the vibraphone a bow on its bars (the
-// same, with a bow's friction for the amplifier), and the mallet instruments roll (Roll), as a
-// player keeps a mallet note sounding.
+// and plucked engines take it: pressing a held key harder makes its note more, never less, and
+// never strikes it again. The strings, tines, reeds, springs, the celesta's and kalimba's steel and
+// the steel pan's notes have a sustainer on them (an EBow over a string, a driver coil by a pickup:
+// Sustainer), and the mallet instruments a bow on their bars, gongs, tubes and bells (the same, with
+// a bow's friction for the amplifier).
 //
 // Only a firm press counts: pressure below PRESS_FROM does nothing (a Seaboard sends some from any
 // finger at rest on a held key, which would set every note going), and the press goes in over the
@@ -185,27 +185,6 @@ struct Sustainer {
     return p * F * x / std::sqrt(1 + x * x);
   }
   void rest() { live = false; } // let go: it listens afresh when pressed again
-};
-
-// A roll: a mallet note kept sounding by striking it again and again, the mallets in turn, while
-// its key is pressed past rest: `rate` strokes a second, a little uneven (±3 % in time, as a
-// player's), each as hard as the key is pressed (ROLL_FULL of the hardest stroke at full press). The
-// first comes a stroke's time after the press begins.
-constexpr double ROLL_FULL = 0.8;
-
-struct Roll {
-  double in = -1;   // samples to the next stroke (−1: not rolling)
-  bool hand = false; // which mallet strikes next
-  // n samples on, pressed p: the velocity of the stroke due in this block, or 0
-  double step(double p, double rate, int n, double fs, uint32_t &rng) {
-    if (!(p > 0)) { in = -1; return 0; }
-    if (in < 0) { in = fs / rate; return 0; }
-    if ((in -= n) > 0) return 0;
-    rng = rng * 1664525u + 1013904223u;
-    hand = !hand;
-    in += (fs / rate) * (1 + 0.06 * ((rng >> 8) / 16777216.0 - 0.5));
-    return ROLL_FULL * p;
-  }
 };
 
 } // namespace forte

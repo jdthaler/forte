@@ -14,7 +14,9 @@
 //
 // The mode: auto (the default) plays plain MIDI until a controller sends the configuration
 // message, so an ordinary keyboard plays as ever; on plays as if the lower zone had 15 members
-// until one says otherwise; off never decodes MPE.
+// until one says otherwise; off plays a controller that sent the message as a keyboard: its notes
+// play, and what its member channels send of their own (bend, pressure, CC74) is no one's, so no
+// note moves on its own and none moves them all. The zones it announces are kept, for on again.
 #pragma once
 
 #include <cmath>
@@ -46,9 +48,9 @@ class MpeDecoder {
   void setMode(int m);
   int mode() const { return mode_; }
   // Reads one MIDI message (status, data 1, data 2). True when it was MPE's own (a member channel's
-  // pitch bend, channel pressure or CC74, handed to the sink as its note's): the host does nothing
-  // more with it. A member's note-on first hands the sink the key's bend and slide, then returns
-  // false: the host plays the note as ever.
+  // pitch bend, channel pressure or CC74, handed to the sink as its note's; Off: to no one): the host
+  // does nothing more with it. A member's note-on first hands the sink the key's bend and slide (Off:
+  // nothing), then returns false: the host plays the note as ever.
   bool midi(const uint8_t *d, Sink &sink);
   bool active() const { return members(0) > 0 || members(1) > 0; } // channels are notes' own now
   int members(int zone) const;      // 0: the lower zone, 1: the upper
@@ -71,6 +73,8 @@ class MpeDecoder {
     int dataMsb = -1;
   };
   int zoneOf(int channel) const;    // the zone a member channel is in, else −1
+  int heard(int zone) const;        // its members from configuration messages alone
+  int heardZoneOf(int channel) const; // the zone by those alone (Off), else −1
   void configure(int zone, int count);
   int mode_ = mpe::autoDetect;
   int zone_[2] = {-1, -1};          // members per zone, from a configuration message (−1: none came)

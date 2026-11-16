@@ -576,7 +576,7 @@ for (const { id, dir } of described) {
     const titled = (t) => I.groups.filter((g) => g.title === t);
     assert.deepEqual(titled('Output').map((g) => g.params.map((p) => p.id)), [['room', 'venue', 'volume']], 'one Output group: room, venue, volume');
     assert.deepEqual(titled('Tuning'), [TUNING_GROUP], 'the shared Tuning group');
-    assert.deepEqual(titled('Expression'), [EXPRESSION], 'the shared Expression group');
+    assert.deepEqual(titled('Expression').map((g) => g.params.map(({ def, ...p }) => p)), [EXPRESSION.params.map(({ def, ...p }) => p)], 'the shared Expression group (its defaults its own)');
     assert.ok(!I.engine && !I.engineParams, 'the engine is the C++ (wasm), not JavaScript');
     assert.ok(I.wasm?.binary && has(new URL(I.wasm.binary).pathname.slice(R.pathname.length)), `wasm.binary ${I.wasm?.binary}`);
     const E = (await import(I.wasm.module))[I.wasm.name];

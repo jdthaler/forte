@@ -34,7 +34,7 @@
     {"id":"glideOn","kind":"toggle","def":true},
     {"id":"slideOn","kind":"toggle","def":true},
     {"id":"pressOn","kind":"toggle","def":true},
-    {"id":"liftOn","kind":"toggle","def":true}
+    {"id":"liftOn","kind":"toggle","def":false}
   ],
   "presets": [
     {"name":"Earth: a great megathrust quake","values":{"liftOn":false}},

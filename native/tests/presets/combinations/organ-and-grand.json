@@ -145,9 +145,9 @@
             "cents10": 0,
             "cents11": 0,
             "strikeOn": true,
-            "glideOn": true,
-            "slideOn": true,
-            "pressOn": true,
+            "glideOn": false,
+            "slideOn": false,
+            "pressOn": false,
             "liftOn": true
           }
         }

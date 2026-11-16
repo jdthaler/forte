@@ -16,6 +16,132 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-11-16 — Global settings, the MIDI status in its drawer and an MPE switch; EXP 2's toe down is Morph's top; Press never strikes again; each instrument's own Expression defaults; the Quantum Keyboard answers to Press; the Trautonium's pitch stays put on repeated presses
+
+### Forte 0.54.0
+- **Global settings:** the drawer at the left is Global settings (it was Presets and settings), in the plugins' window and the Forte app too. A new **Velocity** section, after Output, holds the computer keys' velocity (moved out of each instrument's own group of controls; it stays above the keys too) and, where the browser has Web MIDI, the MIDI keys' velocity curve, Soft, Normal or Hard, which every instrument shares (it was Touch, in the MIDI settings).
+- **The MIDI status is the MIDI devices drawer:** the header's MIDI status is gone where the drawer is. The drawer lists the devices plugged in (or says MIDI is off, with its button, or not allowed), says how far Octave and Transpose move the keys, and folded, its rail keeps one lamp that lights as any device plays. *Enable MIDI* stays in the header until MIDI is on. On a phone with Web MIDI the drawer opens from a MIDI button at the right of the header.
+- **An MPE switch,** at the top of the MIDI devices drawer, one for every instrument and page (it was a menu, Auto, On or Off, in the MIDI settings). On is Auto. Off, a controller that sends MPE, a Seaboard among them, plays notes alone, each as hard as it was struck: its glide, slide and press move nothing, neither its own note nor every note, where Off used to hear each finger's bend and pressure as the whole keyboard's. A zone announced while MPE is off is kept, so switching it on works at once. The Seaboard RISE's panel greys Glide, Slide and Press while MPE is off and says why.
+- The plugins' MPE parameter keeps Auto, On and Off, with Off as on the site, and Off also leaves out a host's per-note expressions (CLAP's, VST3's).
+- **An FC-300's EXP 2 moves Morph's slider the way the foot leans:** toe down is the top preset and heel down the bottom one (it was the other way round). Morph switches on as the pedal leaves the toe.
+- The FC-300's section of the drawer says EXP 2 moves Morph again (since the slider stood up it had said the mod wheel), and which way.
+- **An instrument's Expression switches start as its presets have them:** the dimensions that make little sense on it (its own bend on a piano, a slow or fast release on a bar) are off by default too, on its page, in Combinations and in the plugins, not only in its presets (`expression(off)` in `shared/expression.js`). Anyone can still turn any of them on.
+- **Press makes a note more, never strikes it again:** `forte/press.h` has no roll any more; the mallet instruments are bowed and the steel pan held by a sustainer instead.
+
+### Ribbon Piano 0.17.0
+- **Press and Slide are off by default and in every preset,** with Glide as before: a piano's keys have nothing to press into or slide along. Turn them on in Expression to hear the sustainer and the strike point.
+
+### Harpsichord 0.13.0
+- **Press and Slide are off by default and in every preset,** with Glide as before.
+
+### Vibraphone 0.14.0
+- Glide and Lift are off by default, as in its presets.
+
+### Carillon 0.10.0
+- **A firm press bows the soundbow instead of rolling it:** the bell's hum, prime, tierce, quint and nominal hold as loud as the press, and the clapper never strikes again.
+- Glide and Lift are off by default, as in its presets.
+
+### Celesta 0.9.0
+- **Press and Slide are off by default and in every preset,** with Glide as before.
+
+### Kalimba 0.8.0
+- Glide and Lift are off by default, as in its presets.
+
+### Steel Pan 0.8.0
+- **A firm press holds a held note with a sustainer under it instead of rolling it:** as loud as the press, and never struck again. The roll is the mod wheel's alone.
+- **A note's own slide moves its sticks from the centre towards the note's edge,** at the stroke, as its Strike point knob does, in place of rolling it.
+- Glide and Lift are off by default, as in its presets.
+
+### Marimba and Xylophone 0.4.0
+- **A firm press bows the bar instead of rolling it:** a bow at the bar's end holds a held note as loud as the press (a full press about as loud as the hardest strike), swelling or fading there, and never strikes it again. The roll is the mod wheel's alone.
+- **A note's own slide moves its mallets from the centre towards the bar's end,** at the stroke, as the Strike point knob does, in place of rolling it.
+- Glide and Lift are off by default, as in its presets.
+
+### Gamelan 0.4.0
+- **A firm press bows the bar or gong instead of rolling it:** it holds the note as loud as the press and never strikes it again.
+- Glide is off by default, as in its presets.
+
+### Cimbalom 0.3.0
+- Glide is off by default, as in its presets.
+
+### Tubular Bells 0.4.0
+- **A firm press bows the cap instead of rolling it:** the tube's strike tones swell to the press's level over a few seconds and hold, and the tube is never struck again.
+- Glide is off by default, as in its presets.
+
+### Electric Grand 0.15.0
+- **Press and Slide are off by default and in every preset,** with Glide as before.
+
+### Tonewheel Organ 0.14.0
+- Glide and Press are off by default, as in its presets.
+
+### Tine Piano 0.16.0
+- **Press and Slide are off by default and in every preset.**
+
+### Reed Piano 0.15.0
+- **Press and Slide are off by default and in every preset.**
+
+### Sticky-Pad Piano 0.14.0
+- **Press and Slide are off by default and in every preset.**
+
+### Trautonium 0.5.0
+- **A key pressed again while its note dies away lands back on its pitch.** After a slow lift (a Seaboard's Lift, or a keyboard's low release velocity) the pitch kept the lift's slide, and the next slow lift added another: repeated presses climbed a semitone each.
+- **A slow lift now slides the pitch down, not up,** by up to a semitone: the wire's contact resistance adds to its resistance as it leaves the rail, and the pitch goes as 1/R.
+
+### Telharmonium 0.4.0
+- Glide is off by default, as in its presets.
+
+### Cellulophone 0.4.0
+- Glide is off by default, as in its presets.
+
+### Clavicylinder 0.6.0
+- Glide is off by default, as in its presets.
+
+### Hurdy-Gurdy 0.4.0
+- Lift is off by default, as in its presets.
+
+### Cristal Baschet 0.4.0
+- Glide is off by default, as in its presets.
+
+### Gong Keyboard 0.14.0
+- **A firm press bows the gong instead of rolling it:** it holds its note as loud as the press, its nonlinearity still spreading the bow's sound through its other modes, and never strikes it again.
+- Glide is off by default, as in its presets.
+
+### Black-Hole Keyboard 0.12.0
+- Lift is off by default, as in its presets.
+
+### Quantum Keyboard 0.12.0
+- **Press holds the pump on:** pressing into a held key (aftertouch, or a Seaboard's Press, past half way) keeps a weak drive on the packet's levels, in step with them, refilling it as its lifetime drains it. The note holds at the level a strike as hard as the press would launch, with all its collapses and revivals, and launches nothing new: Strike sets the attack, Press the level it holds at. Below that level it swells there within a tenth of a second; above it, it settles at the note's own rate, so a press never makes a note die sooner. The Expression group and the plugins gain the Press switch.
+
+### Collider Showers 0.6.0
+- Lift is off by default, as in its presets.
+
+### Whistlers 0.6.0
+- Lift is off by default, as in its presets.
+
+### Project 8 0.6.0
+- Lift is off by default, as in its presets.
+
+### ABRACADABRA 0.8.0
+- Glide and Lift are off by default, as in its presets.
+
+### TESS 0.5.0
+- Glide and Lift are off by default, as in its presets.
+
+### CUORE 0.6.0
+- Lift is off by default, as in its presets.
+
+### Chladni Plate 0.4.0
+- Glide is off by default, as in its presets.
+
+### Ringing Planets 0.3.0
+- Lift is off by default, as in its presets.
+
+### Pulsars 0.4.0
+- Lift is off by default, as in its presets.
+
+### NMR Spin Echo 0.4.0
+- Lift is off by default, as in its presets.
+
 ## 2026-11-15 — Custom configuration, and Morph's slider standing up with Swap; Strike sets the attack, Press the held level
 
 ### Forte 0.53.0
