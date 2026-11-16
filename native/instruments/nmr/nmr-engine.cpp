@@ -16,6 +16,7 @@ constexpr double BLANK_T = 0.001; // s: the receiver closes over this before a �
 constexpr double REL_T = 0.006;   // s: the receiver closes with this time constant
 constexpr double FADE_T = 0.004;  // s: a voice replaced by a new pulse on its key fades with this
 constexpr double BEND_T = 0.01;   // s: the field follows the pitch wheel with this time constant
+constexpr double SHIM_T = 0.1;    // s: a full press's shims take the spread's phase back this fast (Press)
 constexpr double SILENT = 1e-4;   // a refocusable signal under this (−80 dB of a full note) is over
 constexpr double FRAME_T = 1.0 / 30;
 constexpr int FIRST = 21, LAST = 108;
@@ -98,7 +99,7 @@ void NmrEngine::noteOn(int key, double velocity) {
   v->key = key;
   v->amp = OUT * std::sin(theta) * before;
   v->age = v->t0 = v->S = v->D = v->phi = v->gate = 0;
-  v->keyAt = -1;
+  v->lock = {};
   v->rel = 1;
   v->bendNow = wheel * expr.bendOf(key);
   v->peak = std::fabs(v->amp);
@@ -171,22 +172,20 @@ void NmrEngine::setSustain(bool on) {
 // swamp it: the receivers listening close over BLANK_T, the pulse fires once they have, and they
 // open again as the probe rings down (GATE_T), as after a key's pulse. Heard open, the pulse would be
 // a click: it turns the real channel over (M_x → −M_x) in microseconds.
-void NmrEngine::arm(int only) {
-  if (only < 0) { if (allAt < 0) allAt = clock + BLANK_T; return; }
-  for (Voice &v : voices)
-    if (v.on && !v.fading && v.key == only && v.keyAt < 0) v.keyAt = clock + BLANK_T;
+void NmrEngine::arm() {
+  if (allAt < 0) allAt = clock + BLANK_T;
 }
 
 // A π pulse about y on every sample still sounding: each one's coherences are carried across
 // (ρ' = R ρ Rᵀ, order +1 to −1), the phases its spins gathered from the field are negated, and its
 // magnetisation along the field turned upside down.
-void NmrEngine::pulse(int only) {
+void NmrEngine::pulse() {
   pulses++;
   pulsedAt = clock;
   Message m;
   m.type = kPulse; m.count = 0;
   for (Voice &v : voices) {
-    if (!v.on || v.fading || !v.receiving || !sys[v.key] || (only >= 0 && v.key != only)) continue;
+    if (!v.on || v.fading || !v.receiving || !sys[v.key]) continue;
     const KeySystem &k = *sys[v.key];
     const double dt = v.age - v.t0;
     for (int e = 0; e < k.elems; e++) scratch[e] = v.x[e] * std::polar(1.0, k.elem[e].w * dt);
@@ -206,14 +205,22 @@ void NmrEngine::play(Voice &v, float *L, float *R, int n) {
   const double dt = n / fs;
   // the field's spread now (the mod wheel or the note's own slide), and its offset (the pitch wheel)
   const double shim = expr.slideOr(v.key, P[p::shim]);
-  const double dS = TAU * shim * 1e-9 * k.f0 * dt;
+  const double rate = TAU * shim * 1e-9 * k.f0; // dS/dt: the phase the spread gathers across the sample
   v.bendNow = glideTo(v.bendNow, wheel * expr.bendOf(v.key), dt, BEND_T);
   const double dw = TAU * k.fAnchor * (v.bendNow - 1);
   const Sample &smp = sample(sysSample[v.key]);
   const double t2 = t2of(P.data()), Dk = smp.D / (COIL_M * COIL_M);
   const int profile = (int)P[p::profile];
   auto envelope = [&](double age, double S, double D) { return v.amp * std::exp(-age / t2 - Dk * D) * dephasing(profile, S); };
-  const double S0 = v.S, S1 = S0 + dS;
+  // Press: the spins held. A firm press drives the shim coils against the field's spread, as hard
+  // as the key is pressed: they cancel that much of it, and pull the phase it has already given the
+  // spins back toward none within SHIM_T (a gradient echo, with no pulse). S then follows
+  // S' = (1 − x)·rate − x·S/SHIM_T, exactly over the step, and holds at (1 − x)·rate·SHIM_T/x: a full
+  // press refocuses the sample and keeps it so, and the note fades by T₂ alone. Unlike a π pulse it
+  // leaves the chemical shifts and couplings alone, so the lines play on as they were; and it can
+  // only give back what the key's pulse tipped, never more.
+  const double S0 = v.S, x = v.lock.p, u = x * dt / SHIM_T, q = -std::expm1(-u);
+  const double S1 = x > 0 ? S0 + (1 - x) * rate * dt * (q / u) - S0 * q : S0 + rate * dt;
   const double D1 = v.D + (S0 * S0 + S0 * S1 + S1 * S1) / 3 * dt; // ∫S² dt, S linear over the step
   const double e0 = envelope(v.age, S0, v.D), e1 = envelope(v.age + dt, S1, D1);
   const double bound = std::fabs(v.amp) * std::exp(-(v.age + dt) / t2 - Dk * D1); // what an echo could bring back
@@ -221,7 +228,7 @@ void NmrEngine::play(Voice &v, float *L, float *R, int n) {
   const double closeStep = v.fading ? std::exp(-1 / (fs * FADE_T)) : !v.receiving ? std::exp(-1 / (fs * (v.closeT ? v.closeT : REL_T))) : 1;
   const double gateStep = 1 / (fs * GATE_T);
   // a π pulse armed for this sample: its receiver closes, to be shut when the pulse fires
-  const bool blank = (allAt >= 0 || v.keyAt >= 0) && v.receiving && !v.fading;
+  const bool blank = allAt >= 0 && v.receiving && !v.fading;
   const double blankStep = 1 / (fs * BLANK_T);
   const double noise = P[p::noise] <= -100 ? 0 : std::pow(10.0, P[p::noise] / 20) * OUT;
   const bool quad = (int)P[p::channels] == channels_::quadrature;
@@ -304,21 +311,12 @@ void NmrEngine::process(float *L, float *R, int n) {
     // the π pulses armed BLANK_T ago fire, the receivers shut by now
     constexpr double EPS = 1e-9;
     if (allAt >= 0 && clock >= allAt - EPS) { allAt = -1; pulse(); }
-    for (Voice &v : voices)
-      if (v.keyAt >= 0 && clock >= v.keyAt - EPS) { v.keyAt = -1; if (v.on && !v.fading) pulse(v.key); }
     if (pending) { pending = false; arm(); }
     else if (pedal && P[p::train] > 0.5) {
       if (toPulse <= 0) { arm(); toPulse += P[p::spacing]; if (toPulse <= 0) toPulse = P[p::spacing]; }
     }
-    // Press: a firm press into a held key runs its own echo train, a π pulse on its sample at once
-    // and then every echo time, up to four times as often the harder it is pressed
-    for (Voice &v : voices) {
-      if (!v.on || v.fading || !v.held || !v.receiving) continue;
-      const double x = press.of(v.key);
-      if (x <= 0) { v.echo = 0; continue; }
-      if (v.echo <= 0) { arm(v.key); v.echo += P[p::spacing] / (1 + 3 * x); if (v.echo <= 0) v.echo = P[p::spacing]; }
-      v.echo -= m / fs;
-    }
+    // Press: the shims driven against a held key's spread, as hard as it is pressed (play)
+    for (Voice &v : voices) if (v.on) v.lock.follow(!v.fading && v.held && v.receiving ? press.of(v.key) : 0, m, fs);
     wheel = glideTo(wheel, wheelTarget, m / fs, BEND_T);
     for (Voice &v : voices) if (v.on) play(v, L + i0, R + i0, m);
     if (pedal) toPulse -= m / fs;

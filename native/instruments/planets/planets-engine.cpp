@@ -11,7 +11,6 @@
 namespace forte::planets {
 
 namespace fd = forte::fdlibm;
-constexpr double AFTER_T = 0.4;        // s between aftershocks while a key is pressed (Press)
 constexpr double OUT = 0.06;          // the reference quake's rms at the start, at Mw 9
 constexpr double RELEASE = 0.15;      // s: a key let go stops the recording, fading this fast
 constexpr double FLOOR = 3e-5;        // an oscillator this far under the voice's loudest (at the start) is gone
@@ -68,7 +67,7 @@ void PlanetEngine::envelope(const Voice &v, const Osc &o, double *eL, double *eR
 
 void PlanetEngine::start(Voice &v, int key, double velocity) {
   if (dirty) { respond(P.data(), resp); dirty = false; }
-  v.key = key; v.on = true; v.released = false; v.damped = false; v.level = 1; v.fall = 0; v.after = 0;
+  v.key = key; v.on = true; v.released = false; v.damped = false; v.level = 1; v.fall = 0; v.press = {}; v.vel = velocity; v.hold = 0;
   v.stereo = resp.stereo;
   v.K = speedup(key, P.data());
   v.spin = expr.slideOr(key, P[p::spin]);
@@ -137,26 +136,24 @@ void PlanetEngine::noteOff(int key, double velocity) {
   }
 }
 
-// Press: aftershocks. A firm press into a held key sets off one at once, and another every
-// AFTER_T while it stays pressed: a smaller quake at the same source, each mode it rings
-// kicked again in the phase the main shock gave it. By Båth's law the largest aftershock is
-// about 1.2 magnitudes below the main shock; the harder the press, the nearer it comes (to 0.3
-// below at the firmest).
-void PlanetEngine::aftershock(Voice &v, double x) {
-  const double a = fd::pow(10.0, 1.5 * (-1.2 + 0.9 * x));
-  for (int j = 0; j < v.count; j++) v.osc[j].zr += a;
-}
-
 void PlanetEngine::process(float *L, float *R, int n) {
   for (int i = 0; i < n; i++) L[i] = R[i] = 0;
   const double dt = n / fs, fall = fd::exp(-1 / (fs * RELEASE));
   const double wheelRatio = fd::pow(2.0, wheel * kBendSemitones / 12);
   for (Voice &v : voices) {
     if (!v.on) continue;
-    if (const double x = v.released ? 0 : press.of(v.key); x > 0) {
-      v.after -= dt;
-      if (v.after <= 0) { aftershock(v, x); v.after += AFTER_T; if (v.after <= 0) v.after = AFTER_T; }
-    } else v.after = 0;
+    // Press: the planet hums. While a held key is pressed firmly the planet is shaken steadily, as
+    // the oceans and the air shake the Earth (its hum), in step with each mode the quake rang: each
+    // settles where its losses take what it is fed, at an amplitude in proportion to its decay
+    // time, the least damped at what a quake as hard as the press rings it at. Strike sets the
+    // quake, Press the level its ringing holds at (forte/press.h). Over a block a mode's amplitude
+    // a goes to h + (a − h)·αⁿ: below h it swells within ATTACK_T, above it it decays toward h at
+    // its own rate (a press only slows its decay). Nothing strikes it again.
+    v.press.follow(v.released ? 0 : press.of(v.key), n, fs);
+    v.hold = v.press.on() ? fd::pow(10.0, 1.5 * MW_SPAN * (v.press.p - v.vel)) : 0; // (magnitude())
+    double dmin = INFINITY;
+    if (v.hold > 0) for (int j = 0; j < v.count; j++) dmin = std::min(dmin, v.osc[j].decay);
+    const double swell = fd::exp(-n / (fs * ATTACK_T));
     v.spin = glideTo(v.spin, expr.slideOr(v.key, P[p::spin]), dt, 0.05);
     const double K = v.K * wheelRatio * expr.bendOf(v.key);
     const bool turns = K != v.Kc, spins = turns || v.spin != v.spinC || n != v.nC;
@@ -175,7 +172,14 @@ void PlanetEngine::process(float *L, float *R, int n) {
       double eL1[2], eR1[2];
       envelope(v, o, eL1, eR1);
       double zr = o.zr, zi = o.zi;
-      const double rr = o.rr, ri = o.ri;
+      double rr = o.rr, ri = o.ri;
+      if (v.hold > 0 && o.decay > 0) { // (the hum: the turn that takes the mode's amplitude to `to`)
+        const double h = v.hold * dmin / o.decay, a = std::sqrt(zr * zr + zi * zi), rho = std::sqrt(rr * rr + ri * ri);
+        if (a > 0 && rho > 0) {
+          const double to = h + (a - h) * (a < h ? swell : fd::pow(rho, n)), c = fd::pow(to / a, 1.0 / n) / rho;
+          rr *= c; ri *= c;
+        }
+      }
       if (ws < 0.49 * TAU * fs) {
         double er = o.eL[0], ei = o.eL[1];
         const double der = (eL1[0] - er) * inv, dei = (eL1[1] - ei) * inv;

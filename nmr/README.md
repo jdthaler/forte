@@ -127,6 +127,19 @@ The pitch wheel moves the whole field (a field offset, as a spectrometer's Z0 sh
 moves by the same number of hertz, not the same ratio, so a bent chord changes shape. It is a ΔB F_z
 term too, so a π pulse refocuses it as well.
 
+A firm press into a held key (aftertouch or MPE pressure past half way) holds its spins: it drives
+the shim coils against that sample's spread, as hard as it is pressed. They cancel a fraction x of
+it and pull the phase it has already given the spins back toward none within 0.1 s, so
+
+    dS/dt = (1 − x) · 2πΔν − x · S / 0.1 s,
+
+followed exactly at each step. The fanned-out spins come back into step with no π pulse (a
+**gradient echo**, as reversing a gradient makes one), and stay so: a full press brings the note back
+and holds it, fading by T₂ alone, and a lighter one holds S at (1 − x) · 2πΔν · 0.1 s / x, a fainter
+note. Unlike a π pulse it leaves the chemical shifts and couplings alone, so the chord plays on as
+it was, and it can only give back what the key's pulse tipped, never more: the strike sets the note,
+and the press how much of it the spread is let to take.
+
 ### 5. Relaxation: T₂ and T₁
 
 What no echo can undo is **T₂**: the spins' real loss of phase, by the fluctuating fields of
@@ -184,6 +197,8 @@ magnetisation over about y, so the real channel jumps from M_x to −M_x.
   refocus.
 * **The train.** Hold the pedal with the echo train on: the notes pulse back every echo time, falling
   only by T₂.
+* **The press.** Let a note fade, then press into its key: it swells back without a pulse and holds,
+  falling only by T₂, as long as the press lasts.
 * **Saturation.** With a long T₁, repeat a note at full velocity: it fades away; with small pulse
   angles it keeps sounding.
 * **Second order.** Low keys lean: listen for extra lines and uneven multiplets around A0–A2.
@@ -210,6 +225,9 @@ tools/render-nmr.mjs                  the demos
   π pulse that is not quite π leaves some coherence where it was and makes stimulated echoes, which
   is what Meiboom and Gill's phase was for. Here every pulse is exact, so the train's phase is the
   only one that matters and no stimulated echoes form.
+* **Press's shims are ideal.** They take back exactly the fraction of the spread the press asks for,
+  whatever its shape (a real shim set cancels only the gradients it has coils for), with no eddy
+  currents, and diffusion through them loses what it would in the spread they leave.
 * **One T₂ and one T₁** for every group of a sample, set by the parameters rather than computed from
   the molecules' tumbling; a real ethanol's groups relax at slightly different rates.
 * **Chemical exchange** is all or nothing: ethanol's OH is either coupled (DMSO) or a singlet

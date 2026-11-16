@@ -45,7 +45,8 @@ class PlanetEngine : public Engine {
   struct Voice {
     int key = -1;
     bool on = false, released = false, damped = false, stereo = false;
-    double after = 0; // until its next aftershock while its key is pressed, s
+    Press press;      // its key's press (Press: the hum), and the level it holds the modes at
+    double vel = 0, hold = 0;
     double fall = 0; // its fade a sample after this lift (0: as usual; forte/lift.h)
     double K = 1, spin = 1, level = 1;
     double Kc = 0, spinC = -1; int nC = 0; // what the oscillators' turns were made for
@@ -65,7 +66,6 @@ class PlanetEngine : public Engine {
   double wheel = 0;
   NoteExpression expr{48};
   Presses press;
-  void aftershock(Voice &v, double x);
   Response resp;
   std::vector<int> order;
   long long age = 0;

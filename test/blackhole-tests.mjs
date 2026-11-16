@@ -483,21 +483,28 @@ test('slide sweeps across the whole range, sent every block while chords are str
     assert.ok(pk > 0.01 && pk < 1.25 * top, `${fs} Hz, inspiral ${inspiral}: peak ${pk.toFixed(2)}, ${top.toFixed(2)} at the fastest spin`);
   }
 });
-test('Press: matter falling in. A firm press drops a clump into a held key\'s black hole at once and every 0.15 s; one whose ringing has died away rings anew, as its merger did, a third as loud at the firmest; a resting finger, or a key let go, nothing', () => {
-  const p = { ...DEFAULTS, inspiral: false }, s0 = 188 * 128, at = s0 / 48000, every = Math.ceil(0.15 * 48000 / 128) * 128;
+test('Press: matter streaming in. A firm press holds a held key\'s black hole ringing, swelling in over 0.1 s and never struck again, its fundamental tones about as loud as the hardest merger\'s ringing at the firmest, whatever the strike; half as firm, half as loud; a resting finger, or a key let go, nothing', () => {
+  const p = { ...DEFAULTS, inspiral: false }, s0 = 188 * 128, at = s0 / 48000;
   const press = (key, value) => (e) => e.handle({ type: 'pressure', key, value });
   const plain = ring(p, [[0, strike(57)]], 1.2), [L] = plain;
   assert.ok(L.subarray(s0).every((v) => v === 0), 'the merger\'s ringing has died away');
+  const peak = (x, a, b) => { let m = 0; for (let i = Math.round(a * 48000); i < Math.round(b * 48000); i++) m = Math.max(m, Math.abs(x[i])); return m; };
+  const top = peak(ring(p, [[0, strike(57, 1)]], 0.1)[0], 0, 0.05); // the hardest merger's ringing
   const [F] = ring(p, [[0, strike(57)], [at, press(57, 1)], [0.9, (e) => e.noteOff(57)]], 1.2);
-  let peak = 0, err = 0;
-  for (let i = 0; i < every; i++) { peak = Math.max(peak, Math.abs(L[i])); err = Math.max(err, Math.abs(F[s0 + i] - L[i] / 3)); }
-  assert.ok(err < 1e-4 * peak, `the first clump: the merger's ringing at a third (off by ${(err / peak).toExponential(1)})`);
-  let next = 0; for (let i = 0; i < every; i++) next = Math.max(next, Math.abs(F[s0 + every + i]));
-  assert.ok(Math.abs(next / (peak / 3) - 1) < 0.02, `and the next, 0.15 s on: ${(next / peak).toFixed(4)}`); // (over the room's tail of the first)
-  assert.ok(F.subarray(Math.round(0.95 * 48000)).every((v) => v === 0), 'none once the key is let go');
-  const [H] = ring(p, [[0, strike(57)], [at, press(57, 0.75)]], 0.8);
-  let hp = 0; for (let i = s0; i < s0 + every; i++) hp = Math.max(hp, Math.abs(H[i]));
-  assert.ok(Math.abs(hp / (peak / 6) - 1) < 1e-3, `half as firm, half the clump: ${(hp / peak).toFixed(4)}`);
+  const held = peak(F, 0.8, 0.9), dB = (r) => 20 * Math.log10(r);
+  assert.ok(Math.abs(dB(held / top)) < 1, `held ${dB(held / top).toFixed(2)} dB from the hardest merger's ringing`);
+  // a swell, not a strike: a tenth of the way in after 10 ms, and rising each 20 ms until it holds
+  assert.ok(peak(F, at, at + 0.01) < 0.3 * held, `the first 10 ms: ${(peak(F, at, at + 0.01) / held).toFixed(3)} of the held level`);
+  for (let t = at; t < at + 0.2; t += 0.02) assert.ok(peak(F, t + 0.02, t + 0.04) > peak(F, t, t + 0.02), `swelling at ${t.toFixed(2)} s`);
+  assert.ok(peak(F, 1.1, 1.2) === 0, 'gone once the key is let go');
+  // Strike sets the merger, Press the level: struck softly, held as loud
+  const [S] = ring(p, [[0, strike(57, 0.3)], [at, press(57, 1)]], 0.9);
+  assert.ok(Math.abs(dB(peak(S, 0.8, 0.9) / held)) < 0.1, `struck at 0.3: ${dB(peak(S, 0.8, 0.9) / held).toFixed(2)} dB`);
+  const [H] = ring(p, [[0, strike(57)], [at, press(57, 0.75)]], 0.9);
+  assert.ok(Math.abs(dB(peak(H, 0.8, 0.9) / held) + 6.02) < 0.5, `half as firm: ${dB(peak(H, 0.8, 0.9) / held).toFixed(2)} dB`);
+  // pressed from the start, the ringing never dies: it holds from the merger on
+  const [G] = ring(p, [[0, strike(57)], [0.001, press(57, 1)]], 0.9);
+  for (let t = 0.05; t < 0.9; t += 0.05) assert.ok(peak(G, t, t + 0.05) > 0.5 * held, `pressed from the start, at ${t.toFixed(2)} s`);
   assert.ok(same(ring(p, [[0, strike(57)], [at, press(57, 0.45)]], 1.2), plain), 'a finger at rest');
   assert.ok(same(ring(p, [[0, strike(57)], [0.2, (e) => e.noteOff(57)], [at, press(57, 1)]], 1.2), ring(p, [[0, strike(57)], [0.2, (e) => e.noteOff(57)]], 1.2)), 'a key let go');
   const [C] = ring(p, [[0, strike(57)], [at, press(-1, 1)], [0.9, (e) => e.noteOff(57)]], 1.2);
