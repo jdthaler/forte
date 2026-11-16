@@ -12,7 +12,10 @@ namespace forte::gamelan {
 constexpr double OUT = 0.3;
 constexpr double BEND_T = 0.02;   // s: a note's own bend glides as the instruments that bend glide theirs
 constexpr double CHORD = 0.04;    // s: strokes this close together are a chord, and the hand spares them
-constexpr double ROLL_RATE = 8;   // strokes/s: a firm press rolls the note (Press: forte/press.h Roll)
+// Press: a full press bows each partner's fundamental to HOLD times the swing the hardest stroke
+// gives it, however hard it was struck (forte/press.h Sustainer); the fundamental's decay rate,
+// which sets the bow's grip, is measured as it rings, over SIG_T (a gangsa's tube takes a share)
+constexpr double HOLD = 1, SIG_T = 0.2;
 constexpr int POST_EVERY = 2048;  // samples between the views' messages
 
 GamelanEngine::GamelanEngine(double fs) : Engine(fs) { voices.reserve(kMaxVoices + 1); }
@@ -34,6 +37,7 @@ void GamelanEngine::tune(Voice &v, double beat) {
     for (Sub &s : v.sub) {
       for (int i = 0; i < v.count; i++) { s.m[i].y1 *= 0.5; s.m[i].y2 *= 0.5; }
       s.tube.y1 *= 0.5; s.tube.y2 *= 0.5;
+      s.sus.vH *= 0.5; s.sus.v0 *= 0.5; // (Press: each bow holds its partner at half)
     }
     v.subs = 2;
   }
@@ -48,6 +52,7 @@ void GamelanEngine::tune(Voice &v, double beat) {
       const Mode &m = v.d.m[i];
       const ModeCoeffs c = modeCoeffs(m.f * r * v.bent, m.sigma + (v.damped ? hand / v.liftK : 0), fs);
       u.m[i].a1 = c.a1; u.m[i].a2 = c.a2; u.m[i].b = c.b; u.m[i].w = TAU * m.f * r * v.bent; u.m[i].out = m.out;
+      if (i == 0) u.sig0 = m.sigma + (v.damped ? hand / v.liftK : 0);
     }
     if (v.d.hasTube) {
       const ModeCoeffs c = modeCoeffs(v.d.tube.f, v.d.tube.sigma, fs);
@@ -79,7 +84,7 @@ void GamelanEngine::stroke(Voice &v, double velocity) {
   const double share = v.subs == 2 ? std::sqrt(0.5) : 1;
   for (int s = 0; s < v.subs; s++)
     for (int i = 0; i < v.count; i++) v.sub[s].m[i].y1 += v.sub[s].m[i].b * fs * v.d.m[i].amp * velocity * share;
-  v.vel = velocity; v.age = 0;
+  v.vel = velocity; v.age = 0; v.tuneNow = true;
 }
 
 void GamelanEngine::noteOn(int key, double velocity) {
@@ -160,10 +165,20 @@ void GamelanEngine::process(float *L, float *R, int n) {
   for (int i = 0; i < n; i++) L[i] = R[i] = 0;
   for (Voice &v : voices) {
     if (v.d.pairs) { const double b = beatOf(v.key); if (b != v.beat) tune(v, b); }
-    // Press: a firm press rolls the held note, its strokes as hard as the key is pressed
+    // Press: a firm press bows the held note, each partner's bar or gong (below)
     v.press.follow(v.held ? presses.of(v.key) : 0, n, fs);
-    if (const double rv = v.roll.step(v.press.p, ROLL_RATE, n, fs, rng); rv > 0) stroke(v, rv);
     if (const double to = expr.bendOf(v.key); v.bent != to) { v.bent = glideTo(v.bent, to, n / fs, BEND_T); tune(v, v.beat); } // Glide: a hand on the bar
+    if (v.tuneNow) { // the bows, on each partner's fundamental as the stroke has left it
+      v.tuneNow = false;
+      for (int s = 0; s < v.subs; s++) {
+        Sub &u = v.sub[s];
+        const Res &r = u.m[0];
+        const double th = r.w / fs, a = r.y1 * r.y1 + r.y2 * r.y2 - 2 * r.y1 * r.y2 * std::cos(th);
+        u.sigEff = u.sig0;
+        u.sus.tune(u.sig0, 1, r.w / TAU, hardest(r.w * std::sqrt(std::max(0.0, a)) / std::sin(th), v.vel, 1), HOLD, fs);
+      }
+    }
+    const bool bow = v.held && v.press.on();
     const int count = v.count;
     const bool tube = v.d.hasTube, nl = v.d.G > 0 && v.d.round2 >= 0 && v.d.round2 < count;
     const int k2 = v.d.round2;
@@ -172,10 +187,13 @@ void GamelanEngine::process(float *L, float *R, int n) {
       Sub &u = v.sub[s];
       Res *m = u.m.data();
       const double w1 = m[0].w;
+      const bool drive = bow && u.sus.ready();
+      if (!drive) u.sus.rest();
+      double loss = 0; // Press: the power the fundamental and its tube lose, over the block
       for (int i = 0; i < n; i++) {
-        double F0 = 0, F2 = 0, Ft = 0;
+        double F0 = drive ? u.sus.force(m[0].y1, v.press.p, fs) : 0, F2 = 0, Ft = 0;
         if (tube) {
-          F0 = -kt * (u.tube.y1 - u.tube.y2) * fs;
+          F0 -= kt * (u.tube.y1 - u.tube.y2) * fs;
           Ft = kt * (m[0].y1 - m[0].y2) * fs;
         }
         if (nl) {
@@ -199,15 +217,26 @@ void GamelanEngine::process(float *L, float *R, int n) {
           const double y = r.a1 * r.y1 - r.a2 * r.y2 + r.b * Ft;
           r.y2 = r.y1; r.y1 = y; out += r.out * r.w * y;
         }
+        if (drive) {
+          const double d0 = (m[0].y1 - m[0].y2) * fs, dt = tube ? (u.tube.y1 - u.tube.y2) * fs : 0;
+          loss += 2 * u.sig0 * d0 * d0 + (tube ? 2 * v.d.tube.sigma * dt * dt : 0);
+        }
         out *= OUT;
         L[i] = (float)(L[i] + u.gl * out); // a Float32Array's +=
         R[i] = (float)(R[i] + u.gr * out);
+      }
+      // Press: the fundamental's decay rate as it rings, what it and its tube lose over twice its
+      // energy; the bow pays for it
+      if (drive) {
+        const double d0 = (m[0].y1 - m[0].y2) * fs, e1 = 0.5 * (d0 * d0 + w1 * w1 * m[0].y1 * m[0].y1);
+        if (e1 > 1e-24) u.sigEff += (1 - std::exp(-n / (SIG_T * fs))) * (std::max(u.sig0, loss / (n * 2 * e1)) - u.sigEff);
+        u.sus.decay(u.sigEff);
       }
     }
     v.age += n;
   }
   // finished voices (and any the physics lost), in place
-  std::erase_if(voices, [&](const Voice &v) { const double l = level(v); return v.age > 0.05 * fs && !(l > 2e-5); });
+  std::erase_if(voices, [&](const Voice &v) { const double l = level(v); return v.age > 0.05 * fs && !(l > 2e-5) && !(v.held && v.press.on()); });
   if ((sincePost += n) >= POST_EVERY) { sincePost = 0; postViews(); }
 }
 

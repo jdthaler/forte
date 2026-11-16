@@ -71,9 +71,9 @@
     {"id":"leslie","kind":"choice","def":"slow","options":["bypass","slow","fast","stop"]},
     {"id":"motor","kind":"toggle","def":true},
     {"id":"strikeOn","kind":"toggle","def":true},
-    {"id":"glideOn","kind":"toggle","def":true},
+    {"id":"glideOn","kind":"toggle","def":false},
     {"id":"slideOn","kind":"toggle","def":true},
-    {"id":"pressOn","kind":"toggle","def":true},
+    {"id":"pressOn","kind":"toggle","def":false},
     {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [

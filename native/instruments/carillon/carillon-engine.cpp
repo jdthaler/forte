@@ -83,7 +83,7 @@ int CarillonEngine::newVoice(int key) {
   v.nAct = 0;
   keyPan(key, v.gl, v.gr);
   v.eps = 0; v.age = 0; v.fade = 1; v.fading = false; v.dead = false;
-  v.peak = 0; v.level = 0; v.released = false; v.press = Press{}; v.roll = Roll{}; v.bent = own.bendOf(key); // (bent before it was struck)
+  v.peak = 0; v.level = 0; v.released = false; v.press = Press{}; v.nBow = 0; v.tuneNow = v.bowing = false; std::fill(v.bowed, v.bowed + RES_MAX, 0); v.bent = own.bendOf(key); // (bent before it was struck)
   v.clap = {}; v.Cm = v.hm = v.fd0 = v.fV0 = 0;
   v.cl = Clap{};
   coefs(v, true);
@@ -94,9 +94,10 @@ int CarillonEngine::newVoice(int key) {
 
 constexpr double BEND_T = 0.02; // s: a note's own bend glides as the instruments that bend glide theirs
 
-// Press: a firm press plays the carillonneur's tremolo, the clapper struck again ROLL_RATE times a
-// second (forte/press.h Roll)
-constexpr double ROLL_RATE = 7;
+// Press: a full press bows each of the bell's principal partials to HOLD times the swing the
+// hardest stroke gives it, however hard the bell was struck (forte/press.h Sustainer): the bell as
+// struck, held, its upper partials left to die away
+constexpr double HOLD = 1;
 
 // Frequencies (with the doublet split at the current asymmetry) and damping → two-pole coefficients.
 void CarillonEngine::coefs(Voice &v, bool first) {
@@ -164,6 +165,7 @@ void CarillonEngine::strike(Voice &v, double velocity) {
   compact(v);
   const double speed = clapperSpeed(v.bell, P.data(), velocity);
   if (!(speed > 0)) return;
+  v.speed = speed;
   Clap &cl = v.cl;
   const Clapper c = clapperOf(v.bell, P.data());
   v.clap = c; v.Cm = C; v.hm = (h * h) / c.m;
@@ -228,9 +230,25 @@ void CarillonEngine::render(Voice &v, float *L, float *R, int n) {
       b[s] = y;
     }
   } else {
+    const int *idx = v.idx;
+    int na = v.nAct, rest[RES_MAX];
+    if (v.bowing) { // Press: the bowed partials, sample by sample, each with its bow; then the others
+      const double *B = v.B;
+      for (int k = 0; k < v.nBow; k++) {
+        const int r = v.bowR[k];
+        Sustainer &bow = v.sus[k];
+        const double a1 = A1[r], a2 = A2[r], br = B[r], phi = v.PHI[r], p = v.press.p;
+        double y1 = Y1[r], y2 = Y2[r], g = G[r];
+        const double dg = glide * (GT[r] - g) * inv;
+        for (int s = 0; s < n; s++) { const double y = a1 * y1 - a2 * y2 + br * bow.force(phi * y1, p, fs); b[s] += g * (y - y1); y2 = y1; y1 = y; g += dg; }
+        Y1[r] = y1; Y2[r] = y2; G[r] = g;
+      }
+      int k = 0;
+      for (int q = 0; q < na; q++) if (!v.bowed[idx[q]]) rest[k++] = idx[q];
+      idx = rest; na = k;
+    } else for (int k = 0; k < v.nBow; k++) v.sus[k].rest();
     // free ringing: mode by mode over the block, four at a time (independent recursions in one loop
     // run in parallel in the CPU), each output gain ramping to its target
-    const int *idx = v.idx, na = v.nAct;
     int q = 0;
     for (; q + 4 <= na; q += 4) {
       const int r0 = idx[q], r1 = idx[q + 1], r2 = idx[q + 2], r3 = idx[q + 3];
@@ -272,7 +290,7 @@ void CarillonEngine::render(Voice &v, float *L, float *R, int n) {
 
 void CarillonEngine::endContact(Voice &v) {
   Clap &cl = v.cl;
-  cl.on = false; cl.ms = (1000.0 * cl.contact) / fs;
+  cl.on = false; cl.ms = (1000.0 * cl.contact) / fs; v.tuneNow = true;
   // the force pulse's width at half its peak
   int a = -1, b = -1;
   for (int i = 0; i < std::min(cl.n, forcesLen); i++) if (v.forces[i] >= 0.5 * cl.Fmax) { if (a < 0) a = i; b = i; }
@@ -304,9 +322,29 @@ void CarillonEngine::prune(Voice &v) {
   v.level = sum;
   if (v.cl.on || v.age < YOUNG) return;
   const double floor = v.floor * v.peak;
-  for (int r = 0; r < N; r++) if (v.act[r]) { if (v.AMP[r] < floor || v.AMP[r] < 1e-12) v.act[r] = 0; else any = true; }
+  for (int r = 0; r < N; r++) if (v.act[r]) { if (!(v.bowing && v.bowed[r]) && (v.AMP[r] < floor || v.AMP[r] < 1e-12)) v.act[r] = 0; else any = true; }
   compact(v);
   if (!any) v.dead = true;
+}
+
+// Press: the bows, each on a principal partial's doublet member as the clapper has left it, at the
+// soundbow (where it struck: its reach PHI), tuned to hold it at HOLD times the swing the hardest
+// stroke would give it (the clapper's speed in proportion to the velocity).
+void CarillonEngine::tuneBows(Voice &v) {
+  v.tuneNow = false;
+  const double h = 1 / fs, top = clapperSpeed(v.bell, P.data(), 1);
+  std::fill(v.bowed, v.bowed + RES_MAX, 0);
+  v.nBow = 0;
+  for (int r = 0; r < v.N && v.nBow < Voice::BOW_MAX; r++) {
+    const Partial name = v.modes[v.src[r]].name;
+    if (name < hum || name > nominal || v.A1[r] == 0 || v.PHI[r] == 0) continue;
+    const double w = v.W[r], c = std::cos(w * h), sn = std::sin(w * h), a = v.Y1[r], b = v.Y2[r];
+    const double amp = std::sqrt(std::max(0.0, a * a - 2 * c * a * b + b * b)) / sn;
+    Sustainer &bow = v.sus[v.nBow];
+    bow = Sustainer{};
+    bow.tune(v.SIG[r], v.PHI[r], w / TAU, hardest(std::fabs(v.PHI[r]) * w * amp, v.speed, top), HOLD, fs);
+    if (bow.ready()) { v.bowR[v.nBow++] = r; v.bowed[r] = 1; }
+  }
 }
 
 void CarillonEngine::compact(Voice &v) {
@@ -374,12 +412,17 @@ void CarillonEngine::block(float *L, float *R, int n) {
     const double to = own.bendOf(v.key), was = v.bent; // Glide: the bell swinging (Doppler)
     if (was != to) v.bent = glideTo(was, to, n / fs, BEND_T);
     if (v.bent != was) coefs(v, false);
-    // Press: the tremolo, its strokes as hard as the key is pressed (one due while the clapper is
-    // still on the bell is left out)
+    // Press: a firm press bows the bell (render), once the clapper has left it
     v.press.follow(v.released || v.fading ? 0 : presses.of(v.key), n, fs);
-    if (const double rv = v.roll.step(v.press.p, ROLL_RATE, n, fs, rng); rv > 0 && !v.cl.on) strike(v, rv);
     if (v.graceIn > 0 && (v.graceIn -= n) <= 0 && !v.fading && !v.cl.on) { strike(v, v.grace); v.released = true; }
+    v.bowing = v.press.on() && v.nBow > 0 && !v.cl.on;
+    if (v.bowing) { // its bowed partials ring on, however quiet they had become
+      bool woke = false;
+      for (int k = 0; k < v.nBow; k++) if (!v.act[v.bowR[k]]) { v.act[v.bowR[k]] = 1; woke = true; }
+      if (woke) compact(v);
+    }
     render(v, L, R, n);
+    if (v.tuneNow) tuneBows(v);
   }
   int j = 0;
   for (int i = 0; i < nVoices; i++) {

@@ -23,7 +23,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/steelpan/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity |
 | `Space` | sustain: keeps your hands off the notes after key-up |
-| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = roll**; MPE slide rolls one note; a firm press (aftertouch, past half way) rolls a held note too, as hard as it is pressed |
+| MIDI | notes, velocity, sustain pedal (CC64); **mod wheel = roll**; MPE slide moves one note's sticks from the centre towards its edge, at the stroke; a firm press (aftertouch, past half way) holds a held note with a sustainer under it, as loud as the press (a full press as loud as the hardest stroke), and strikes it no more |
 
 ## The physics
 
@@ -221,7 +221,17 @@ ringing along with it. **Let notes ring** or Space (the sustain pedal) keeps
 the hands off. A long note on a pan is a roll: both sticks strike again and
 again. While a key is held, **Roll** (the mod wheel) restrikes it at that
 fraction of its first stroke, **Roll speed** times a second, alternating
-hands a little unevenly. A note's own MPE slide rolls it alone.
+hands a little unevenly. A note's own MPE slide is where its sticks land,
+from the knob's point towards the note's edge, taken as it strikes.
+
+A firm press into a held key (aftertouch past half way) does not roll it: a
+sustainer holds it, a driver coil under the note's centre (steel answers a
+magnet), where its fundamental swings most and its octave and third partials
+not at all (`forte/press.h` Sustainer). It senses the fundamental through a
+band-pass on the note and pushes in step with it, saturating at the press: a
+full press holds the fundamental at the swing the hardest stroke gives it,
+however hard the note was struck. Letting go of the press lets the note ring
+away.
 
 ### 8. The engine
 

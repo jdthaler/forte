@@ -52,7 +52,7 @@ class CarillonEngine : public Engine {
   void slide(double value, int key) override { own.setSlide(value, key); }
   // Glide: the bell swinging toward the listener or away: a Doppler shift of a few tens of cents
   void noteBend(double ratio, int key) override { own.setBend(ratio, key); }
-  void pressure(double value, int key) override { presses.set(value, key); } // a firm press: the tremolo, the clapper struck again and again
+  void pressure(double value, int key) override { presses.set(value, key); } // a firm press bows the bell, holding it as loud as the press
   void setSustain(bool on) override { sustain = on; } // a carillon has no dampers: nothing to lift
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
@@ -79,7 +79,14 @@ class CarillonEngine : public Engine {
     double fMax = 0, floor = 0; // Quality's, when the bell was hung: its highest mode (Hz), and where a mode is pruned (× the loudest)
     bool fading = false, dead = false, released = false;
     Press press; // how hard its key is pressed (forte/press.h)
-    Roll roll;   // a firm press's tremolo
+    // Press: a bow on the soundbow, where the clapper strikes, holding the bell's principal partials
+    // (hum, prime, tierce, quint, nominal: each doublet member) as struck (forte/press.h Sustainer)
+    static constexpr int BOW_MAX = 10;
+    std::array<Sustainer, BOW_MAX> sus{};
+    int bowR[BOW_MAX] = {}, nBow = 0; // the resonators bowed
+    uint8_t bowed[RES_MAX] = {};
+    bool tuneNow = false, bowing = false;
+    double speed = 0; // the last stroke's clapper speed (m/s)
     double bent = 1; // its sound × this (a note's own bend: the bell swinging)
     double grace = 0; int graceIn = 0; // a fast lift's grace stroke: its velocity, and the samples until it lands (forte/lift.h)
     Clapper clap{};
@@ -103,6 +110,7 @@ class CarillonEngine : public Engine {
   double contactForce(Voice &v, double dFree, double C);
   void render(Voice &v, float *L, float *R, int n);
   void endContact(Voice &v);
+  void tuneBows(Voice &v);
   void prune(Voice &v);
   static void compact(Voice &v);
   void block(float *L, float *R, int n);
@@ -111,7 +119,6 @@ class CarillonEngine : public Engine {
   std::unique_ptr<Voice[]> pool;
   std::array<double, p::count> P{};
   Presses presses; // each key's pressure and the channel's
-  uint32_t rng = 12345; // the tremolos' unevenness
   NoteExpression own{0.3}; // each key's own slide, and its bend (thirty cents either way; forte/expression.h)
   bool hasParams = false, sustain = false;
   Tuning tuning; // the keyboard's: a bell hung at a key is cast for its pitch

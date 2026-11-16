@@ -5,8 +5,9 @@ on their caps with a rawhide mallet. Each tube bends like a free bar, and the no
 played by none of its modes. Modes 4, 5 and 6 lie close to 2 : 3 : 4, the 2nd, 3rd and 4th
 harmonics of a note an octave below mode 4, and the ear hears that missing note: the **strike
 note**. A felt-lined damper bar presses on every tube near its top until the pedal lifts it.
-A firm press into a held key (aftertouch, past half way) rolls its tube, two mallets in turn, six
-strokes a second as hard as the key is pressed.
+A firm press into a held key (aftertouch, past half way) bows its tube at the cap, holding the
+strike note's three partials (modes 4–6) as loud as the press, a full press as loud as the
+hardest stroke gives them, and strikes it no more (it gets there over the tube's own long ring).
 
 Every key is a tube cut to length, from the orchestral set's 18 (C4–F5) and, with **Full range**,
 on down to a 5.1 m tube at A0 and up to a 29 cm one at C8. Each tube is solved as a Timoshenko

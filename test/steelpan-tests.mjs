@@ -311,7 +311,7 @@ test('a hand on the note: key-up mutes it; Let notes ring and the sustain pedal 
   assert.ok(drop({}, [[0, 'sustain', 0, true]]) > -25, 'sustain pedal');
 });
 const same = (x, y, what) => { for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) assert.fail(`${what}: sample ${i} differs`); };
-test('a roll: while the key is down the sticks keep striking, and a firm press rolls the note too, as hard as it is pressed; a Seaboard\'s finger at rest (up to half) changes nothing, bit for bit', () => {
+test('a roll: while the key is down the sticks keep striking; a firm press holds the note with its sustainer instead, as hard as it is pressed; a Seaboard\'s finger at rest (up to half) changes nothing, bit for bit', () => {
   const key = 64, ev = [[0, 'on', key, 0.7]], early = (x) => rms(x, 0, 4800), late = (x) => rms(x, Math.round(1.4 * FS), Math.round(1.5 * FS));
   const still = play(P({ letRing: true }), 1.5, ev).L, rolled = play(P({ letRing: true, roll: 0.6 }), 1.5, ev).L;
   const pressed = play(P({ letRing: true }), 1.5, [...ev, [0.05, 'pressure', key, 0.3], [0.2, 'pressure', key, 0.5]]).L;
@@ -319,8 +319,8 @@ test('a roll: while the key is down the sticks keep striking, and a firm press r
   assert.ok(dB(late(rolled) / early(rolled)) > -12, `roll: ${dB(late(rolled) / early(rolled)).toFixed(1)} dB`);
   same(pressed, still, 'pressure on the key');
   same(play(P({ letRing: true }), 1.5, [...ev, [0.05, 'pressure', -1, 0.5]]).L, still, 'pressure on the channel');
-  // a firm press rolls the note: it keeps sounding, louder the harder it is pressed (strokes 0.8 ×
-  // how hard past half way), and stops rolling when the press does
+  // a firm press holds the note (a driver coil under it): it keeps sounding, as hard as it is
+  // pressed past half way, and rings away when the press does
   for (const k of [key, -1]) {
     const firm = play(P({ letRing: true }), 1.5, [...ev, [0.1, 'pressure', k, 1]]).L;
     assert.ok(dB(late(firm) / early(firm)) > -12, `a firm press ${k < 0 ? 'on the channel' : 'on the key'}: ${dB(late(firm) / early(firm)).toFixed(1)} dB after 1.4 s`);
@@ -331,32 +331,22 @@ test('a roll: while the key is down the sticks keep striking, and a firm press r
   const eased = play(P({ letRing: true }), 1.5, [...ev, [0.1, 'pressure', key, 1], [0.5, 'pressure', key, 0]]).L;
   assert.ok(dB(late(eased) / early(eased)) < -30, 'the press let go: it rings away');
   const released = play(P({ letRing: true, roll: 0.6 }), 1.5, [...ev, [0.5, 'off', key]]).L;
-  assert.ok(dB(late(released) / early(released)) < -20, 'and stops with the key');
+  assert.ok(dB(late(released) / early(released)) < -20, 'and a roll stops with the key');
 });
-// A note's own slide (MPE) is its own roll.
-test('a note\'s own slide is its roll: a lone note slid to x is the note rolled at x, bit for bit, and the note beside it is not rolled', () => {
+// A note's own slide (MPE) is where its sticks land.
+test('a note\'s own slide moves its sticks, at the stroke: a lone note slid to x is the note struck at x, bit for bit; slid while it sounds, it rings on as it was; back to none, as never slid', () => {
   const key = 64, ev = [[0, 'on', key, 0.7]];
-  for (const x of [0.3, 1]) {
-    same(play(P({ letRing: true }), 1, [[0, 'slide', key, x], ...ev]).L, play(P({ letRing: true, roll: x }), 1, ev).L, `roll ${x}`);
-    // slid while it sounds, as the wheel moved then
-    same(play(P({ letRing: true }), 1, [...ev, [0.3, 'slide', key, x]]).L, play(P({ letRing: true }), 1, [...ev, [0.3, 'params', 0, P({ letRing: true, roll: x })]]).L, `roll ${x}, slid`);
+  for (const x of [0.1, 0.8]) {
+    same(play(P({ letRing: true }), 1, [[0, 'slide', key, x], ...ev]).L, play(P({ letRing: true, along: x }), 1, ev).L, `struck at ${x}`);
+    same(play(P({ letRing: true }), 1, [...ev, [0.3, 'slide', key, x]]).L, play(P({ letRing: true }), 1, ev).L, `slid to ${x} while it sounds`);
   }
-  // two notes far apart, uncoupled: the chord is the rolled note and the struck one, apart
-  const Q = P({ letRing: true, coupling: 0, wall: 0 }), chord = play(Q, 1, [[0, 'slide', key, 0.6], ...ev, [0, 'on', 48, 0.7]]).L;
-  const a = play({ ...Q, roll: 0.6 }, 1, ev).L, b = play(Q, 1, [[0, 'on', 48, 0.7]]).L;
-  let d = 0, pk = 0;
-  for (let i = 0; i < chord.length; i++) { d = Math.max(d, Math.abs(chord[i] - a[i] - b[i])); pk = Math.max(pk, Math.abs(chord[i])); }
-  assert.ok(d < 1e-5 * pk, `differs by ${(d / pk).toExponential(2)} of the peak`);
-  // and back to none (NaN), before the note and while it sounds: bit-identical, wheel up or not
-  for (const roll of [0, 0.5]) {
-    same(play(P({ roll }), 0.6, [[0, 'slide', key, 1], [0, 'slide', key, NaN], ...ev, [0.2, 'slide', 67, 0.4], [0.2, 'slide', 67, NaN], [0.3, 'on', 67, 0.5]]).L,
-      play(P({ roll }), 0.6, [...ev, [0.3, 'on', 67, 0.5]]).L, `slid and back, roll ${roll}`);
-  }
+  same(play(P(), 0.6, [[0, 'slide', key, 1], [0, 'slide', key, NaN], ...ev, [0.2, 'slide', 67, 0.4], [0.2, 'slide', 67, NaN], [0.3, 'on', 67, 0.5]]).L,
+    play(P(), 0.6, [...ev, [0.3, 'on', 67, 0.5]]).L, 'slid and back');
 });
-test('stability: each note\'s own roll swept every block, on chords at the corners, at 44.1, 48 and 96 kHz', () => {
-  for (const fs of [44100, 48000, 96000]) for (const o of [{}, { rise: 10, coupling: 0.01, contact: 0.2, rollRate: 24, letRing: true }]) {
+test('stability: each note\'s own press swept every block (its sustainer), with the roll up, on chords at the corners, at 44.1, 48 and 96 kHz', () => {
+  for (const fs of [44100, 48000, 96000]) for (const o of [{ roll: 0.5 }, { rise: 10, coupling: 0.01, contact: 0.2, rollRate: 24, roll: 1, letRing: true }]) {
     const keys = [21, 60, 64, 67, 108], ev = keys.map((k) => [0, 'on', k, 1]);
-    const { L } = play(P(o), 0.5, ev, { fs, watch: (e, t) => keys.forEach((k, i) => e.handle({ type: 'slide', key: k, value: 0.5 + 0.5 * Math.sin(t * fs / 128 / (2 + i)) })) });
+    const { L } = play(P(o), 0.5, ev, { fs, watch: (e, t) => keys.forEach((k, i) => e.handle({ type: 'pressure', key: k, value: 0.5 + 0.5 * Math.sin(t * fs / 128 / (2 + i)) })) });
     let pk = 0;
     for (const v of L) { assert.ok(Number.isFinite(v), `${fs} Hz ${JSON.stringify(o)}: NaN`); pk = Math.max(pk, Math.abs(v)); }
     assert.ok(pk < 4, `${fs} Hz ${JSON.stringify(o)}: peak ${pk.toFixed(2)}`);
