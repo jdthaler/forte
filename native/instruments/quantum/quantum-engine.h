@@ -11,7 +11,11 @@
 //   * all voices together sum at most BUDGET pairs; past it the weakest pairs of all are dropped;
 //   * with Coherent restrike on (Ramsey fringes), a restruck key's pulse adds its amplitudes to the
 //     packet still ringing there: the voice that takes over holds, per state, the amplitude Rₙ the
-//     first pulse left (seen from the second's centre), so aₙ = (Rₙ + g(t))·e^(−iθₙ·count).
+//     first pulse left (seen from the second's centre), so aₙ = (Rₙ + g(t))·e^(−iθₙ·count);
+//   * Press (aftertouch, MPE pressure: forte/press.h) holds the pump on, a drive with a line on each
+//     level, in step with it: the packet's amplitude b (√ of its population) goes toward the press's,
+//     b' = −(b − b_p)/τ, with τ = 2T₁ above b_p (it only slows the decay) and the servo's ATTACK_T
+//     below it (held()).
 //
 // Each key's packet (makePacket, about a millisecond: the page's noteData) is built off the audio
 // thread by forte/background.h for the knobs it depends on; a note whose packet is not built yet
@@ -29,6 +33,7 @@
 #include "forte/engine.h"
 #include "forte/lift.h"
 #include "forte/expression.h"
+#include "forte/press.h"
 #include "quantum-model.h"
 #include "quantum-params.h"
 
@@ -51,6 +56,7 @@ class QuantumEngine : public Engine {
   // a note's slide: its own well's dephasing rate (the noise on that well alone), gliding
   void slide(double value, int key) override { expr.setSlide(value, key); }
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); } // the well squeezed: every level, so every line, higher
+  void pressure(double value, int key) override { presses.set(value, key); } // a firm press holds the pump on (Voice::held)
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // the same in double precision (the WebAssembly's hook for the tests, which render into
@@ -77,6 +83,7 @@ class QuantumEngine : public Engine {
     std::array<double, MAX_STATES> gA{}; // 1, or 0 for a group a bend takes past the band's top
     bool useIm = false;
     double dc = 0, rampK = 0, env = 0, gl = 0, gr = 0, r1 = 1;
+    double rb = 1; // env's factor a decaying sample this block: r1, or held() while pressed
     // the well squeezed (a note's own bend): every level × bent, and the phase that has gained over
     // the sample count, Σ(bent − 1) (exactly 0 for a voice never bent)
     double bent = 1, warp = 0;
@@ -84,6 +91,7 @@ class QuantumEngine : public Engine {
     int64_t count = 0, rampEnd = 0, dcEnd = 0;
     bool released = false, quench = false, stolen = false, dead = false;
     double liftK = 1; // how many times longer than usual its release takes after this lift (forte/lift.h)
+    Press press;      // how hard its key is pressed (0 once it is let go)
     int first = 0;       // the packet's first state this voice uses (state s is the packet's first + s)
     double gdt = 0, lam = 0; // Γ_φ/fs now, and ∫Γ_φ dt since the pulse's centre
     // A coherent restrike (cohere): Rₙ = Rr + i·Ri, and |Rₙ + 1|, the state's amplitude once the
@@ -93,6 +101,7 @@ class QuantumEngine : public Engine {
     bool coh = false, folded = false;
     std::array<double, MAX_STATES> Rr{}, Ri{}, mag{}, xr{}, xi{};
     double dcB = 0, dcC = 0, gain = 1;
+    double pop = 1; // its population over a fresh packet's of the same env: Σcₙ²|Rₙ + 1|² / Σcₙ² (Press holds env·pop)
 
     bool start(const QuantumEngine &eng, int key, double vel, const Packet &p);
     bool cohere(const QuantumEngine &eng, Voice &old);
@@ -103,6 +112,7 @@ class QuantumEngine : public Engine {
     void rates(const QuantumEngine &eng);
     void dephase(const QuantumEngine &eng, int n);
     void bend(const QuantumEngine &eng, int n); // the well squeezed (a note's own bend): the phasors' turns at bent
+    double held(const QuantumEngine &eng, int n) const; // the factor env takes a sample over this block's decaying ones, pressed
     void sync();
     template <class T> void render(T *L, T *R, int n);
     template <class T> void renderCoherent(T *L, T *R, int n);
@@ -124,6 +134,7 @@ class QuantumEngine : public Engine {
   std::array<double, p::count> P{};
   bool hasParams = false, sustain = false;
   forte::NoteExpression expr{0, 12}; // each key's slide (its noise) and bend (its well squeezed: up to an octave)
+  Presses presses;                    // how hard each key, and the channel, is pressed
   const double fMax;
   std::array<Voice, POOL> pool{};
   std::array<double, BUF> buf{};

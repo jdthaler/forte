@@ -21,6 +21,8 @@ export const INSTRUMENT = {
   modWheel: 'dephase',                  // CC1: dephasing, from its default up to its maximum
   mpe: { bend: 12, way: 'up', slide: true }, // MPE: a note's slide is the noise on its own well; its bend squeezes the well
   glide: 'squeezing the well: its levels, and the pitch, rise', // what a note's own bend does
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
+  aftertouch: 'a firm press holds the pump on: the packet holds at the press’s level', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'the measurement that ends the note: a fast lift collapses the state at once, a slow one lets it decohere slowly', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['nbar', 'sigma', 'T1', 'ramseyDetune', 'dephase'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/quantum), built as WebAssembly. Each note's
