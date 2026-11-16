@@ -141,8 +141,10 @@ void TrautoniumEngine::noteOn(int key, double velocity) {
       return;
     }
   } else {
-    for (Voice &v : voices) if (v.alive && !v.stolen && v.key == key) { // pressed again while it sounds
-      v.held = true; v.vel = v.vh = std::clamp(velocity, 0.0, 1.0); v.hold.start();
+    for (Voice &v : voices) if (v.alive && !v.stolen && v.key == key) { // pressed again while it sounds:
+      // the wire lands on the rail at the key's place again, undoing a slow lift's slide
+      v.held = true; v.u = v.uTo = 1 / baseFreq(key); v.uRate = 0;
+      v.vel = v.vh = std::clamp(velocity, 0.0, 1.0); v.hold.start();
       v.aPress = 1 - exp(-1 / (fs * P[p::press] * (1.5 - v.vel)));
       newest = &v;
       return;
@@ -162,13 +164,14 @@ void TrautoniumEngine::noteOn(int key, double velocity) {
 }
 
 // Lift: how fast the finger lets go of the wire: a slow lift lets the pressure ease off over up to
-// twice the finger's lift time, and as the wire leaves the rail the resistance rises, so the pitch
-// slides up (up to 6 %, a semitone); a fast one lets go in half the time, on its pitch.
+// twice the finger's lift time, and as the wire leaves the rail its contact resistance adds up to
+// 6 % to the wire's, so the pitch (∝ 1/R) slides down by up to a semitone; a fast one lets go in
+// half the time, on its pitch. Pressed again before it dies, the wire lands back on its place.
 void TrautoniumEngine::lift(Voice &v, double velocity) {
   v.held = false;
   const double s = liftScale(velocity);
   if (s != v.liftK) { v.liftK = s; v.aLift = 1 - exp(-1 / (fs * (v.stolen ? STEAL_T : P[p::lift] * v.liftK))); }
-  if (v.liftK > 1) { v.uTo = v.u / (1 + 0.06 * (v.liftK - 1)); v.uRate = std::fabs(v.uTo - v.u) / (3 * P[p::lift] * v.liftK); }
+  if (v.liftK > 1) { v.uTo = v.u * (1 + 0.06 * (v.liftK - 1)); v.uRate = std::fabs(v.uTo - v.u) / (3 * P[p::lift] * v.liftK); }
 }
 
 void TrautoniumEngine::noteOff(int key, double velocity) {
