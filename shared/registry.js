@@ -412,7 +412,7 @@ export const INSTRUMENTS = [
     accent: '#e6c15a',
   },
   {
-    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.12.0', trim: 14,
+    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.13.0', trim: 14,
     plugin: { code: 'BHol', ready: true },
     tagline: 'Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.',
     physics: 'General relativity · quasinormal modes',
@@ -564,7 +564,7 @@ export const INSTRUMENTS = [
     accent: '#f4d438',
   },
   {
-    id: 'planets', name: 'Ringing Planets', section: 'phenomena', ready: true, version: '0.3.0', trim: 12.5,
+    id: 'planets', name: 'Ringing Planets', section: 'phenomena', ready: true, version: '0.4.0', trim: 12.5,
     plugin: { code: 'Plnt', ready: true },
     after: 'the free oscillations of the Earth',
     tagline: 'Every key the whole Earth, Mars or Moon ringing after a great quake, sped up until its gravest tone, the hour-long football mode, is the note: hundreds of standing waves of the planet, each split by its spin into tones that beat.',
@@ -589,7 +589,7 @@ export const INSTRUMENTS = [
     accent: '#e8a65c',
   },
   {
-    id: 'nmr', name: 'NMR Spin Echo', section: 'devices', ready: true, version: '0.4.0', trim: 6.5,
+    id: 'nmr', name: 'NMR Spin Echo', section: 'devices', ready: true, version: '0.5.0', trim: 6.5,
     plugin: { code: 'Nmrs', ready: true },
     tagline: 'Every key a tube of liquid in an NMR magnet, its field set so the sample\'s lowest line is the note: a pulse tips the protons\' spins, each chemical group rings at its own shift, so ethanol is a chord whose J couplings beat, the note fades as the spins drift out of step, and the pedal\'s π pulse calls them back as Hahn\'s echo.',
     physics: 'Nuclear magnetic resonance · chemical shifts and J couplings, solved exactly · Hahn echoes and CPMG trains · T₁ and T₂',
