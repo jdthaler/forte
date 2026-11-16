@@ -21,7 +21,10 @@ constexpr double MALLET_MAX = 0.03; // s: the longest a mallet may stay in fligh
 constexpr double DAMP_RAMP = 0.008; // s: the damper felt lands (and lifts) over this
 constexpr int POST_BLOCKS = 4;      // live view messages every few blocks
 constexpr double NYQUIST = 0.45;    // × fs: modes from here up are left out (they would alias)
-constexpr double ROLL_RATE = 6;     // strokes/s: a firm press rolls the tube, two mallets in turn (Press: forte/press.h Roll)
+// Press: a full press bows each of the strike note's partials to HOLD times the swing the hardest
+// stroke gives it, however hard the tube was struck (forte/press.h Sustainer): the note as struck,
+// held
+constexpr double HOLD = 1;
 
 // ---- a voice: one tube ------------------------------------------------------------------------
 
@@ -57,6 +60,7 @@ void TubularEngine::Voice::start(TubularEngine &eng, Data::Ref r, uint64_t ver) 
   }
   bent = eng.expr.bendOf(key); // bent before it was struck
   coefs(eng);
+  for (int b = 0; b < BOWED; b++) wb[b] = FIRST_BOWED + b < N ? modeW(d->m[FIRST_BOWED + b], d->L, d->L) : 0; // (Press: the bow, at the cap)
 }
 
 // Exact two-pole coefficients for every mode at the current damping (the metal, radiation, the damper).
@@ -94,7 +98,7 @@ void TubularEngine::Voice::strike(const TubularEngine &eng, double velocity) {
   for (int i = 0; i < N; i++) uc += ws[i] * q[i];
   eta = uc - 1.5 * v * h; etaPrev = eta - v * h;
   dPrev = -1; dPrev2 = -1; malletOn = true; contact = false; inFlight = 0;
-  contactSamples = 0; Fmax = 0;
+  contactSamples = 0; Fmax = 0; struck = velocity;
   released = false; fading = false; fade = 1; age = 0; liftK = 1;
 }
 
@@ -129,6 +133,8 @@ double TubularEngine::Voice::contactForce(double dFree, double C) {
 void TubularEngine::Voice::render(float *L, float *R, int n, TubularEngine &eng) {
   const double fadeStep = fading ? 1 / (FADE * eng.fs) : 0;
   double fade_ = fade;
+  const bool drive = !released && !fading && press.on(); // Press: the bow on the tube
+  if (!drive) for (Sustainer &b : sus) b.rest();
   for (int s = 0; s < n; s++) {
     for (int i = 0; i < N; i++) { const double qn = a1[i] * q[i] - a2[i] * q1[i]; q1[i] = q[i]; q[i] = qn; }
     if (malletOn) {
@@ -143,7 +149,13 @@ void TubularEngine::Voice::render(float *L, float *R, int n, TubularEngine &eng)
         if (Fc > Fmax) Fmax = Fc;
       }
       if (++inFlight > eng.malletMax || (contact && Fc == 0 && dPrev < -1e-4)) {
-        malletOn = false; lastContactMs = (1000.0 * contactSamples) / eng.fs;
+        malletOn = false; lastContactMs = (1000.0 * contactSamples) / eng.fs; tuneNow = true;
+      }
+    } else if (drive) { // the bow, on each of the strike note's partials
+      for (int b = 0; b < BOWED; b++) {
+        const int i = FIRST_BOWED + b;
+        if (!sus[b].ready()) continue;
+        q[i] += bc[i] * wb[b] * sus[b].force(wb[b] * q[i], press.p, eng.fs);
       }
     }
     double y[2] = {0, 0};
@@ -174,7 +186,20 @@ void TubularEngine::Voice::render(float *L, float *R, int n, TubularEngine &eng)
     eng.post(m);
     return;
   }
-  if (!malletOn && age > YOUNG && (E <= floor * Emax || (damp > 0.99 && E < std::max(1e-7, floor) * Emax))) dead = true;
+  // Press: the bows, each tuned on its partial as the mallet has left (its speed in proportion to
+  // the velocity), then on its decay rate as it is now (a bend moves it)
+  for (int b = 0; b < BOWED; b++) {
+    const int i = FIRST_BOWED + b;
+    if (i >= N || cut[i]) continue;
+    const double om = TAU * d->m[i].f * bent;
+    if (tuneNow) {
+      const double c = std::cos(om * k), sn = std::sin(om * k), a = q[i], q0 = q1[i];
+      const double amp = std::sqrt(std::max(0.0, a * a - 2 * c * a * q0 + q0 * q0)) / sn;
+      sus[b].tune(sig[i], wb[b], om / TAU, hardest(std::fabs(wb[b]) * om * amp, struck, 1), HOLD, eng.fs);
+    } else if (sus[b].ready()) sus[b].decay(sig[i]);
+  }
+  tuneNow = false;
+  if (!malletOn && age > YOUNG && !drive && (E <= floor * Emax || (damp > 0.99 && E < std::max(1e-7, floor) * Emax))) dead = true;
 }
 
 // ---- the engine ------------------------------------------------------------------------------
@@ -315,10 +340,8 @@ void TubularEngine::processBlock(float *L, float *R, int n) {
     const double to = expr.bendOf(v->key), was = v->bent; // Glide: the tube swinging (Doppler)
     if (was != to) v->bent = glideTo(was, to, n / fs, BEND_T);
     if (v->damp != v->dampSet || v->bent != was) v->coefs(*this);
-    // Press: a firm press rolls the held tube, its strokes as hard as the key is pressed (one due
-    // while the last mallet is still on the tube is left out)
+    // Press: a firm press bows the held tube (render)
     v->press.follow(v->released || v->fading ? 0 : presses.of(v->key), n, fs);
-    if (const double rv = v->roll.step(v->press.p, ROLL_RATE, n, fs, rng); rv > 0 && !v->malletOn) v->strike(*this, rv);
     v->render(L, R, n, *this);
   }
   int j = 0;

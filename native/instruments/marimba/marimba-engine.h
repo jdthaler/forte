@@ -7,7 +7,8 @@
 //   the bar's place along the frame
 //
 // One voice per bar: striking a ringing bar hits it where it is, and a held key rolls (the two
-// mallets in turn) as long as the roll is up or the key is pressed firmly. Each bar's modes (a
+// mallets in turn) as long as the roll is up. A firm press bows the bar instead, at its end
+// (forte/press.h Sustainer), striking it no more. Each bar's modes (a
 // finite-element solve, the page's noteData) are built off the audio thread by forte/background.h
 // for the instrument, the undercut depth and the keyboard's tuning; a note whose bar is not built
 // yet waits for it (a few ms).
@@ -49,10 +50,10 @@ class MarimbaEngine : public Engine {
   void noteOn(int key, double velocity) override;
   void noteOff(int key, double velocity) override;
   void allNotesOff() override;
-  void slide(double value, int key) override { expr.setSlide(value, key); } // the key's own roll
+  void slide(double value, int key) override { expr.setSlide(value, key); } // where the key's own mallets land, at the stroke
   // Glide: a hard mallet pressed on the bar and dragged along it: up to a semitone flat
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
-  void pressure(double value, int key) override { presses.set(value, key); } // a firm press rolls the note, as hard as it is pressed
+  void pressure(double value, int key) override { presses.set(value, key); } // a firm press bows the bar, holding it as loud as the press
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
   // A bar its page's model built already (packVoiceData; the page's noteData), for the next
@@ -86,7 +87,11 @@ class MarimbaEngine : public Engine {
     bool held = false, hand = false;     // the key is down; which mallet strikes next in a roll
     double vel = 0, rollIn = 0; // the first stroke's velocity, samples to the next stroke
     double fade = 1;
-    Press press;     // how hard its key is pressed: a firm press rolls it (forte/press.h)
+    Press press;     // how hard its key is pressed: a firm press bows it (forte/press.h)
+    Sustainer sus;   // the bow, at the bar's end: tuned on the fundamental as the first stroke leaves it
+    std::array<double, MAX_MODES> we{}; // each mode's weight at the bow (none for the torsion modes: it bows the centre line)
+    bool tuneNow = false;
+    double sigEff = 0; // the fundamental's decay rate as it rings (1/s), the tube's share in it
     LiftTouch touch; // a mallet resting on the bar a moment after a fast lift (forte/lift.h)
     bool fading = false, dead = false;
     double age = 0;
@@ -144,7 +149,7 @@ class MarimbaEngine : public Engine {
   int malletMax;
   uint32_t rng = 0x2545F491u;
   Presses presses; // each key's pressure and the channel's
-  NoteExpression expr{1, 0}; // each key's own roll, and its bend (down only, a semitone at most)
+  NoteExpression expr{1, 0}; // each key's own strike point, and its bend (down only, a semitone at most)
   Message barMsg; // kept between posts
 };
 

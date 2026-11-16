@@ -4,17 +4,20 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './celesta-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { EXPRESSION, offInPresets } from '../../shared/expression.js';
+import { expression, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 // celesta-model.h: KEY_LO–KEY_HI, the compass; KEY_MIN–KEY_MAX, every key with Full range
 export const KEY_LO = 60, KEY_HI = 108, KEY_MIN = 21, KEY_MAX = 108;
 
+// what makes little sense on it: off by default and in its presets (shared/expression.js)
+const OFF = ['glide', 'slide', 'press'];
+
 export const INSTRUMENT = {
   id: 'celesta',
-  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: offInPresets(PRESETS, ['glide']), // its presets turn off what makes little sense on it (shared/expression.js)
+  groups: [...GROUPS, expression(OFF)], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
+  presets: offInPresets(PRESETS, OFF), // its presets, with them off too
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // C4–C8, 60–108, until Full range opens the rest

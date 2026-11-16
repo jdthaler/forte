@@ -3,7 +3,8 @@
 // each mode an exact two-pole resonator. A gangsa's bar drives the air in its tube, and the tube
 // the bar (two oscillators coupled through the air between them); a gong's note drives its second
 // round mode through the face's curvature (a quadratic force). The damping hand stops notes as the
-// player's would. A note's own slide (MPE) is its own pair's beat.
+// player's would. A note's own slide (MPE) is its own pair's beat. A firm press bows each partner's
+// bar or gong (forte/press.h Sustainer), striking it no more.
 #pragma once
 
 #include <array>
@@ -29,7 +30,7 @@ class GamelanEngine : public Engine {
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's own beat
   // Glide: a hand pressing the bar's end (or the gong's rim), loading it: a few cents flat
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
-  void pressure(double value, int key) override { presses.set(value, key); } // a firm press rolls the note, as hard as it is pressed
+  void pressure(double value, int key) override { presses.set(value, key); } // a firm press bows the note, holding it as loud as the press
   int voiceCount() const override { return (int)voices.size(); }
   void process(float *L, float *R, int n) override;
 
@@ -44,6 +45,9 @@ class GamelanEngine : public Engine {
     std::array<Res, kModes> m{};
     Res tube{};
     double gl = 0, gr = 0, f1 = 0;
+    double sig0 = 0;                  // its fundamental's decay rate (1/s), with the hand's
+    Sustainer sus;                    // Press: its bow, tuned on its fundamental as the stroke leaves it
+    double sigEff = 0;                // the fundamental's decay rate as it rings, the tube's share in it
   };
   struct Voice {
     int key = 0, band = 0, family = 0;
@@ -52,8 +56,8 @@ class GamelanEngine : public Engine {
     int subs = 1, count = 0;          // partners sounding; modes each
     double beat = 0, vel = 0;         // the pair's beat now (Hz)
     bool held = false, released = false, damped = false;
-    Press press; // how hard its key is pressed (forte/press.h)
-    Roll roll;   // a firm press's roll
+    Press press; // how hard its key is pressed: a firm press bows it (forte/press.h)
+    bool tuneNow = false; // the bows, at the next block (a stroke has just left)
     double liftK = 1; // how many times longer than usual the hand takes to stop it (forte/lift.h)
     double bent = 1;  // its modes × this (a note's own bend)
     int age = 0;                      // samples since its last stroke
@@ -74,7 +78,6 @@ class GamelanEngine : public Engine {
   bool hasParams = false, sustain = false;
   int focus = -1, sincePost = 0;
   Presses presses; // each key's pressure and the channel's
-  uint32_t rng = 12345; // the rolls' unevenness
   NoteExpression expr{0.1, 0}; // each key's own beat, and its bend (down only, ten cents at most)
   std::vector<Voice> voices; // reserved: never reallocates
 };

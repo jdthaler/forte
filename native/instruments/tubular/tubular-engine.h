@@ -5,7 +5,9 @@
 //   output = each mode's pressure at two microphones in front of the frame (its gain and phase,
 //   from the line of dipoles the tube is: tubular-model.h)
 //
-// One voice per tube: striking a ringing tube hits it where it is. Each tube's modes (a few ms to
+// One voice per tube: striking a ringing tube hits it where it is. A firm press holds its strike
+// note's three partials (modes 4–6) with a bow at the cap (forte/press.h Sustainer, one on each),
+// striking it no more. Each tube's modes (a few ms to
 // find and to radiate) are built off the audio thread by forte/background.h, for the tubes the
 // knobs make and the keyboard's tuning (each tube cut to its key's pitch); in the WebAssembly the
 // page builds them with its own model and sends each note its tube (the page's noteData). A note
@@ -51,7 +53,7 @@ class TubularEngine : public Engine {
   void slide(double value, int key) override { expr.setSlide(value, key); } // the key's mallet face, at its next strike
   // Glide: the tube swinging on its cord, toward the listener or away: a Doppler shift of a few cents
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
-  void pressure(double value, int key) override { presses.set(value, key); } // a firm press rolls the tube, as hard as it is pressed
+  void pressure(double value, int key) override { presses.set(value, key); } // a firm press bows the tube, holding its note as loud as the press
   void allNotesOff() override;
   int voiceCount() const override { return nVoices; }
   void process(float *L, float *R, int n) override;
@@ -85,7 +87,11 @@ class TubularEngine : public Engine {
     double bent = 1; // its sound × this (a note's own bend: the tube swinging)
     double liftK = 1; // how many times longer than usual its damper takes to stop it (forte/lift.h)
     Press press; // how hard its key is pressed (forte/press.h)
-    Roll roll;   // a firm press's roll
+    static constexpr int BOWED = 3, FIRST_BOWED = 3; // Press: the strike note's partials, modes 4–6
+    std::array<Sustainer, BOWED> sus{}; // the bow on each, tuned as the mallet leaves
+    std::array<double, BOWED> wb{};     // each one's weight at the cap, where the bow is
+    bool tuneNow = false;
+    double struck = 0; // the last stroke's velocity
     double fade = 1;
     bool fading = false, dead = false;
     double age = 0;
@@ -119,7 +125,6 @@ class TubularEngine : public Engine {
   bool hasParams = false;
   bool sustain = false;
   Presses presses; // each key's pressure and the channel's (forte/press.h)
-  uint32_t rng = 12345; // the rolls' unevenness
   NoteExpression expr{0.1}; // each key's own mallet face, and its bend (ten cents either way)
   // the tubes' version: a new one when what cuts them changes (the metal, the section, the cap, the
   // microphones' distance, the tuning); its snapshot (a ring, read by the builder) holds those

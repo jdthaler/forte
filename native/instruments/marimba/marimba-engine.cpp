@@ -22,6 +22,13 @@ constexpr int POST_BLOCKS = 4;      // live view messages every few blocks
 constexpr double NYQUIST = 0.45;    // × fs: modes from here up are left out (they would alias)
 constexpr double ROLL_ON = 0.005;   // a roll below this is no roll
 constexpr double SECOND = 0.03;     // the second mallet lands this much (× L) nearer the centre
+// Press: a full press bows the bar's fundamental to HOLD times the swing the hardest stroke gives it
+// (the mallet's speed is in proportion to the velocity), however hard it was struck. The tube, kept
+// full by the bow, sounds a held bar louder than a stroke's swing ever gets it (struck, the bar has
+// given much of its swing away by the time the tube fills): 0.7 holds a full press within a few dB
+// of the hardest stroke at its loudest. The fundamental's decay rate, which sets the bow's grip, is
+// measured as it rings, over SIG_T (the tube takes a share, more or less as the gap and tuning are set)
+constexpr double HOLD = 0.7, SIG_T = 0.2;
 
 // ---- a voice: one bar and its tube ---------------------------------------------------------
 
@@ -38,6 +45,7 @@ void MarimbaEngine::Voice::start(MarimbaEngine &eng, Data::Ref r, uint64_t ver) 
   floor = eng.pick(1e-9, 1e-7, 1e-6);
   bent = eng.expr.bendOf(key); // bent before it was struck
   coefs(eng);
+  for (int i = 0; i < N; i++) we[i] = d->tors[i] ? 0 : d->w[i * d->nx]; // (Press: the bow, at the end)
 }
 
 // The implicit midpoint's matrix for a pair, at its masses, stiffnesses and losses: the stiffnesses
@@ -87,12 +95,13 @@ void MarimbaEngine::Voice::tube(const MarimbaEngine &eng) {
   }
 }
 
-// The mallet lands at x (fraction of the length from the end) and y (fraction of the half-width);
-// in a roll, the second mallet a little nearer the centre and on the other side of the centre line.
+// The mallet lands at x (fraction of the length from the end: the key's own slide, or the knob's)
+// and y (fraction of the half-width); in a roll, the second mallet a little nearer the centre and
+// on the other side of the centre line.
 void MarimbaEngine::Voice::strike(const MarimbaEngine &eng, double velocity) {
   const double *P = eng.P.data();
   const int nx = d->nx;
-  const double x = std::min(0.5, P[p::strike] + (hand ? SECOND : 0));
+  const double x = std::min(0.5, eng.expr.slideOr(key, P[p::strike]) + (hand ? SECOND : 0));
   const double u = std::min(nx - 1 - 1e-9, std::max(0.0, x * (nx - 1))), j = std::floor(u), fr = u - j;
   const int jj = (int)j;
   const double yb = P[p::across] * (d->b / 2) * (hand ? -1 : 1);
@@ -153,6 +162,9 @@ void MarimbaEngine::Voice::render(float *L, float *Rt, int n, MarimbaEngine &eng
   Pair &A = pair[0], &B = pair[1];
   const bool bOn = B.on;
   double fade_ = fade;
+  const bool drive = held && !fading && press.on() && sus.ready(); // Press: the bow on the bar
+  if (!drive) sus.rest();
+  double loss = 0; // Press: the power the fundamental and its tube lose, summed over the block
   for (int s = 0; s < n; s++) {
     if (touch.on()) { // a mallet resting on the bar
       const double t = touch.step();
@@ -187,11 +199,19 @@ void MarimbaEngine::Voice::render(float *L, float *Rt, int n, MarimbaEngine &eng
       }
       if (++inFlight > eng.malletMax || (contact && Fc == 0 && dPrev < -1e-4)) {
         malletOn = false; lastContactMs = (1000.0 * contactSamples) / fs;
+        if (strokes == 1) tuneNow = true; // Press: the bow, on the key's first stroke
       }
+    } else if (drive) { // the bow: it answers the fundamental alone (the tube drains it faster than the bar's overtones ring)
+      const double Fd = sus.force(we[0] * A.q, press.p, fs);
+      for (int i = PAIRS; i < N; i++) q[i] += bc[i] * we[i] * Fd;
+      const double fA = we[0] * Fd * h * A.id, fB = we[1] * Fd * h * B.id;
+      vmA += A.a22 * fA; vxA -= A.a12 * fA;
+      if (bOn) { vmB += B.a22 * fB; vxB -= B.a12 * fB; }
     }
     double y = 0;
     {
       const double vbN = 2 * vmA - A.v, vxN = 2 * vxA - A.vx;
+      loss += A.c1 * A.M11 * vmA * vmA + A.R * vxA * vxA;
       A.q += h * vmA; A.X += h * vxA;
       y += tubeGain * (vxN - A.vx) * fs + A.out * (vbN - A.v) * fs;
       A.v = vbN; A.vx = vxN;
@@ -209,6 +229,18 @@ void MarimbaEngine::Voice::render(float *L, float *Rt, int n, MarimbaEngine &eng
   }
   fade = fade_;
   age += n / fs;
+  // Press: the fundamental's decay rate as it rings (sigEff): what the bar and its tube lose, over
+  // twice the bar's own energy in it; the bow, tuned on the fundamental as the mallet has left
+  // (struck as hard as the key went down), pays for it
+  if (const double e1 = 0.5 * (A.M11 * A.v * A.v + A.K11 * A.q * A.q); e1 > 1e-24) {
+    const double s1 = std::max(0.5 * A.c1, loss / (n * 2 * e1));
+    sigEff = sigEff > 0 ? sigEff + (1 - std::exp(-n / (SIG_T * fs))) * (s1 - sigEff) : s1;
+  }
+  if (tuneNow) {
+    tuneNow = false;
+    const double om = std::sqrt(A.K11 / A.M11);
+    sus.tune(sigEff, we[0], om / TAU, hardest(std::fabs(we[0]) * std::sqrt(A.v * A.v + om * om * A.q * A.q), vel, 1), HOLD, fs);
+  } else if (sus.ready()) sus.decay(sigEff);
   // energy: the pairs (bar and tube), the other modes from two successive samples
   const double k = 1 / fs;
   double eb = 0, et = 0;
@@ -350,23 +382,21 @@ void MarimbaEngine::allNotesOff() {
   presses.clear();
 }
 
-// The roll: the wheel's, or the key's own slide.
-double MarimbaEngine::rollOf(const Voice &v) const { return expr.slideOr(v.key, P[p::roll]); }
+// The roll: the wheel's (a press bows the bar instead, and a note's own slide moves its mallets).
+double MarimbaEngine::rollOf(const Voice &) const { return P[p::roll]; }
 
 // Held keys roll: the mallets strike in turn, at the roll's share of the first stroke, the strokes
-// a little uneven (±3 % in time), as a player's are. A firm press rolls too (forte/press.h), its
-// strokes as hard as the key is pressed (ROLL_FULL of the hardest at full press), whichever is the
-// harder.
+// a little uneven (±3 % in time), as a player's are.
 void MarimbaEngine::rolls(int n) {
   for (int i = 0; i < nVoices; i++) {
     Voice &v = *voices[i];
     if (!v.held || v.fading) continue;
-    const double amt = rollOf(v), pr = ROLL_FULL * v.press.p;
-    if (amt <= ROLL_ON && !(pr > 0)) { v.rollIn = fs / P[p::rollRate]; continue; }
+    const double amt = rollOf(v);
+    if (amt <= ROLL_ON) { v.rollIn = fs / P[p::rollRate]; continue; }
     if ((v.rollIn -= n) > 0) continue;
     rng = rng * 1664525u + 1013904223u;
     v.hand = !v.hand;
-    v.strike(*this, std::max(amt > ROLL_ON ? v.vel * amt : 0.0, pr));
+    v.strike(*this, v.vel * amt);
     v.rollIn += (fs / P[p::rollRate]) * (1 + 0.06 * ((rng >> 8) / 16777216.0 - 0.5));
   }
 }
@@ -388,7 +418,7 @@ void MarimbaEngine::process(float *L, float *R, int n) {
     Voice *v = voices[i];
     if (moving) v->tube(*this);
     if (const double to = expr.bendOf(v->key); v->bent != to) { v->bent = glideTo(v->bent, to, n / fs, BEND_T); v->coefs(*this); } // Glide: the mallet dragged along the bar
-    v->press.follow(v->held && !v->fading ? presses.of(v->key) : 0, n, fs);
+    v->press.follow(v->held && !v->fading ? presses.of(v->key) : 0, n, fs); // Press: the bow (render)
     v->render(L, R, n, *this);
   }
   int j = 0;

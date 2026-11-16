@@ -31,7 +31,11 @@ constexpr double FIT_PERIODS = 1.5; // the linear tail's statistics average over
 constexpr double CLIP = 2;          // the output is soft-clipped above CLIP (towards 2·CLIP)
 constexpr int POST_SAMPLES = 12 * 128; // view messages every 12 blocks of 128
 constexpr double BEND_T = 0.02; // s: a note's own bend glides as the instruments that bend glide theirs
-constexpr double ROLL_RATE = 8;     // strokes/s: a firm press rolls the gong with soft mallets (Press: forte/press.h Roll)
+// Press: a full press bows the strike tone to HOLD times the swing the hardest stroke gives it,
+// however hard it was struck (forte/press.h Sustainer), once the mallet has left: it pushes on the
+// strike tone alone, a force the scheme takes as it takes the mallet's (Voice::step), so a crash
+// still spreads what it puts in.
+constexpr double HOLD = 1;
 constexpr int BLOCK = 128;          // the blocks the bookkeeping is counted in (the page's)
 
 double sinc2(double t) { if (t < 1e-4) return 1 - (t * t) / 3; const double s = std::sin(t) / t; return s * s; }
@@ -176,7 +180,7 @@ void Voice::init(GongEngine &e, int key_, const double *P_, const Shell &S_) {
   full = &views[0]; lite = &views[1]; cs = full;
   vScale = g.h * g.w0; // m/s per unit of dx̄/dt̄
   setOutput(P_);
-  extra = 0; liftK = 1; press = Press{}; roll = Roll{}; released = damped = killing = dead = false;
+  extra = 0; liftK = 1; press = Press{}; sus = Sustainer{}; bowP = 0; tuneNow = false; released = damped = killing = dead = false;
   m = 1; h = k; calm = 0; adapt = true; tail = false; n1 = n2 = lam = tf = 0; fitting = wantFit = odd = armed = false;
   A = cf[0].A.data(); B = cf[0].B.data(); iD = cf[0].iD.data(); WD = cf[0].WD.data(); iW = cf[0].iW.data();
   nl = false; psi = 0; eps0 = 1.5; V = Vprev = V3 = V4 = defect = 0;
@@ -428,9 +432,12 @@ void Voice::project(double Vn) {
 // One step of the scheme (size h): advances x, x1.
 void Voice::step() {
   const double k2 = h * h;
+  const int t = S->tuned;
+  const double Fb = bowF; // Press: the bow, on the strike tone (render: once a sample)
   if (!nl && !hit.on) {
     if (tail) { for (int i = 0; i < N; i++) { const double xn = A[i] * x[i] - B[i] * x1[i]; x1[i] = x[i]; x[i] = xn * iD[i] + toff[i]; } }
     else for (int i = 0; i < N; i++) { const double xn = A[i] * x[i] - B[i] * x1[i]; x1[i] = x[i]; x[i] = xn * iD[i]; }
+    x[t] += Fb * k2 * WD[t];
     if (trace) trace->insert(trace->end(), x.begin(), x.begin() + N);
     return;
   }
@@ -465,15 +472,19 @@ void Voice::step() {
     hit.xm1 = hit.xm; hit.xm = xmF - k2 * hit.Mi * F; hit.dm1 = hit.d0; hit.d0 = dp; lastF = F;
     if (F > 0) { hit.touched = true; hit.steps++; if (F > hit.Fmax) hit.Fmax = F; }
     hit.t += h;
-    if ((hit.touched && F == 0 && dp < -1) || hit.t > hit.tmax) { contactMs = (hit.steps * h * 1000) / g.w0; hit.on = false; resetFit(); }
+    if ((hit.touched && F == 0 && dp < -1) || hit.t > hit.tmax) { contactMs = (hit.steps * h * 1000) / g.w0; hit.on = false; resetFit(); tuneNow = true; }
   }
   double gdx = 0;
   const bool f = truthy(F);
+  const double gX2 = Fb != 0 ? gv[t] * k2 * WD[t] * den : 0; // the bow's share, as the mallet's (gX1)
   for (int i = 0; i < N; i++) {
-    const double b = c4 * gv[i] * WD[i], xn = a0[i] - b * gX0 + (f ? F * (a1[i] - b * gX1) : 0);
+    const double b = c4 * gv[i] * WD[i];
+    double xn = a0[i] - b * gX0 + (f ? F * (a1[i] - b * gX1) : 0);
+    if (Fb != 0) xn += Fb * ((i == t ? k2 * WD[t] : 0) - b * gX2);
     gdx += gv[i] * (xn - x1[i]);
     x1[i] = x[i]; x[i] = xn;
   }
+  if (Fb != 0) Einj += Fb * (x[t] - x1[t]); // the bow's work: energy it gave (the passivity guard counts it as the mallets')
   psi += 0.5 * gdx;
   if (fitting && (odd = !odd)) fit();
   if (trace) trace->insert(trace->end(), x.begin(), x.begin() + N);
@@ -508,8 +519,10 @@ void Voice::render(double *bl, double *br, int n, GongEngine &e) {
   // the statistics for a hand-over run only while one may be forced (see limitNonlinear)
   if (nl && wantFit != fitting) { fitting = wantFit; if (fitting) resetFit(); }
   double pk = 0;
+  const int t = S->tuned;
   for (int s = 0; s < n; s++) {
     std::copy(x.begin(), x.begin() + N, xs.begin());
+    bowF = bowP > 0 ? sus.force(x[t], bowP, 1 / k) : 0; // Press: the bow, once a sample (its band-pass is on the bus's rate)
     for (int j = 0; j < m; j++) step();
     double l = 0, r = 0;
     for (int i = 0; i < N; i++) { const double v = x[i] - xs[i]; l += mL[i] * v; r += mR[i] * v; }
@@ -525,6 +538,11 @@ void Voice::render(double *bl, double *br, int n, GongEngine &e) {
   }
   age += n;
   peak = pk;
+  if (tuneNow) { // Press: the bow, on the strike tone as the mallet has left (its speed goes as the velocity²)
+    tuneNow = false;
+    const double Om = S->Om[t], X = 0.5 * (x[t] + x1[t]), v = (x[t] - x1[t]) / h;
+    sus.tune(sg[t], 1, wd[t] / (2 * pi), hardest(Om * std::sqrt(X * X + (v * v) / (Om * Om)), vImpact, P[p::speed]), HOLD, 1 / k);
+  } else if (sus.ready()) sus.decay(sg[S->tuned]); // (as it is now: a bend moves it)
   if (!(pk < 1e3) || x[0] != x[0]) {
     dead = true;
     Message msgE; msgE.type = msg::error; msgE.key = (int16_t)key;
@@ -532,7 +550,6 @@ void Voice::render(double *bl, double *br, int n, GongEngine &e) {
     return;
   }
   // pitch of the strike tone, from the phase advance of its modal coordinate about its slow mean
-  const int t = S->tuned;
   const double Om = S->Om[t], X = 0.5 * (x[t] + x1[t]), v = (x[t] - x1[t]) / h, dt = Om * k * n;
   dc += (1 - std::exp(-dt / 25)) * (X - dc);
   const double p_ = std::atan2(-v / Om, X - dc);
@@ -791,9 +808,10 @@ void GongEngine::process(float *L, float *R, int n) {
   }
   for (int i = 0; i < nv; i++) {
     Voice &v = *order[i];
-    // Press: a firm press rolls the held gong, its strokes as hard as the key is pressed
+    // Press: a firm press bows the held gong (Voice::render, Voice::step)
     v.press.follow(v.released || v.killing ? 0 : presses.of(v.key), n, fs);
-    if (const double rv = v.roll.step(v.press.p, ROLL_RATE, n, fs, rng); rv > 0) v.strike(rv, v.P.data());
+    v.bowP = v.press.on() && v.sus.ready() && !v.hit.on ? v.press.p : 0;
+    if (!(v.bowP > 0)) v.sus.rest();
     if (const double to = expr.bendOf(v.key); v.bent != to && !v.killing) v.bend(glideTo(v.bent, to, n / fs, BEND_T)); // Glide: a hand on the rim
     const int b = v.R == 1 ? 0 : v.R == 2 ? 1 : v.R == 4 ? 2 : 3;
     if (inputs[b] > 0) v.render(buses[b].inL.data(), buses[b].inR.data(), inputs[b], *this);

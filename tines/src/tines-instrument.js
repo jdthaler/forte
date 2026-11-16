@@ -5,14 +5,17 @@
 import { GROUPS, DEFAULTS, PRESETS, hammerSpeed } from './rhodes-params.js';
 import { KEY_MIN, KEY_MAX } from './tine.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { EXPRESSION } from '../../shared/expression.js';
+import { expression, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
+// what makes little sense on it: off by default and in its presets (shared/expression.js)
+const OFF = ['slide', 'press'];
+
 export const INSTRUMENT = {
   id: 'tines',
-  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: PRESETS,
+  groups: [...GROUPS, expression(OFF)], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
+  presets: offInPresets(PRESETS, OFF), // its presets, with them off too
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: 88, A0–C8 (the 73-key models: E1–E7)
   space: 'sustain',                     // Space and CC64: the damper pedal, sent to the engine

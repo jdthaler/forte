@@ -4,14 +4,17 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './clavicylinder-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { EXPRESSION, offInPresets } from '../../shared/expression.js';
+import { expression, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
+// what makes little sense on it: off by default and in its presets (shared/expression.js)
+const OFF = ['glide'];
+
 export const INSTRUMENT = {
   id: 'clavicylinder',
-  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: offInPresets(PRESETS, ['glide']), // its presets turn off what makes little sense on it (shared/expression.js)
+  groups: [...GROUPS, expression(OFF)], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
+  presets: offInPresets(PRESETS, OFF), // its presets, with them off too
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: A0–C8
   compass: { keys: [36, 89], param: 'fullRange' }, // C2–F6, “four and a half octaves, from the great C to f‴”, until Full range opens the rest

@@ -4,17 +4,20 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './tubular-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { EXPRESSION, offInPresets } from '../../shared/expression.js';
+import { expression, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 // tubular-model.h: KEY_LO–KEY_HI, the orchestral set of 18 tubes; KEY_MIN–KEY_MAX, every key with Full range
 export const KEY_LO = 60, KEY_HI = 77, KEY_MIN = 21, KEY_MAX = 108;
 
+// what makes little sense on it: off by default and in its presets (shared/expression.js)
+const OFF = ['glide'];
+
 export const INSTRUMENT = {
   id: 'tubular',
-  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: offInPresets(PRESETS, ['glide']), // its presets turn off what makes little sense on it (shared/expression.js)
+  groups: [...GROUPS, expression(OFF)], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
+  presets: offInPresets(PRESETS, OFF), // its presets, with them off too
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: A0–C8, 21–108
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // C4–F5, 60–77, until Full range opens the rest
@@ -22,7 +25,8 @@ export const INSTRUMENT = {
   modWheel: 'hardness',                 // CC1: the mallet's face, from its default up to brass
   mpe: { bend: 0.1, slide: true },     // a note's own bend, its tube swinging (a Doppler shift, ten cents either way at most); its slide, its mallet's face, at the strike
   glide: 'the tube swinging on its cord: a slow Doppler shift of a few cents', // what a note's own bend does
-  aftertouch: 'a firm press rolls the tube, two mallets in turn, as hard as it is pressed', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
+  aftertouch: 'a firm press: a bow on the cap holds the note as loud as the press', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'how fast the damper bar falls: a slow lift leaves a longer tail, a fast one stops the tube sooner', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['damp', 'mass', 'speedMax', 'strike', 'hardness'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/tubular), built as WebAssembly

@@ -32,22 +32,22 @@
     {"id":"cents11","kind":"continuous","min":-100,"max":100,"def":0,"step":0.01,"log":false},
     {"id":"strikeOn","kind":"toggle","def":true},
     {"id":"glideOn","kind":"toggle","def":true},
-    {"id":"slideOn","kind":"toggle","def":true},
-    {"id":"pressOn","kind":"toggle","def":true},
+    {"id":"slideOn","kind":"toggle","def":false},
+    {"id":"pressOn","kind":"toggle","def":false},
     {"id":"liftOn","kind":"toggle","def":true}
   ],
   "presets": [
-    {"name":"200A as voiced","values":{}},
-    {"name":"Tremolo through the speakers","values":{"tremDepth":0.65}},
-    {"name":"Direct out, clean","values":{"output":"direct","drive":0.1}},
-    {"name":"Reed centred in the slot (octave)","values":{"offset":0}},
-    {"name":"Reed riding high (thin, clean)","values":{"offset":1.2}},
-    {"name":"Heavy solder (short reeds, sweet, short sustain)","values":{"solder":3}},
-    {"name":"Light solder (long reeds, more bark)","values":{"solder":0.15}},
-    {"name":"Constant-voltage pickup (1 MΩ feed)","values":{"rbias":1}},
-    {"name":"Barking: tight gap, pushed preamp","values":{"gap":0.18,"offset":0.25,"drive":0.8,"hardness":2}},
-    {"name":"Fast tremolo (9 Hz)","values":{"tremDepth":0.6,"tremRate":9}},
-    {"name":"Soft felt hammers: a round attack","values":{"hardness":0.25}},
-    {"name":"Struck near the clamp: a small, clean swing","values":{"strike":0.15}}
+    {"name":"200A as voiced","values":{"slideOn":false,"pressOn":false}},
+    {"name":"Tremolo through the speakers","values":{"slideOn":false,"pressOn":false,"tremDepth":0.65}},
+    {"name":"Direct out, clean","values":{"slideOn":false,"pressOn":false,"output":"direct","drive":0.1}},
+    {"name":"Reed centred in the slot (octave)","values":{"slideOn":false,"pressOn":false,"offset":0}},
+    {"name":"Reed riding high (thin, clean)","values":{"slideOn":false,"pressOn":false,"offset":1.2}},
+    {"name":"Heavy solder (short reeds, sweet, short sustain)","values":{"slideOn":false,"pressOn":false,"solder":3}},
+    {"name":"Light solder (long reeds, more bark)","values":{"slideOn":false,"pressOn":false,"solder":0.15}},
+    {"name":"Constant-voltage pickup (1 MΩ feed)","values":{"slideOn":false,"pressOn":false,"rbias":1}},
+    {"name":"Barking: tight gap, pushed preamp","values":{"slideOn":false,"pressOn":false,"gap":0.18,"offset":0.25,"drive":0.8,"hardness":2}},
+    {"name":"Fast tremolo (9 Hz)","values":{"slideOn":false,"pressOn":false,"tremDepth":0.6,"tremRate":9}},
+    {"name":"Soft felt hammers: a round attack","values":{"slideOn":false,"pressOn":false,"hardness":0.25}},
+    {"name":"Struck near the clamp: a small, clean swing","values":{"slideOn":false,"pressOn":false,"strike":0.15}}
   ]
 }

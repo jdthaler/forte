@@ -15,6 +15,10 @@ constexpr double QUIET = 2e-6;    // a note below this (in thicknesses) and done
 constexpr int GRACE = 2048;       // samples a note stays alive after it wakes, to be driven
 constexpr int POST = 512;         // samples between the views' messages
 constexpr double STICK_T60 = 0.15; // s: a stick resting on a note after a fast lift
+// Press: a full press holds the note's fundamental at HOLD times the swing the hardest stroke gives
+// it, however hard it was struck (forte/press.h Sustainer), through a driver coil under the note's
+// centre, where its fundamental swings most and its octave and third partials not at all
+constexpr double HOLD = 1;
 constexpr size_t MAX_COUPLINGS = NKEYS * 8 * 2 * kModes, MAX_WALL = NKEYS * kModes * 4;
 
 SteelPanEngine::SteelPanEngine(double fs) : Engine(fs), notes(NKEYS) {
@@ -66,8 +70,9 @@ void SteelPanEngine::coefs(Note &v) {
   const double w1 = TAU * v.nm.m[0].f;
   const double mute = v.damped ? sigmaFromT60(v.touch > 0 ? STICK_T60 : P[p::mute] * v.liftK) : 0;
   for (int i = 0; i < kModes; i++) {
-    if (i >= v.nm.count) { v.a1[i] = v.a2[i] = v.b[i] = v.out[i] = 0; v.w[i] = 1; continue; }
+    if (i >= v.nm.count) { v.a1[i] = v.a2[i] = v.b[i] = v.out[i] = v.wc[i] = 0; v.w[i] = 1; continue; }
     const Mode &m = v.nm.m[i];
+    v.wc[i] = shape(m.i, m.j, 0, 0);
     const ModeCoeffs c = modeCoeffs(m.f * v.bent, m.sigma + mute, fs);
     v.a1[i] = c.a1; v.a2[i] = c.a2; v.b[i] = c.b;
     v.w[i] = TAU * m.f * v.bent;
@@ -78,7 +83,7 @@ void SteelPanEngine::coefs(Note &v) {
 void SteelPanEngine::activate(Note &v) {
   if (v.active) return;
   v.y1.fill(0); v.y2.fill(0); v.F.fill(0);
-  v.active = true; v.struck = false; v.damped = false; v.released = false; v.age = 0; v.press = Press{};
+  v.active = true; v.struck = false; v.damped = false; v.released = false; v.age = 0; v.press = Press{}; v.sus = Sustainer{};
   v.bent = expr.bendOf(v.key); // bent before it rang
   v.run = kTuned;
   retune(v);
@@ -87,7 +92,8 @@ void SteelPanEngine::activate(Note &v) {
 }
 
 // A stroke: an impulse of force on every mode, shaped by the contact (a half-sine pulse) and by
-// where it lands. The note keeps what it was doing: the strike adds to it.
+// where it lands (along: the key's own slide, or the knob). The note keeps what it was doing: the
+// strike adds to it.
 void SteelPanEngine::strike(Note &v, double velocity) {
   if (v.version != version) retune(v);
   // Quality: at Medium and Low a stroke rings at most 8 and 6 modes, none of the untuned ones above
@@ -98,8 +104,12 @@ void SteelPanEngine::strike(Note &v, double velocity) {
   while (run < v.nm.count && run < most && v.nm.m[run].f < top) run++;
   if (run > v.run) couplingsDirty = true; // its upper modes now meet the neighbours' and the skirt's
   v.run = std::max(v.run, run);
-  const double f1 = v.nm.m[0].f, tau = contactTime(P[p::contact], f1, velocity);
-  for (int i = 0; i < run; i++) v.y1[i] += v.b[i] * strikeGain(v.nm.m[i], f1, tau) * velocity * fs;
+  const double f1 = v.nm.m[0].f, tau = contactTime(P[p::contact], f1, velocity), along = expr.slideOr(v.key, P[p::along]);
+  for (int i = 0; i < run; i++) {
+    Mode m = v.nm.m[i];
+    if (along != P[p::along]) m.shape = shape(m.i, m.j, along, P[p::across]);
+    v.y1[i] += v.b[i] * strikeGain(m, f1, tau) * velocity * fs;
+  }
   v.struck = true; v.age = 0;
 }
 
@@ -134,6 +144,7 @@ void SteelPanEngine::noteOn(int key, double velocity) {
   v.held = true; v.released = false; v.vel = velocity; v.hand = false;
   v.rollIn = fs / P[p::rollRate];
   strike(v, velocity);
+  v.tuneNow = true; // Press: the sustainer, on this stroke
   focus = key;
 }
 
@@ -168,8 +179,8 @@ void SteelPanEngine::allNotesOff() {
   focus = -1;
 }
 
-// The roll: the wheel's, or the key's own slide (a firm press rolls too: process, forte/press.h).
-double SteelPanEngine::rollOf(const Note &v) const { return expr.slideOr(v.key, P[p::roll]); }
+// The roll: the wheel's (a firm press sustains the note instead, and its own slide moves its sticks).
+double SteelPanEngine::rollOf(const Note &) const { return P[p::roll]; }
 
 int SteelPanEngine::voiceCount() const {
   int n = 0;
@@ -246,10 +257,15 @@ void SteelPanEngine::process(float *L, float *R, int n) {
   for (int i = 0; i < n; i++) L[i] = R[i] = 0;
   if (couplingsDirty) rebuildCouplings();
   for (int i : live) if (Note &v = notes[i]; v.touch > 0 && (v.touch -= n) <= 0) { v.touch = 0; damp(v, false); } // the stick lifts off
-  // Press: how hard each held note's key is pressed (a firm press rolls it: below)
+  // Press: how hard each held note's key is pressed (a firm press sustains it: below)
   for (int i : live) {
     Note &v = notes[i];
     v.press.follow(v.held ? presses.of(v.key) : 0, n, fs);
+    if (v.tuneNow) { // the sustainer, tuned on the fundamental as the stroke has left it
+      v.tuneNow = false;
+      v.sus.tune(v.nm.m[0].sigma, 1, v.nm.m[0].f * v.bent, hardest(v.w[0] * amplitude(v, 0), v.vel, 1), HOLD, fs);
+    }
+    if (!(v.held && v.press.on() && v.sus.ready())) v.sus.rest();
     const double to = expr.bendOf(v.key), was = v.bent; // Glide: a hand on the note's rim
     if (was != to) { v.bent = glideTo(was, to, n / fs, BEND_T); coefs(v); }
   }
@@ -275,6 +291,10 @@ void SteelPanEngine::process(float *L, float *R, int n) {
       Note &v = notes[i];
       // the dome's forces among the modes it runs
       domeForces(v.tri.data(), v.triBelow[v.run], v.run, v.y1.data(), v.w.data(), g * v.w[0] * v.w[0], v.F.data());
+      if (v.held && v.press.on() && v.sus.ready()) { // Press: the driver coil, at the centre
+        const double Fd = v.sus.force(v.y1[0], v.press.p, fs);
+        for (int p = 0; p < v.run; p++) v.F[p] += v.wc[p] * Fd;
+      }
       double out = 0;
       for (int p = 0; p < v.run; p++) {
         const double y = v.a1[p] * v.y1[p] - v.a2[p] * v.y2[p] + v.b[p] * v.F[p];
@@ -282,11 +302,11 @@ void SteelPanEngine::process(float *L, float *R, int n) {
         v.y2[p] = v.y1[p]; v.y1[p] = y; v.F[p] = 0;
       }
       l += v.gl * out; r += v.gr * out;
-      if (v.held) { // a roll: the sticks strike again while the key is down (the roll's, or a firm press's)
-        const double amt = rollOf(v), pr = ROLL_FULL * v.press.p;
-        if ((amt > 0.005 || pr > 0) && --v.rollIn <= 0) {
+      if (v.held) { // a roll: the sticks strike again while the key is down, with the roll up
+        const double amt = rollOf(v);
+        if (amt > 0.005 && --v.rollIn <= 0) {
           rng = rng * 1664525u + 1013904223u;
-          strike(v, std::max(amt > 0.005 ? v.vel * amt : 0.0, pr) * (v.hand ? 0.85 : 1));
+          strike(v, v.vel * amt * (v.hand ? 0.85 : 1));
           v.hand = !v.hand;
           v.rollIn = (fs / P[p::rollRate]) * (1 + 0.06 * ((rng >> 8) / 16777216.0 - 0.5));
         }
