@@ -2,7 +2,8 @@
 // at. On the struck and plucked instruments pressing a held key makes its note more, never less: a
 // sustainer swells and holds the strings, tines, reeds, springs and steel bars (an EBow, a driver
 // coil by a pickup) at the level the hardest strike gives them, a bow the vibraphone's bars; the
-// mallet instruments roll; the Breit-Wigner Keyboard keeps making its state. A finger resting on a
+// mallet instruments roll; the Breit-Wigner Keyboard keeps making its state, and the Quantum Keyboard's
+// pump stays on, refilling its packet. A finger resting on a
 // key (pressure up to half way: a Seaboard sends some) plays exactly as no press at all. On the
 // instruments whose notes hold (a bow, a breath, a current), a note's own pressure (MPE) takes its
 // level over from the strike once it comes.
@@ -22,6 +23,7 @@ const HOW = {
   bow: ['vibraphone'],
   roll: ['marimba', 'steelpan', 'gongs', 'carillon', 'tubular', 'gamelan'],
   production: ['breitwigner'],
+  pump: ['quantum'],
 };
 // the instruments whose notes hold, whose own pressure sets the level (forte/press.h Held)
 const HELD = ['voice', 'brass', 'clavicylinder', 'chladni', 'cristal', 'saw', 'resonator', 'ondes', 'trautonium', 'cellulophone', 'telharmonium',
@@ -65,7 +67,7 @@ const keyOf = (I) => {
 // The grand's and the vibraphone's notes ring so long that a press brings them to its level over
 // seconds, and a harpsichord's two choirs of strings, each held, sum as their phases fall; the
 // rest have settled by the last second.
-const SETTLED = ['piano', 'reeds', 'celesta', 'kalimba', 'springs', 'breitwigner', ...HOW.roll];
+const SETTLED = ['piano', 'reeds', 'celesta', 'kalimba', 'springs', 'breitwigner', 'quantum', ...HOW.roll];
 await test(`Strike sets the attack, Press the level: under a full press a soft strike (0.3) and a hard one (1) hold within 1 dB: ${SETTLED.join(', ')}`, async () => {
   const wrong = [];
   for (const id of SETTLED) {

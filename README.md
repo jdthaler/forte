@@ -216,7 +216,8 @@ and on the Black-Hole Keyboard it drops matter in, each clump ringing the
 hole again. On the Ion Chain a held key's laser pushes its ions, so a firm
 press keeps them ringing. On the Breit-Wigner Keyboard a firm press keeps
 making the state, as a beam at its energy would, so the note swells and
-holds. Slide, set before a strike, is TESS's planet's
+holds, and on the Quantum Keyboard it holds the pump on, refilling the
+packet as fast as its lifetime drains it, revivals and all. Slide, set before a strike, is TESS's planet's
 path across its star, CUORE's own thermistor bias, where a Collider Showers
 particle lands, and a Whistlers line's plasma density; on the Wind Harp it
 is how gusty the wind is at that key's strings.

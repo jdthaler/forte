@@ -250,7 +250,9 @@ an Osmose) bends, slides and presses each note alone. `shared/mpe.js` and the pl
   press holds the fundamental at the swing the hardest strike gives it (`hardest()`), however
   hard this one was struck (it swells or decays there over its own decay time): Strike shapes the
   attack, and Press alone the level the note holds at; the mallet instruments `Roll`, striking
-  again as hard as the key is pressed.
+  again as hard as the key is pressed. The Breit-Wigner and Quantum keyboards make their state as
+  it decays, in step with it (a beam at its energy, the pump held on), so its amplitude goes to the
+  press's.
   Unpressed, a note plays bit for bit as before. An engine whose press shapes a held note (a
   brighter beam, a stronger field, a deeper trap) keeps
   `Pressures` instead, the pressure as it comes, and glides toward `1 + k·p` over `PRESS_GLIDE`.
