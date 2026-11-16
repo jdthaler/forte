@@ -30,6 +30,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/planets/>
 | `Space` | sustain: keep listening after the keys come up |
 | MIDI | notes, velocity (the magnitude), sustain pedal (CC64), pitch bend; **mod wheel = the planet's spin** |
 | MPE | each note's bend retunes its own planet; slide (CC74) spins it |
+| Press | aftertouch or MPE pressure past half way: the planet hums, its ringing held as loud as a quake as hard as the press |
 | Keyboard bar | the planet (Earth, Mars, Moon) |
 
 ## The physics
@@ -192,6 +193,17 @@ each planet's modes up to twelve times ₀S₂ and degree 40, with their strain 
 Levels are scaled so a reference quake sounds as loud on each planet through
 each sensor, and then by the magnitude.
 
+A firm press into a held key (aftertouch or MPE pressure past half way) makes
+the planet hum: it is shaken steadily, as the oceans and the air shake the
+Earth, in step with each mode the quake rang. Each settles where its losses
+take what it is fed, at an amplitude in proportion to its decay time, the
+least damped at what a quake of the press's magnitude (as a velocity, p of the
+way past half) rings it at. So Strike sets the quake and Press the level its
+ringing holds at: struck softly or hard, a full press holds the same hum, and
+a lighter one a quieter hum (tested). It swells in over a tenth of a second,
+and above its level the ringing only decays more slowly toward it: nothing
+shakes the planet again.
+
 ## What to listen for
 
 The demos in `examples/planets/`:
@@ -244,6 +256,9 @@ tools/render-planets.mjs                node tools/render-planets.mjs → exampl
   and their Q is a guess within what their quakes allow.
 - **No noise.** A real record has the Earth's hum and the station's noise
   under the tones, which hides the gravest ones until the biggest quakes.
+  Press's hum is a stylised one: driven in step with each mode, it holds the
+  quake's tones, where the real hum is random and rings the gravest modes
+  most.
 - **The table stops at degree 40 and twelve times ₀S₂**, so the crack (the
   surface waves) is the sum of the modes up to there, not a true click.
 

@@ -231,20 +231,24 @@ test('the receiver is blanked for each π pulse, as a spectrometer\'s is: it clo
     assert.ok(near < 0.01 * before, `${ch}: ${(near / before).toFixed(4)} of the signal`);
   }
 });
-test('Press: a firm press into a held key runs its own echo train, π pulses on its sample alone every echo time, up to four times as often; a resting finger none', () => {
-  const sp = onBlock(0.32), o = P({ sample: 'water', shim: 400, t2: 1, t1: 5, spacing: sp, acquire: 'ring' });
+test('Press: the spins held. A firm press drives the shims against a held key\'s spread, unwinding the phase it gave its spins (a gradient echo, with no π pulse) and holding them so: the note comes back and fades by T₂ alone; a lighter press, less; a resting finger, nothing', () => {
+  const o = P({ sample: 'water', shim: 400, t2: 1, t1: 5, acquire: 'ring', noise: -120 });
   const run = (press, sec = 1) => play(o, [{ at: 0, on: 60 }, { at: 0, on: 64 }, ...(press === undefined ? [] : [{ at: 0.05, press, key: 60 }])], sec);
   const plain = run(), resting = run(0.45), full = run(1), half = run(0.75);
-  assert.equal(plain.e.pulses, 0);
-  assert.equal(resting.e.pulses, 0, 'a finger at rest');
-  // at once, then every sp / (1 + 3x) over the 0.95 s left: x = 1 at full, ½ at 0.75
-  assert.ok(Math.abs(full.e.pulses - (1 + Math.floor(0.95 / (sp / 4)))) <= 1, `full: ${full.e.pulses}`);
-  assert.ok(Math.abs(half.e.pulses - (1 + Math.floor(0.95 / (sp / 2.5)))) <= 1, `half: ${half.e.pulses}`);
-  // its own sample's magnetisation turned over each time; the other key's left alone
-  assert.ok(Math.abs(full.e.mz(60) - plain.e.mz(60)) > 0.01, `key 60: ${full.e.mz(60)} vs ${plain.e.mz(60)}`);
-  assert.equal(full.e.mz(64), plain.e.mz(64), 'key 64');
-  // and the echoes keep the dephased note sounding, as the pedal's train does
-  assert.ok(envAt(full, 0.6) > 3 * envAt(plain, 0.6), `${envAt(full, 0.6)} vs ${envAt(plain, 0.6)}`);
+  assert.deepEqual(resting.L, plain.L, 'a finger at rest');
+  assert.equal(full.e.pulses, 0, 'no π pulse');
+  assert.equal(full.e.mz(60), plain.e.mz(60), 'its magnetisation along the field untouched');
+  assert.equal(full.e.mz(64), plain.e.mz(64), 'nor the other key\'s');
+  // key 60 alone, refocused: at its start (in a perfect field) times e^(−t/T₂), within 5 %
+  const alone = play(o, [{ at: 0, on: 60 }, { at: 0.05, press: 1, key: 60 }], 1);
+  const want = startOf(60, o) * Math.exp(-0.7 / 1), got = envAt(alone, 0.7, 0.01);
+  assert.ok(Math.abs(got / want - 1) < 0.05, `refocused: ${(got / want).toFixed(3)} of e^(−t/T₂)`);
+  assert.ok(envAt(full, 0.7, 0.01) > 3 * envAt(plain, 0.7, 0.01), `${envAt(full, 0.7, 0.01)} vs ${envAt(plain, 0.7, 0.01)}`);
+  assert.ok(envAt(half, 0.7, 0.01) > envAt(plain, 0.7, 0.01) && envAt(half, 0.7, 0.01) < envAt(full, 0.7, 0.01), 'a lighter press, less');
+  // it comes back as the phase unwinds, over a tenth of a second and more: no jump
+  const e = [0.06, 0.1, 0.15, 0.2, 0.3].map((t) => envAt(alone, t, 0.01));
+  assert.ok(e[0] < 0.3 * want * Math.exp(0.6), `10 ms on: ${(e[0] / (want * Math.exp(0.6))).toFixed(2)}`);
+  assert.ok(e.every((x, i) => i === 0 || x > e[i - 1]), `rising: ${e.map((x) => x.toFixed(4)).join(' ')}`);
 });
 test('diffusion in a gradient steals the echo: exp(−⅔ γ²G² D τ³), γG = 2πΔν/L (Hahn 1950; Carr and Purcell 1954)', () => {
   const shim = 2000, t2 = 20, key = 96, tau = onBlock(0.15), o = P({ sample: 'water', profile: 'gradient', shim, t2, t1: 30, acquire: 'ring' });

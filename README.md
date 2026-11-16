@@ -220,9 +220,10 @@ flash, and Strike is how fast the key brings its lamp's supply on. On the physic
 beam, ABRACADABRA's magnet, the Hydrogen Lamp's current, the Early
 Universe's amplitude and TESS's planet grow with it; Project 8's trap
 deepens, so its electron stays longer; on the NMR Spin Echo a firm press
-runs the key's own echo train; on Ringing Planets it sets off aftershocks,
-and on the Black-Hole Keyboard it drops matter in, each clump ringing the
-hole again. On the Ion Chain a held key's laser pushes its ions, so a firm
+drives the shims against the key's spread, so its spins come back into step
+without a pulse and stay so; on Ringing Planets the planet hums, its ringing
+held as loud as the press, and on the Black-Hole Keyboard matter streams in,
+holding the hole ringing: a press never strikes them again. On the Ion Chain a held key's laser pushes its ions, so a firm
 press keeps them ringing. On the Breit-Wigner Keyboard a firm press keeps
 making the state, as a beam at its energy would, so the note swells and
 holds, and on the Quantum Keyboard it holds the pump on, refilling the

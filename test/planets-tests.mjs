@@ -221,18 +221,22 @@ test('MPE: a note\'s bend speeds its own time-lapse (an octave up), and the whee
   const { L } = render(48, P({ spin: 0 }), 1, 1.4, { sustain: true, before: (e) => e.handle({ type: 'noteBend', key: 48, value: 2 }) });
   assert.ok(Math.abs(cents(peak(L, 2 * f, Math.round(0.2 * FS), Math.round(1.4 * FS)), 2 * f)) < 1);
 });
-test('Press: aftershocks. A firm press rings the planet again at once and every 0.4 s while held, the harder the larger (Båth: 1.2 magnitudes below the main shock at the lightest)', () => {
-  const press = (value) => [[1, (e) => e.handle({ type: 'pressure', key: 48, value })]];
+test('Press: the planet hums. A firm press holds its ringing at what a quake as hard as the press rings it at, swelling in and never shaken again; struck softly or hard, held as loud; a lighter press, quieter', () => {
+  const press = (value, key = 48) => [[1, (e) => e.handle({ type: 'pressure', key, value })]];
   const plain = render(48, P(), 0.8, 2.6), full = render(48, P(), 0.8, 2.6, { at: press(1) }), half = render(48, P(), 0.8, 2.6, { at: press(0.75) });
   const resting = render(48, P(), 0.8, 2.6, { at: press(0.45) });
   assert.deepEqual(resting.L, plain.L, 'a finger at rest');
-  const t = (s) => Math.round(s * FS), level = (x, a) => rms(x.L, t(a), t(a + 0.3));
+  const t = (s) => Math.round(s * FS), level = (x, a, w = 0.3) => rms(x.L, t(a), t(a + w));
   assert.deepEqual(full.L.subarray(0, t(0.99)), plain.L.subarray(0, t(0.99)), 'nothing before the press');
-  assert.ok(level(full, 1) > 1.5 * level(plain, 1), `rung again: ${(level(full, 1) / level(plain, 1)).toFixed(2)}×`);
-  assert.ok(level(half, 1) > level(plain, 1) && level(half, 1) < level(full, 1), 'a lighter press, a smaller aftershock');
-  // and again while it stays pressed: each 0.4 s the ringing grows back
-  assert.ok(level(full, 2.2) > 1.5 * level(plain, 2.2), `still: ${(level(full, 2.2) / level(plain, 2.2)).toFixed(2)}×`);
-  const channel = render(48, P(), 0.8, 2.6, { at: [[1, (e) => e.handle({ type: 'pressure', key: -1, value: 1 })]] });
+  assert.ok(level(full, 2.2) > 1.5 * level(plain, 2.2), `held: ${(level(full, 2.2) / level(plain, 2.2)).toFixed(2)}×`);
+  assert.ok(level(half, 2.2) > level(plain, 2.2) && level(half, 2.2) < level(full, 2.2), 'a lighter press, a quieter hum');
+  // struck softly, it swells to the same hum over a tenth of a second and more, as no quake would
+  const soft = render(48, P(), 0.3, 2.6, { at: press(1) });
+  assert.ok(Math.abs(20 * Math.log10(level(soft, 2.2) / level(full, 2.2))) < 1.5, `struck softly: ${(20 * Math.log10(level(soft, 2.2) / level(full, 2.2))).toFixed(2)} dB from hard`);
+  assert.ok(level(soft, 2.2) > 4 * level(soft, 0.95, 0.04), 'it swells');
+  assert.ok(level(soft, 1, 0.015) < 0.4 * level(soft, 2.2), `the first 15 ms: ${(level(soft, 1, 0.015) / level(soft, 2.2)).toFixed(2)} of the hum`);
+  assert.ok(level(soft, 1.1, 0.04) < level(soft, 1.25, 0.04) && level(soft, 1.25, 0.04) < 0.95 * level(soft, 2.2), 'still swelling 0.1 s on');
+  const channel = render(48, P(), 0.8, 2.6, { at: press(1, -1) });
   assert.deepEqual(channel.L, full.L, 'the channel\'s pressure as the key\'s');
 });
 test('Quality: Medium and Low play fewer modes, at the same pitch', () => {

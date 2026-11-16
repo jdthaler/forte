@@ -263,9 +263,10 @@ an Osmose) bends, slides and presses each note alone. `shared/mpe.js` and the pl
   rest at none), is `pressure` with `ownPressure` set while it runs, and each voice's `Held`
   marks it (`hold.pressed(key, v.key, ownPressure)`, or `Pressures::came(key)`) and gives
   `vel(strike, p)`, the velocity to make the held level from: the strike's until then, giving way
-  to the press's over `ATTACK_T` (0.1 s) from its first message;
-  one whose press sets something off (an echo train, aftershocks, matter falling in) uses
-  `Presses`, so a finger at rest fires nothing. Both `reset(key)` on a new note.
+  to the press's over `ATTACK_T` (0.1 s) from its first message; one whose press starts
+  something a finger at rest mustn't (a stream of matter, a planet's hum, the shims driven
+  against a spread) uses `Presses`, so a finger at rest does nothing. Both `reset(key)` on a new
+  note. Whatever it does, a press never strikes a note again.
 
 Either may come before the key's `noteOn`: keep them per key (`forte/expression.h`
 `NoteExpression`) and start the note there; glide a sounding note toward them as the wheel
