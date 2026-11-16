@@ -651,6 +651,100 @@ test('slide sweeps on chords, sent every block across the whole range, stay fini
     assert.ok(pk > 0.01 && pk < 2, `${fs} ${potential}: peak ${pk.toFixed(2)}`);
   }
 });
+// Press (aftertouch, MPE pressure): the pump held on, a line on each level in step with it, so every
+// amplitude b·cₙ goes toward the press's b_p = √(0.3·p), the amplitude a strike as hard launches:
+// b' = −(b − b_p)/τ, τ = 0.1 s below b_p (the servo, forte/press.h ATTACK_T), 2T₁ above (a press
+// only slows the decay). Only a press past half way counts, rescaled (PRESS_FROM).
+console.log('Press');
+const press = (t, value, key) => [t, 'msg', { type: 'pressure', key, value }];
+// a note on `key` with `events`, rendered block by block; env read after each block
+function pressed(params, key, vel, events, sec) {
+  const e = new QuantumEngine(FS); e.setParams(params);
+  const bl = 128, n = Math.round((sec * FS) / bl), L = new Float64Array(n * bl), bL = new Float64Array(bl), bR = new Float64Array(bl), env = [];
+  const ev = [[0, 'on', key, vel], ...events].map(([t, ...r]) => [Math.round(t * FS), ...r]);
+  for (let b = 0; b < n; b++) {
+    for (const [at, type, k, v] of ev) if (at === b * bl) { if (type === 'on') e.noteOn(k, v); else if (type === 'off') e.noteOff(k); else if (type === 'pedal') e.setSustain(k); else e.handle(k); }
+    e.process(bL, bR, bl);
+    L.set(bL, b * bl);
+    env.push(e.voices.length ? e.voices[0].env : 0);
+  }
+  return { L, env };
+}
+const at = (t) => Math.round((t * FS) / 128) * 128 / FS; // on a block's start
+test('a finger at rest (pressure up to half way) plays as no press, sample for sample; past it the press holds the note: a full press at 0.3 (the level a strike of 1 launches) struck soft or hard, half way past rest at 0.15, on the key or the channel', () => {
+  const plain = note(P(), 60, 1).L;
+  assert.ok(same(render(P(), [[0, 'on', 60, 1], press(0.2, 0.5, 60), press(0.3, 0.3, null)], 1).L, plain), 'at rest');
+  for (const [p, want, vels] of [[1, 0.3, [0.2, 1]], [0.75, 0.15, [0.05, 0.1]]]) for (const vel of vels) for (const key of [60, null]) {
+    const { env } = pressed(P(), 60, vel, [press(at(0.3), p, key)], 2.5), got = env.at(-1);
+    assert.ok(Math.abs(got / want - 1) < 1e-5, `pressure ${p} on ${key ?? 'the channel'}, struck at ${vel}: env ${got.toFixed(6)}, not ${want}`);
+  }
+});
+test('the press\'s level is reached as b\' = −(b − b_p)/τ says, b = √env, at the block\'s end to 1e-9: below it within τ = 0.1 s, above it at the note\'s own rate, 2T₁ (never faster than it decays alone)', () => {
+  for (const [vel, p, T1] of [[0.2, 1, 4], [1, 0.75, 4], [1, 0.6, 0.5], [0.3, 0.9, 30]]) {
+    const t0 = at(0.3), { env } = pressed(P({ T1 }), 57, vel, [press(t0, p, 57)], 1.5), plain = pressed(P({ T1 }), 57, vel, [], 1.5).env;
+    const bp = Math.sqrt(0.3 * (p - 0.5) / 0.5), j0 = Math.round((t0 + 0.1) * FS / 128); // (the press's own glide, 10 ms, long done)
+    const b0 = Math.sqrt(env[j0]), tau = b0 < bp ? 0.1 : 2 * T1;
+    for (let j = j0; j < env.length; j++) {
+      const t = ((j - j0) * 128) / FS, b = bp + (b0 - bp) * Math.exp(-t / tau);
+      assert.ok(Math.abs(Math.sqrt(env[j]) / b - 1) < 1e-9, `struck ${vel}, pressed ${p}, T₁ ${T1} s: √env ${Math.sqrt(env[j])} at ${t.toFixed(3)} s, not ${b}`);
+      assert.ok(env[j] >= plain[j] * (1 - 1e-12), `struck ${vel}, pressed ${p}: below the note alone at ${t.toFixed(3)} s`);
+    }
+  }
+});
+test('a press changes only the packet\'s level: its collapses, its revivals and its timbre are the note\'s own, the output the unpressed one times a gain smooth across each block, in every well and with dephasing (it refills the levels, not the phases between them)', () => {
+  for (const o of [{}, { potential: 'morse' }, { potential: 'hydrogen', lock: false, nbar: 44, sigma: 1.3, detector: 'x' }, { potential: 'bouncer' }, { dephase: 2 }]) {
+    const k = 57, a = pressed(P(o), k, 0.4, [press(at(0.2), 1, k), press(at(0.5), 0.8, k)], 1.2).L, u = pressed(P(o), k, 0.4, [], 1.2).L;
+    let worst = 0, rose = 0;
+    for (let b = Math.round(0.2 * FS / 128); b < a.length / 128; b++) {
+      // within a block the gain is one geometric step a sample: log(a/u) linear in the sample
+      const pts = [];
+      for (let i = b * 128; i < (b + 1) * 128; i++) if (Math.abs(u[i]) > 1e-4) pts.push([i - b * 128, Math.log(a[i] / u[i])]);
+      if (pts.length < 8) continue;
+      const [x0, y0] = pts[0], [x1, y1] = pts.at(-1), s = (y1 - y0) / (x1 - x0);
+      for (const [x, y] of pts) worst = Math.max(worst, Math.abs(y - (y0 + s * (x - x0))));
+      rose = Math.max(rose, y0);
+    }
+    assert.ok(worst < 1e-9, `${JSON.stringify(o)}: the shape moves by ${worst.toExponential(2)} (log)`);
+    assert.ok(rose > Math.log(2), `${JSON.stringify(o)}: the press raised it ×${Math.exp(rose).toFixed(2)}`);
+  }
+});
+test('a coherent restrike pressed holds its population, not its env: restruck on the box\'s full revival (every level ×(1 + ρ)) and pressed fully, it sounds as a fresh note pressed fully, to 1e-3, once both have swelled there', () => {
+  const p = P({ ramsey: true, T1: 30 }), bl = 128, run = (first) => {
+    const e = new QuantumEngine(FS); e.setParams(p);
+    const n = Math.round(1.2 * FS / bl), out = new Float64Array(n * bl), bL = new Float64Array(bl), bR = new Float64Array(bl);
+    if (first) { e.noteOn(57, 0.1); for (let b = 0; b < TREV / bl; b++) e.process(bL, bR, bl); }
+    e.noteOn(57, 0.1); e.handle({ type: 'pressure', key: 57, value: 1 });
+    for (let b = 0; b < n; b++) { e.process(bL, bR, bl); out.set(bL, b * bl); }
+    assert.ok(!first || (e.voices.length === 1 && e.voices[0].coh), 'one coherent voice');
+    return out;
+  };
+  const y = run(true), f = run(false);
+  let worst = 0, peak = 0;
+  for (let i = FS; i < y.length; i++) { worst = Math.max(worst, Math.abs(y[i] - f[i])); peak = Math.max(peak, Math.abs(f[i])); }
+  assert.ok(worst < 1e-3 * peak && peak > 0.05, `off by ${(worst / peak).toExponential(2)} of its peak ${peak.toFixed(3)}`);
+});
+test('a pressed key let go quenches as an unpressed one does: the press ends with the key, and with the sustain pedal down the note keeps its T₁', () => {
+  for (const pedal of [false, true]) {
+    const ev = [press(at(0.2), 1, 60), [at(0.6), 'off', 60], ...(pedal ? [[0, 'pedal', true]] : [])];
+    const { env } = pressed(P(), 60, 0.5, ev, 1.4), j = Math.round(at(0.6) * FS / 128), T = pedal ? DEFAULTS.T1 : DEFAULTS.release;
+    const want = Math.exp(-(128 * 4) / (FS * T)), got = env[j + 5] / env[j + 1];
+    assert.ok(Math.abs(got / want - 1) < 1e-9, `${pedal ? 'pedal down' : 'pedal up'}: ${got} over four blocks, not ${want}`);
+  }
+});
+test('presses swept on chords every block, with coherent restrikes and bends, stay finite and bounded at 44.1, 48 and 96 kHz, every well', () => {
+  for (const fs of [44100, 48000, 96000]) for (const potential of ['box', 'morse', 'hydrogen', 'bouncer', 'harmonic']) {
+    const e = new QuantumEngine(fs); e.setParams(P({ potential, ramsey: true, T1: 0.3 }));
+    const keys = [36, 57, 64, 96], bl = new Float64Array(128), br = new Float64Array(128);
+    let pk = 0;
+    for (let b = 0; b < Math.round((0.8 * fs) / 128); b++) {
+      if (b % 40 === 0) for (const k of keys) { e.noteOff(k); e.noteOn(k, 0.05 + 0.9 * ((b / 40) % 2)); }
+      keys.forEach((k, i) => { e.handle({ type: 'pressure', key: k, value: 0.5 + 0.5 * Math.sin(b / (2 + i)) ** 2 }); e.handle({ type: 'noteBend', key: k, value: 1 + 0.5 * Math.sin(b / 7) ** 2 }); });
+      e.process(bl, br, 128);
+      for (let i = 0; i < 128; i++) { assert.ok(Number.isFinite(bl[i] + br[i]), `${fs} ${potential}: NaN`); pk = Math.max(pk, Math.abs(bl[i]), Math.abs(br[i])); }
+    }
+    assert.ok(pk > 0.01 && pk < 4, `${fs} ${potential}: peak ${pk.toFixed(2)}`);
+  }
+});
 test('CPU: 10 voices render well under real time', () => {
   const run = (p) => {
     const e = new QuantumEngine(FS); e.setParams(p);
