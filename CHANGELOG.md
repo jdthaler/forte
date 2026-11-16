@@ -16,6 +16,17 @@ Releases up to Forte 0.3.0 are tagged in git as `forte-vX.Y.Z` or
 `<instrument>-vX.Y.Z`, for example `piano-v0.1.0`. Later releases are not
 tagged; this changelog and the commit titles record them.
 
+## 2026-11-16 — Press holds the black hole, the planets and the spins
+
+### Black-Hole Keyboard 0.13.0
+- **A firm press streams matter in instead of dropping clumps:** the held key's hole keeps ringing, its fundamental tones held as loud as the press (a full press about as loud as the hardest merger's ringing, whatever the strike). It swells in over a tenth of a second, a hole whose ringing has died away swells back the same way, and nothing strikes it again.
+
+### Ringing Planets 0.4.0
+- **A firm press makes the planet hum instead of setting off aftershocks:** its ringing is held at what a quake as hard as the press rings it at, so struck softly or hard it holds the same hum. It swells in, and nothing shakes the planet again.
+
+### NMR Spin Echo 0.5.0
+- **A firm press holds the spins instead of running an echo train:** it drives the shims against the key's spread, so its spins come back into step with no π pulse (a gradient echo) and stay so, the note fading by T₂ alone; a lighter press holds less of it. The chord's shifts and couplings play on as they were.
+
 ## 2026-11-16 — Global settings, the MIDI status in its drawer and an MPE switch; EXP 2's toe down is Morph's top; Press never strikes again; each instrument's own Expression defaults; the Quantum Keyboard answers to Press; the Trautonium's pitch stays put on repeated presses
 
 ### Forte 0.54.0

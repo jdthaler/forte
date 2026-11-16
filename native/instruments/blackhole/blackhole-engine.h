@@ -46,6 +46,11 @@ struct Voice {
   double fade = 1, level = 0, rise = 0, riseStep = 0;
   // the remnant's recoil toward us or away (a note's own bend): every frequency and rate × bent
   double bent = 1, f0 = 0, mf[MAX_MODES], mg[MAX_MODES];
+  bool fundamental[MAX_MODES]; // n = 0: the least damped of its (l, m)
+  // Press: matter streaming in, as hard as the key is pressed (forte/press.h), and the amplitude it
+  // holds each mode at (in the units the merger rang it at: 0 while it isn't pressed)
+  forte::Press press;
+  double hold = 0;
   // the inspiral (hasChirp): the model's chirp, and its state
   bool hasChirp = false;
   Chirp c;
@@ -71,7 +76,7 @@ class RingdownEngine : public Engine {
   void slide(double value, int key) override { expr.setSlide(value, key); }
   // a note's bend: the remnant's recoil, toward us or away: a Doppler shift of the whole wave
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
-  // a note's press: matter falling into its black hole, each clump ringing it again
+  // a note's press: matter streaming into its black hole, holding it ringing
   void pressure(double value, int key) override { press.set(value, key); }
   int voiceCount() const override { return nv; }
   void process(float *L, float *R, int n) override;
@@ -96,7 +101,7 @@ class RingdownEngine : public Engine {
  private:
   Voice *slot();
   void strike(int key, double velocity, bool ringOnly);
-  void clump(int key, double x);
+  void revive(int key);
   const KeyVoice &voiceFor(int key);
 
   Voice pool[kPool];
@@ -114,7 +119,6 @@ class RingdownEngine : public Engine {
   double struck[128] = {}; // each key's last velocity, for a fast lift's second merger (forte/lift.h)
   forte::Presses press;
   bool down[128] = {};      // each key held
-  double infall[128] = {};  // until the next clump falls in while it is pressed, s (Press)
   forte::NoteExpression expr{0.3}; // each key's slide (its spin) and bend (its recoil: ±30 ¢, a kick of about 5000 km/s)
   KeyVoice spun;                 // a key's voice at its slide's spin
   Angular spunAngular;           // and its angular functions (kept apart from the keys' own)

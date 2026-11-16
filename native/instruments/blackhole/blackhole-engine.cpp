@@ -13,7 +13,9 @@ namespace fd = forte::fdlibm;
 static constexpr double PI = 3.141592653589793, TAU = 2 * PI;
 static constexpr double BEND_T = 0.02;           // s: a note's own bend glides this fast
 static constexpr double STEAL_TAU = 0.0015;      // a stolen voice fades out with this time constant (gone in ~10 ms)
-static constexpr double INFALL_T = 0.15;         // s between the clumps a pressed key drops in (Press)
+// Press: a full press holds the (2,2,0) mode at this many times the amplitude a merger rings it at:
+// held, its ringing peaks about as high as the hardest merger's do (whose own die within a cycle)
+static constexpr double HOLD = 0.43;
 static constexpr int VOICES_EVERY = 48 * 128;    // samples between voice counts for the page
 
 void Voice::start(const RingdownEngine &eng, int key_, const KeyVoice &d, double vel_) {
@@ -22,13 +24,14 @@ void Voice::start(const RingdownEngine &eng, int key_, const KeyVoice &d, double
   n = d.count;
   for (int i = 0; i < n; i++) {
     const Mode &md = d.modes[i];
-    mf[i] = md.f; mg[i] = md.gamma;
+    mf[i] = md.f; mg[i] = md.gamma; fundamental[i] = md.n == 0;
     cpr[i] = md.cpr; cpi[i] = md.cpi; cxr[i] = md.cxr; cxi[i] = md.cxi;
   }
   bent = eng.bendOf(key); f0 = d.info.f0;
   ring = false;
   fade = 1;
   stolen = false;
+  press = {}; hold = 0;
   level = INFINITY; // output level estimate, for choosing a voice to steal
   // the strain rises through the merger peak rather than jumping: a raised-cosine rise over half
   // a (2,2,0) cycle removes the onset click
@@ -65,6 +68,31 @@ void Voice::render(float *L, float *R, int ns, const RingdownEngine &eng) {
   const double k = eng.k * bent, g = eng.master * 0.35 * vel;
   const bool mono = !eng.stereo;
   const double fadeStep = stolen ? eng.stealStep : !keyDown && eng.releaseMute ? eng.muteStep : 1;
+  // Press: matter streaming in, in step with the hole's fundamental tones (each (l, m)'s least
+  // damped mode, n = 0), holds each at an amplitude in proportion to its damping time (the stream
+  // feeds them alike, and each settles where its losses take what it is fed): the (2,2,0) at
+  // `hold`. The overtones, the merger's own shape, die as they do. Over this block a held mode's
+  // amplitude a goes to h + (a − h)·αⁿ: below h the stream swells it within ATTACK_T, above it the
+  // mode decays toward h at its own rate (a press only slows its decay). Its turn takes the factor
+  // that does that, the same each sample.
+  double hr[MAX_MODES], hi[MAX_MODES];
+  const double *Rr = rr, *Ri = ri;
+  if (ring && hold > 0) {
+    const double swell = fd::exp(-ns * eng.k / ATTACK_T);
+    double gmin = INFINITY;
+    for (int i = 0; i < n; i++) if (fundamental[i]) gmin = std::min(gmin, mg[i]);
+    for (int i = 0; i < n; i++) {
+      hr[i] = rr[i]; hi[i] = ri[i];
+      if (!fundamental[i]) continue;
+      const double h = mg[i] > 0 ? hold * gmin / mg[i] : hold;
+      double a = hypot2(zr[i], zi[i]);
+      if (!(a > 0)) { zr[i] = a = 1e-4 * h; zi[i] = 0; } // (a mode gone to nothing: started again, softly)
+      const double rho = hypot2(rr[i], ri[i]);
+      const double to = h + (a - h) * (a < h ? swell : fd::pow(rho, ns)), c = fd::pow(to / a, 1.0 / ns) / rho;
+      hr[i] = rr[i] * c; hi[i] = ri[i] * c; // (its own turn, at the magnitude that takes a to `to`)
+    }
+    Rr = hr; Ri = hi;
+  }
   double peak = 0;
   for (int s = 0; s < ns; s++) {
     double hp = 0, hx = 0;
@@ -101,8 +129,8 @@ void Voice::render(float *L, float *R, int ns, const RingdownEngine &eng) {
         const double a = zr[i], b = zi[i];
         rp += cpr[i] * a - cpi[i] * b;
         rx -= cxr[i] * b + cxi[i] * a;
-        zr[i] = a * rr[i] - b * ri[i];
-        zi[i] = a * ri[i] + b * rr[i];
+        zr[i] = a * Rr[i] - b * Ri[i];
+        zi[i] = a * Ri[i] + b * Rr[i];
       }
       double env = 1;
       if (rise < 1) { env = 0.5 - 0.5 * fd::cos(PI * rise); rise = std::min(1.0, rise + riseStep); }
@@ -123,7 +151,7 @@ void Voice::render(float *L, float *R, int ns, const RingdownEngine &eng) {
     double env = 0;
     for (int i = 0; i < n; i++) env += hypot2(zr[i], zi[i]) * (hypot2(cpr[i], cpi[i]) + hypot2(cxr[i], cxi[i]));
     level = env * g * fade;
-    if (level < 1e-5 || !(peak < 1e3)) dead = true;
+    if ((level < 1e-5 && !(hold > 0)) || !(peak < 1e3)) dead = true; // (a pressed note holds)
   } else level = hasChirp ? c.amp * g * fade : peak;
   if (stolen && fade < 1e-4) dead = true;
 }
@@ -156,19 +184,20 @@ void RingdownEngine::offer(const KeyVoice &v) { offer_ = v; hasOffer = true; }
 
 Voice *RingdownEngine::slot() { return nfree ? free_[--nfree] : nullptr; }
 
-// A clump falling in sets the hole's modes ringing again, as the merger did, in proportion to its
-// mass: up to a third of the merger's, the harder the press. A hole whose ringing has died away
-// (its key still held) rings anew; one still spiralling in takes it with the merger.
-void RingdownEngine::clump(int key, double x) {
-  Voice *v = nullptr;
-  for (int i = 0; i < nv; i++) if (voices[i]->key == key && voices[i]->keyDown && !voices[i]->stolen) v = voices[i];
-  if (!v) { if (key >= 0 && key < 128 && struck[key] > 0) strike(key, struck[key] * x / 3, true); return; }
-  if (!v->ring) return;
-  for (int m = 0; m < v->n; m++) v->zr[m] += x / 3;
+// Matter streaming into a held key whose ringing has died away sets it ringing again: a voice
+// for its ringing alone (no inspiral), at the key's own velocity, which starts from next to
+// nothing and swells to what the stream holds it at (Voice::render).
+void RingdownEngine::revive(int key) {
+  if (key < 0 || key > 127 || !(struck[key] > 0)) return;
+  const int n0 = nv;
+  strike(key, struck[key], true);
+  if (nv == n0) return;
+  Voice *v = voices[nv - 1];
+  for (int m = 0; m < v->n; m++) { v->zr[m] *= 1e-4; v->zi[m] *= 1e-4; }
 }
 
 void RingdownEngine::noteOn(int key, double velocity) {
-  if (key >= 0 && key < 128) { down[key] = true; infall[key] = 0; }
+  if (key >= 0 && key < 128) down[key] = true;
   press.reset(key);
   strike(key, velocity, false);
 }
@@ -227,14 +256,22 @@ void RingdownEngine::allNotesOff() {
 void RingdownEngine::process(float *L, float *R, int n) {
   std::fill(L, L + n, 0.0f);
   std::fill(R, R + n, 0.0f);
-  // Press: matter falling in. A firm press into a held key drops a clump into its black hole at
-  // once, and another every INFALL_T while it stays pressed
+  // Press: matter streaming in. While a held key is pressed firmly, a steady stream of matter
+  // falls into its black hole, in step with its ringing, and holds each mode at the amplitude a
+  // merger as hard as the press rings it at: Strike sets the ringdown, Press the level it holds
+  // at (forte/press.h). A hole still spiralling in takes the stream with its merger; one whose
+  // ringing has died away is set ringing again, swelling in (revive). Nothing strikes it again.
   for (int key = 0; key < 128; key++) {
-    if (!down[key]) continue;
-    const double x = press.of(key);
-    if (x <= 0) { infall[key] = 0; continue; }
-    if (infall[key] <= 0) { clump(key, x); infall[key] += INFALL_T; if (infall[key] <= 0) infall[key] = INFALL_T; }
-    infall[key] -= n * k;
+    if (!down[key] || !(press.of(key) > 0)) continue;
+    bool live = false;
+    for (int i = 0; i < nv && !live; i++) live = voices[i]->key == key && voices[i]->keyDown && !voices[i]->stolen && !voices[i]->dead;
+    if (!live) revive(key);
+  }
+  for (int i = 0; i < nv; i++) {
+    Voice *v = voices[i];
+    const bool held = v->keyDown && !v->stolen && v->key >= 0 && v->key < 128 && down[v->key];
+    v->press.follow(held ? press.of(v->key) : 0, n, fs);
+    v->hold = v->press.on() && v->vel > 0 ? HOLD * v->press.p / v->vel : 0;
   }
   int j = 0;
   for (int i = 0; i < nv; i++) {

@@ -14,6 +14,7 @@ Play it at <https://forte.jthaler.net/blackhole/> (or locally — see the
 | `↑` `↓` | spin |
 | `←` `→` | octave |
 | MIDI | notes and velocity; **mod wheel = spin** |
+| Press | aftertouch or MPE pressure past half way: matter streams in, holding the hole ringing as loud as the press |
 
 ## The physics
 
@@ -147,6 +148,18 @@ The page plots each note's strain from the closed-form sum over modes (and
 the chirp's closed-form schedule), at about two points per pixel. The tests
 check it against the engine's output.
 
+* **Press** (aftertouch or MPE pressure past half way): matter streams into
+  the held key's hole. The stream feeds each fundamental tone (n = 0) in step
+  with it, so each settles where its damping takes what it is fed, at an
+  amplitude in proportion to its damping time; the overtones, the merger's own
+  shape, die as they do. The (2,2,0) mode is held at 0.43 × p of what the
+  merger rang it at, p how far past half way the key is pressed, divided by
+  the strike: a full press holds the ringing's peaks about as high as the
+  hardest merger's (whose own die within a cycle), whatever the strike, and
+  half as firm a press half as loud (tested). It swells in over 0.1 s, and a
+  hole whose ringing has already died away swells back the same way: nothing
+  strikes it again. Let go, it dies as it would.
+
 ## Simplifications
 
 * Mode phases are fixed rather than taken from NR. The merger bridge is
@@ -156,6 +169,8 @@ check it against the engine's output.
   remnants reach spins of about 0.95 at most, so near-extremal holes are far
   outside anything a merger is known to make. The QNMs themselves are exact
   at every spin.
+* Press's stream drives each mode in step with it, a stylised accretion:
+  real infall would ring the modes with a random, broadband forcing.
 
 `examples/blackhole/` has six renders: one note as spin rises from 0 to
 1 − 10⁻⁶; a phrase on GW150914-like holes and the same phrase near-extremal;

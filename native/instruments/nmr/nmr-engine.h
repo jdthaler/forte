@@ -53,8 +53,7 @@ class NmrEngine : public Engine {
   static constexpr int kPool = 32;
   struct Voice {
     bool on = false, held = true, fading = false, receiving = true;
-    double echo = 0;   // until its next π pulse while its key is pressed, s (Press)
-    double keyAt = -1; // when a π pulse on its sample alone fires (Press), on the clock; −1: none armed
+    Press lock;        // its key's press: the shims driven against its spread (Press)
     double closeT = 0; // how fast the receiver closes after this lift, s (0: as usual; forte/lift.h)
     int key = 0, nl = 0;
     double amp = 0, age = 0, t0 = 0, S = 0, D = 0, phi = 0, gate = 0, rel = 1, bendNow = 1, peak = 0;
@@ -66,8 +65,8 @@ class NmrEngine : public Engine {
   };
   const KeySystem &system(int key);
   void lines(Voice &v);
-  void arm(int only = -1);   // ask for a π pulse: the receivers close, and it fires BLANK_T later
-  void pulse(int only = -1); // only: that key's sample (−1: every one)
+  void arm();   // ask for a π pulse: the receivers close, and it fires BLANK_T later
+  void pulse(); // a π pulse on every sample
   void play(Voice &v, float *L, float *R, int n);
   void frame();
   double recovered(int key) const;
