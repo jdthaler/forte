@@ -1,8 +1,9 @@
 // expression.js — the five ways a held key is played beyond which key it is, as a Seaboard
 // names them: Strike (how hard it goes down: velocity), Glide (its own pitch bend, MPE), Slide
 // (its own CC74, MPE), Press (aftertouch and MPE pressure) and Lift (how fast it comes up:
-// release velocity). Every instrument has a switch for each, in its Expression group: a preset
-// can turn off the ones that make little sense on it, and anyone can turn any of them off.
+// release velocity). Every instrument has a switch for each, in its Expression group: the ones
+// that make little sense on it are off by default and in its presets (expression(), offInPresets:
+// on a piano, its own bend, press and slide), and anyone can turn any of them on or off.
 //
 // The switches are the page's parameters (they go in P, presets, songs and links), not the
 // engine's: shell.js adds the group, and the worklet (shared/worklet.js) holds back what a switch
@@ -31,6 +32,18 @@ export const EXPRESSION = {
 
 export const EXPRESSION_DEFAULTS = Object.fromEntries(EXPRESSION.params.map((p) => [p.id, p.def]));
 
+/**
+ * An instrument's Expression group: the shared one, with the switches for the dimensions in `off`
+ * (from 'strike', 'glide', 'slide', 'press', 'lift') off by default, as making little sense on it.
+ * A descriptor puts it last in its groups, and gives its presets the same (offInPresets).
+ */
+export const expression = (off = []) => (off.length
+  ? { ...EXPRESSION, params: EXPRESSION.params.map((p) => (off.includes(p.id.slice(0, -2)) ? { ...p, def: false } : p)) }
+  : EXPRESSION);
+
+/** Instrument descriptor I's Expression group (its own: expression()), or the shared one. */
+export const expressionOf = (I) => I.groups?.find((g) => g.id === EXPRESSION.id) ?? EXPRESSION;
+
 /** Whether instrument descriptor I answers to switch `id` (one of EXPRESSION_IDS). */
 export function responds(I, id) {
   switch (id) {
@@ -56,8 +69,8 @@ export function slideOf(I) {
 
 /**
  * An instrument's presets with the dimensions that make little sense on it turned off in each
- * (`dims` from 'strike', 'glide', 'slide', 'press', 'lift'): the approved table's "Off in presets"
- * column. The defaults keep every switch on, and a preset that sets a switch itself keeps its own.
+ * (`dims` from 'strike', 'glide', 'slide', 'press', 'lift'), as its defaults have them
+ * (expression(dims)). A preset that sets a switch itself keeps its own.
  */
 export const offInPresets = (presets, dims) =>
   presets.map((pr) => ({ ...pr, p: { ...Object.fromEntries(dims.map((d) => [`${d}On`, false])), ...pr.p } }));
@@ -66,7 +79,7 @@ export const offInPresets = (presets, dims) =>
 export const unanswered = (I) => EXPRESSION_IDS.filter((id) => !responds(I, id));
 
 /** A descriptor's groups with the Expression group after them (once). */
-export const withExpression = (groups) => (groups.includes(EXPRESSION) ? groups : [...groups, EXPRESSION]);
+export const withExpression = (groups) => (groups.some((g) => g.id === EXPRESSION.id) ? groups : [...groups, EXPRESSION]);
 
 /**
  * What the engine is sent, with the switches applied (shared/worklet.js). message(m) gives the

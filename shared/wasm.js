@@ -10,7 +10,7 @@
 //   XWasmEngine.load(bytes);                              // AudioWorklet: from the bytes the page sends
 //   const e = new XWasmEngine(sampleRate);                // then as any engine
 
-import { EXPRESSION, EXPRESSION_IDS, unanswered } from './expression.js';
+import { EXPRESSION_IDS, expressionOf, unanswered } from './expression.js';
 
 // The engine's parameters, in the order the native tables have them (tools/gen-native-params.mjs):
 // the descriptor's, less those only a page uses (the computer keys' velocity) and the Expression
@@ -22,7 +22,7 @@ export function nativeParams(I) {
   const skip = [...(I.pageOnly ?? PAGE_ONLY), ...EXPRESSION_IDS];
   return [...I.groups, ...(I.console?.groups ?? [])].flatMap((g) => g.params).filter((p) => !skip.includes(p.id));
 }
-export const pluginParams = (I) => [...nativeParams(I), ...EXPRESSION.params.filter((p) => !unanswered(I).includes(p.id))];
+export const pluginParams = (I) => [...nativeParams(I), ...expressionOf(I).params.filter((p) => !unanswered(I).includes(p.id))];
 // A parameter's number for the native code: a choice's index, a toggle's 0 or 1.
 export function nativeValue(p, v) {
   if (p.type === 'select') { const k = p.options.findIndex(([x]) => x === v); return k < 0 ? p.options.findIndex(([x]) => x === p.def) : k; }

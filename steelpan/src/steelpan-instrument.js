@@ -4,25 +4,29 @@
 
 import { GROUPS, DEFAULTS, PRESETS } from './steelpan-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { EXPRESSION, offInPresets } from '../../shared/expression.js';
+import { expression, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS };
 
 // The steel band's compass, six bass to high tenor (steelpan-model.h, KEY_LO/KEY_HI).
 export const KEY_LO = 33, KEY_HI = 90; // A1–F♯6
 
+// what makes little sense on it: off by default and in its presets (shared/expression.js)
+const OFF = ['glide', 'lift'];
+
 export const INSTRUMENT = {
   id: 'steelpan',
-  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: offInPresets(PRESETS, ['glide', 'lift']), // its presets turn off what makes little sense on it (shared/expression.js)
+  groups: [...GROUPS, expression(OFF)], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
+  presets: offInPresets(PRESETS, OFF), // its presets, with them off too
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [21, 108],                     // MIDI keys: all 88, A0–C8
   compass: { keys: [KEY_LO, KEY_HI], param: 'fullRange' }, // A1–F♯6 until Full range opens the rest
   space: 'sustain',                     // Space and CC64: keeps the hands off the notes after key-up
   modWheel: 'roll',                     // CC1: the roll
-  mpe: { bend: 0.5, way: 'up', slide: true }, // a note's own bend, a hand pressing its rim (up only, a quarter tone at most); its slide, its own roll
+  mpe: { bend: 0.5, way: 'up', slide: { param: 'along', max: 0.95 } }, // a note's own bend, a hand pressing its rim (up only, a quarter tone at most); its slide moves its sticks from the centre towards the note's edge, at the stroke
   glide: 'a hand pressing the note\'s rim: up to a quarter tone sharp', // what a note's own bend does
-  aftertouch: 'a firm press rolls the note, as hard as it is pressed', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
+  aftertouch: 'a firm press: a sustainer under the note holds it as loud as the press', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'the hand muting on release: a slow lift lands gently (a longer tail), a fast one firmly; with the notes let ring, a fast lift rests the stick on the note a moment', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['rollRate', 'mute', 'across', 'along', 'roll'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/steelpan), built as WebAssembly

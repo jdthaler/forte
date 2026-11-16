@@ -266,10 +266,11 @@ from nothing, so there it presses on top of the strike as before. On the
 struck and plucked ones a firm press (past half way, so a finger resting on
 a key changes nothing) makes the note more, never less: a sustainer (an
 EBow over a string, a driver coil by a pickup) holds the strings, tines,
-reeds, springs and the celesta's and kalimba's steel as loud as the press,
-however hard they were struck, a bow holds the Vibraphone's bars, and the
-mallet instruments roll (the Marimba, Steel Pan, Gong Keyboard, Carillon,
-Tubular Bells and Gamelan). On the Timpani and Tabla a firm press is still
+reeds, springs, the celesta's and kalimba's steel and the Steel Pan's notes
+as loud as the press, however hard they were struck, and a bow holds the
+mallet instruments' bars, gongs, tubes and bells (the Vibraphone, Marimba,
+Gamelan, Gong Keyboard, Tubular Bells and Carillon): a press never strikes a
+note again. On the Timpani and Tabla a firm press is still
 the heel in the head, which raises the pitch. Its preset arrows step through the Presets menu from the
 preset playing, whichever way it got there (the FC-300's pedals, the menu),
 so the two stay in step; the first press after the RISE has counted

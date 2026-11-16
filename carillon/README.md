@@ -25,7 +25,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/carillon/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity: how hard the baton is struck |
 | `Space` | nothing: a carillon has no dampers, and the bells ring on |
-| MIDI | notes, velocity; a firm press (aftertouch, past half way) plays the carillonneur's tremolo on a held bell, seven strokes a second as hard as it is pressed; the sustain pedal (CC64) is accepted and changes nothing |
+| MIDI | notes, velocity; a firm press (aftertouch, past half way) bows a held bell on its soundbow, holding its principal partials (hum, prime, tierce, quint, nominal) as loud as the press, a full press as loud as the hardest stroke gives them, and strikes it no more; the sustain pedal (CC64) is accepted and changes nothing |
 
 ## The physics
 

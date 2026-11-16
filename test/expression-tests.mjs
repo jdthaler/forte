@@ -1,12 +1,13 @@
 // The Expression switches (shared/expression.js): every instrument has Strike, Glide, Slide,
-// Press and Lift as parameters, all on by default; a page shows those its instrument answers to;
+// Press and Lift as parameters, on by default but for those that make little sense on it; a page
+// shows those its instrument answers to;
 // and the worklet (shared/worklet.js) holds back what a switch that is off would let through,
 // letting go of what it held when one turns off. The plugins' side: native/tests/plugin-tests.cpp.
 // Run: node test/expression-tests.mjs
 
 import assert from 'node:assert/strict';
 import { INSTRUMENTS } from '../shared/registry.js';
-import { EXPRESSION, EXPRESSION_IDS, responds, unanswered, createGate } from '../shared/expression.js';
+import { EXPRESSION, EXPRESSION_IDS, expressionOf, responds, unanswered, createGate } from '../shared/expression.js';
 import { nativeParams, pluginParams } from '../shared/wasm.js';
 import { presetParams } from '../shared/presets.js';
 import { loadInstrument } from '../tools/headless.mjs';
@@ -40,10 +41,11 @@ const ON = Object.fromEntries(EXPRESSION_IDS.map((id) => [id, true]));
 
 console.log('expression');
 
-await test('every instrument has the five switches, all on; its plugin and its saved presets those it answers to, last; its engine none', async () => {
+await test('every instrument has the five switches; its plugin and its saved presets those it answers to, last; its engine none', async () => {
   for (const r of INSTRUMENTS) {
     const I = await loadInstrument(r.id);
-    assert.equal(I.groups.at(-1), EXPRESSION, `${r.id}: the Expression group last`);
+    assert.equal(I.groups.at(-1), expressionOf(I), `${r.id}: the Expression group last`);
+    assert.deepEqual(expressionOf(I).params.map(({ def, ...p }) => p), EXPRESSION.params.map(({ def, ...p }) => p), `${r.id}: the shared switches, but for their defaults`);
     const answered = EXPRESSION_IDS.filter((id) => !unanswered(I).includes(id)), n = answered.length;
     assert.deepEqual(pluginParams(I).slice(-n).map((p) => p.id), answered, `${r.id}: the plugin's last parameters`);
     assert.deepEqual(presetParams(I).map((p) => p.id), pluginParams(I).map((p) => p.id), `${r.id}: a saved preset's`);
@@ -63,18 +65,23 @@ await test('a page shows the switches its instrument answers to', async () => {
   for (const r of INSTRUMENTS) assert.ok((await shown(r.id)).includes('liftOn'), `${r.id}: Lift, at least`); // test/lift-tests.mjs
 });
 
-// The approved table's "Off in presets" column: what each instrument's presets turn off, as making
-// little sense on it (a struck string's or bar's bend, the swell pedal on an organ, a lift on a
-// phenomenon whose release is the recording's). Every other instrument's presets leave all on.
+// What makes little sense on each instrument, off by default and in its presets: the approved
+// table's "Off in presets" column (a struck string's or bar's bend, the swell pedal on an organ, a
+// lift on a phenomenon whose release is the recording's), and on the keyboards whose player only
+// plays the keys (the pianos, the harpsichord, the celesta), Press and Slide (Jesse, 2026-11-16).
+// Every other instrument has all on.
 const OFF_IN_PRESETS = {
-  piano: ['glide'],
-  grand: ['glide'],
-  harpsichord: ['glide'],
+  piano: ['glide', 'slide', 'press'],
+  grand: ['glide', 'slide', 'press'],
+  harpsichord: ['glide', 'slide', 'press'],
+  tines: ['slide', 'press'],
+  reeds: ['slide', 'press'],
+  pianet: ['slide', 'press'],
   cimbalom: ['glide'],
   hurdygurdy: ['lift'],
   vibraphone: ['glide', 'lift'],
   carillon: ['glide', 'lift'],
-  celesta: ['glide'],
+  celesta: ['glide', 'slide', 'press'],
   kalimba: ['glide', 'lift'],
   steelpan: ['glide', 'lift'],
   marimba: ['glide', 'lift'],
@@ -98,10 +105,12 @@ const OFF_IN_PRESETS = {
   pulsars: ['lift'],
   nmr: ['lift'],
 };
-await test('presets turn off what makes little sense on their instrument, the table\'s "Off in presets" column; the defaults keep every switch on', async () => {
+await test('what makes little sense on an instrument is off by default and in its presets', async () => {
   for (const r of INSTRUMENTS) {
     const I = await loadInstrument(r.id), off = (OFF_IN_PRESETS[r.id] ?? []).map((d) => `${d}On`);
     for (const id of off) assert.ok(responds(I, id), `${r.id}: answers to ${id}`);
+    for (const p of expressionOf(I).params) assert.equal(p.def, !off.includes(p.id), `${r.id}: ${p.id} by default`);
+    for (const p of pluginParams(I)) if (EXPRESSION_IDS.includes(p.id)) assert.equal(p.def, !off.includes(p.id), `${r.id}: its plugin's ${p.id} by default`);
     for (const pr of I.presets ?? []) {
       const set = EXPRESSION_IDS.filter((id) => id in pr.p);
       assert.deepEqual(set, EXPRESSION_IDS.filter((id) => off.includes(id)), `${r.id} "${pr.name}": the switches it sets`);

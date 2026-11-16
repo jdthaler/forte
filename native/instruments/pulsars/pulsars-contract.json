@@ -33,7 +33,7 @@
     {"id":"glideOn","kind":"toggle","def":true},
     {"id":"slideOn","kind":"toggle","def":true},
     {"id":"pressOn","kind":"toggle","def":true},
-    {"id":"liftOn","kind":"toggle","def":true}
+    {"id":"liftOn","kind":"toggle","def":false}
   ],
   "presets": [
     {"name":"Millisecond pulsars at 1.4 GHz","values":{"liftOn":false}},

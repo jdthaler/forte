@@ -4,7 +4,7 @@
 
 import { GROUPS, DEFAULTS, PRESETS, KINDS } from './marimba-params.js';
 import { TUNING_KEEP } from '../../shared/tuning.js';
-import { EXPRESSION, offInPresets } from '../../shared/expression.js';
+import { expression, offInPresets } from '../../shared/expression.js';
 
 export { GROUPS, DEFAULTS, PRESETS, KINDS };
 
@@ -15,17 +15,21 @@ export const COMPASS = { marimba: [36, 96], xylophone: [65, 108] };
 // What the undercut tunes the first bending modes to (the xylophone's third falls near 6).
 export const TARGETS = { marimba: [1, 4, 10], xylophone: [1, 3] };
 
+// what makes little sense on it: off by default and in its presets (shared/expression.js)
+const OFF = ['glide', 'lift'];
+
 export const INSTRUMENT = {
   id: 'marimba',
-  groups: [...GROUPS, EXPRESSION], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
-  presets: offInPresets(PRESETS, ['glide', 'lift']), // its presets turn off what makes little sense on it (shared/expression.js)
+  groups: [...GROUPS, expression(OFF)], // then the Expression switches: Strike, Glide, Slide, Press, Lift (shared/expression.js)
+  presets: offInPresets(PRESETS, OFF), // its presets, with them off too
   keep: ['volume', 'room', 'venue', 'velocity', ...TUNING_KEEP], // kept when a preset is chosen
   range: [KEY_MIN, KEY_MAX],            // MIDI keys: all 88, A0–C8
-  space: 'hold',                        // Space and CC64 hold the keys down: a marimba has no dampers, and held notes keep rolling
+  space: 'hold',                        // Space and CC64 hold the keys down: a marimba has no dampers, and held notes keep rolling (with the roll up) and bowed (pressed)
   modWheel: 'roll',                     // CC1: the roll
-  mpe: { bend: 1, way: 'down', slide: true }, // a note's own bend drags a hard mallet along its bar (down only, a semitone at most); its slide, its own roll
+  mpe: { bend: 1, way: 'down', slide: { param: 'strike', max: 0.05 } }, // a note's own bend drags a hard mallet along its bar (down only, a semitone at most); its slide moves its mallets from the centre towards the bar's end, at the stroke
   glide: 'a hard mallet pressed and dragged on the bar: up to a semitone flat', // what a note's own bend does
-  aftertouch: 'a firm press rolls the note, the mallets in turn, as hard as it is pressed', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
+  strike: 'how loud the note starts; a press then sets the level it holds at', // what velocity does, where it isn't how loud (shared/rise.js)
+  aftertouch: 'a firm press: a bow on the bar holds the note as loud as the press', // what pressing into a held key does (aftertouch, MPE pressure: a Seaboard's Press)
   lift: 'a fast lift lets the mallet rest on the bar a moment, damping it', // what a slow or a fast release does (release velocity: a Seaboard's Lift)
   faders: ['hardness', 'gap', 'rollRate', 'strike', 'roll'], // a Seaboard RISE's faders 1–3, then its XY pad's X and Y (shared/midi.js)
   // the engine: the physics in C++ (native/instruments/marimba), built as WebAssembly. The page

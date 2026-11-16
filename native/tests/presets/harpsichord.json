@@ -53,8 +53,8 @@
         "cents11": 0,
         "strikeOn": true,
         "glideOn": false,
-        "slideOn": true,
-        "pressOn": true,
+        "slideOn": false,
+        "pressOn": false,
         "liftOn": true
       }
     }

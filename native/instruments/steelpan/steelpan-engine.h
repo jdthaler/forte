@@ -3,8 +3,8 @@
 // each sample by the dome's quadratic forces among them (steelpan-model.h, noteTriples) and by the steel's
 // coupling to the neighbouring notes, which come alive with it (the pan's note layout), and to
 // the skirt, a ring of steel whose modes every sounding note pushes on. A note's
-// own slide (MPE) is its own roll: how hard its sticks strike again while its key is down; a firm
-// press rolls it too, as hard as it is pressed (forte/press.h).
+// own slide (MPE) is where its sticks land, at the stroke; a firm press holds it with a sustainer,
+// a driver coil under the note's centre (forte/press.h Sustainer), striking it no more.
 #pragma once
 
 #include <array>
@@ -27,10 +27,10 @@ class SteelPanEngine : public Engine {
   void noteOff(int key, double velocity) override;
   void setSustain(bool on) override;
   void allNotesOff() override;
-  void slide(double value, int key) override { expr.setSlide(value, key); } // the key's own roll
+  void slide(double value, int key) override { expr.setSlide(value, key); } // where the key's own sticks land, at the stroke
   // Glide: a hand pressing the note's rim, stiffening its edge: up to a quarter tone sharp
   void noteBend(double ratio, int key) override { expr.setBend(ratio, key); }
-  void pressure(double value, int key) override { presses.set(value, key); } // a firm press rolls the note, as hard as it is pressed
+  void pressure(double value, int key) override { presses.set(value, key); } // a firm press: a sustainer holds the note as loud as the press
   int voiceCount() const override;
   void process(float *L, float *R, int n) override;
 
@@ -44,13 +44,16 @@ class SteelPanEngine : public Engine {
     NoteModes nm;
     int run = 0;                   // modes integrated: kTuned while it only rings along, all once struck
     std::array<double, kModes> a1{}, a2{}, b{}, w{}, out{}, y1{}, y2{}, F{};
+    std::array<double, kModes> wc{}; // each mode's shape at the note's centre (Press: the driver coil there)
     std::array<Triple, kTriples> tri{}; // the dome's couplings among its modes
     std::array<int, kModes + 1> triBelow{}; // how many of them lie among its first n modes
     bool active = false, struck = false, held = false, released = false, damped = false, hand = false;
     double vel = 0, gl = 1, gr = 1, rollIn = 0;
     double liftK = 1; // how many times longer than usual the hand takes to still it (forte/lift.h)
     double bent = 1;  // its modes × this (a note's own bend)
-    Press press;      // how hard its key is pressed: a firm press rolls it (forte/press.h)
+    Press press;      // how hard its key is pressed: a firm press sustains it (forte/press.h)
+    Sustainer sus;    // its driver coil, under the note's centre: tuned on the fundamental as its first stroke leaves it
+    bool tuneNow = false;
     int touch = 0;    // samples the stick still rests on it after a fast lift (the notes let ring)
     int age = 0;                   // samples since it came alive
     int version = -1;              // the parameters its coefficients were made from
@@ -90,7 +93,7 @@ class SteelPanEngine : public Engine {
   int version = 0, focus = -1, sincePost = 0;
   double g = 0;
   Presses presses; // each key's pressure and the channel's
-  NoteExpression expr{0, 0.5}; // each key's own roll, and its bend (up only, a quarter tone at most)
+  NoteExpression expr{0, 0.5}; // each key's own strike point, and its bend (up only, a quarter tone at most)
   std::vector<Note> notes;      // one per key, A0–C8
   std::vector<int> live;        // indices of the active notes (reserved: never reallocates)
   std::vector<Coupling> couplings;

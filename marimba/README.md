@@ -22,7 +22,7 @@ Part of [Forte](../README.md). Play it at <https://forte.jthaler.net/marimba/>
 | `←` `→` | octave |
 | `↑` `↓` | velocity (the mallet's speed, up to 3 m/s by default) |
 | `Space` | holds the keys down: held notes keep rolling (a marimba has no dampers) |
-| MIDI | notes, velocity, CC64 (holds the keys); **mod wheel = roll**; MPE slide rolls one note; a firm press (aftertouch, past half way) rolls a held note too, as hard as it is pressed |
+| MIDI | notes, velocity, CC64 (holds the keys); **mod wheel = roll**; MPE slide moves one note's mallets towards the bar's end, at the stroke; a firm press (aftertouch, past half way) bows a held note at the bar's end, holding it as loud as the press (a full press as loud as the hardest stroke), and strikes it no more |
 
 ## The physics
 
@@ -207,11 +207,24 @@ wheel), struck again at that fraction of the first stroke's velocity,
 **Roll speed** strokes a second (both mallets together; 12 by default),
 each stroke up to 3 % early or late, the second mallet landing 3 % of the
 length nearer the centre and on the other side of the centre line.
-A note's own MPE slide rolls it alone, and so does a firm press into a
-held key (aftertouch past half way, so a finger at rest rolls nothing): its
-strokes as hard as the key is pressed, up to 0.8 of the hardest at full
-press, whichever is the harder. Letting go of the key ends the roll; the bar then rings away by itself (tested: the
+Letting go of the key ends the roll; the bar then rings away by itself (tested: the
 strokes counted, the rolled note held, the released one dying).
+
+A firm press into a held key (aftertouch past half way, so a finger at
+rest changes nothing) does not roll it: it bows the bar, as a marimbist
+draws a bass bow across a bar's end, and strikes it no more. The bow
+(`forte/press.h` Sustainer, as the vibraphone's) senses the fundamental's
+velocity at the end through a band-pass on the note and pushes in step with
+it through an amplifier that saturates at the press: a full press holds the
+fundamental at 0.7 of the swing the hardest stroke gives it, however hard
+the bar was struck, so a soft note swells to the press's level and a hard
+one settles to it. (Held, the tube is kept full and sounds the bar louder
+than a stroke's swing ever gets it, since a struck bar has given much of its
+swing away by the time its tube fills: 0.7 brings a full press within a few
+dB of the hardest stroke at its loudest.) The fundamental's decay rate,
+which sets the bow's grip, is measured as it rings, the tube's share in it.
+A note's own MPE slide moves its mallets from the knob's point towards the
+bar's end, taken as it strikes.
 
 ### 8. The engine
 
