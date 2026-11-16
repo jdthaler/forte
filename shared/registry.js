@@ -14,7 +14,7 @@
 // `plugin.ready` marks an instrument whose native port is built and released as plugins (it has
 // a native/instruments/<id>/ folder); the landing page lists those under Plugins.
 
-export const FORTE_VERSION = '0.53.0';
+export const FORTE_VERSION = '0.54.0';
 
 // Where each instrument's page keeps its settings in the browser (the Combinations page reads an
 // instrument's settings from there, as it was left on its own page).
@@ -55,7 +55,7 @@ export const FILTERS = [
 
 export const INSTRUMENTS = [
   {
-    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.16.0', trim: 3,
+    id: 'piano', name: 'Ribbon Piano', section: 'traditional', ready: true, version: '0.17.0', trim: 3,
     plugin: { code: 'Ribn', ready: true },
     after: 'the concert grand',
     tagline: 'Stiff strings, felt hammers and a shared bridge — then swap the strings for square bars, triangular bars or twisting ribbons.',
@@ -64,7 +64,7 @@ export const INSTRUMENTS = [
     accent: '#5aa9ff',
   },
   {
-    id: 'harpsichord', name: 'Harpsichord', section: 'traditional', ready: true, version: '0.12.0', trim: -2,
+    id: 'harpsichord', name: 'Harpsichord', section: 'traditional', ready: true, version: '0.13.0', trim: -2,
     plugin: { code: 'Hrps', ready: true },
     after: 'the Flemish double-manual harpsichord and virginals (Ruckers, 1600s), and Bach’s gut-strung lute-harpsichord',
     tagline: 'A quill bends, slips off the string and plucks it; stops change where and how it plucks.',
@@ -91,7 +91,7 @@ export const INSTRUMENTS = [
     accent: '#ff9fb0',
   },
   {
-    id: 'vibraphone', name: 'Vibraphone', section: 'traditional', ready: true, version: '0.13.0', trim: 3,
+    id: 'vibraphone', name: 'Vibraphone', section: 'traditional', ready: true, version: '0.14.0', trim: 3,
     plugin: { code: 'Vibe', ready: true },
     after: 'the Deagan vibraharp (1927)',
     tagline: 'Undercut aluminium bars over tuned tubes, with motor-driven discs that open and close the resonators.',
@@ -100,7 +100,7 @@ export const INSTRUMENTS = [
     accent: '#5fd0c8',
   },
   {
-    id: 'carillon', name: 'Carillon', section: 'traditional', ready: true, version: '0.9.0', trim: 3.5,
+    id: 'carillon', name: 'Carillon', section: 'traditional', ready: true, version: '0.10.0', trim: 3.5,
     plugin: { code: 'Carl', ready: true },
     after: 'the Flemish carillon (Hemony bells, 1650s)',
     tagline: 'Bronze bells tuned partial by partial; the note you hear, the strike note, is a virtual pitch made by partials an octave and more above it.',
@@ -109,7 +109,7 @@ export const INSTRUMENTS = [
     accent: '#d9b45f',
   },
   {
-    id: 'celesta', name: 'Celesta', section: 'traditional', ready: true, version: '0.8.0', trim: 0.5,
+    id: 'celesta', name: 'Celesta', section: 'traditional', ready: true, version: '0.9.0', trim: 0.5,
     plugin: { code: 'Cele', ready: true },
     after: 'the Mustel celesta (Paris, 1886)',
     tagline: 'Felt hammers strike thin steel bars, each over a wooden box tuned to it: the bell-like sugar-plum sound.',
@@ -118,7 +118,7 @@ export const INSTRUMENTS = [
     accent: '#b9a4ff',
   },
   {
-    id: 'kalimba', name: 'Kalimba', section: 'traditional', ready: true, version: '0.7.0', trim: -4.5,
+    id: 'kalimba', name: 'Kalimba', section: 'traditional', ready: true, version: '0.8.0', trim: -4.5,
     plugin: { code: 'Kali', ready: true },
     after: 'the African mbira and Hugh Tracey’s kalimba (1950s)',
     tagline: 'Steel tines clamped behind a bridge and plucked by the thumbs, over a wooden box whose sound hole a finger can cover.',
@@ -127,7 +127,7 @@ export const INSTRUMENTS = [
     accent: '#d9a066',
   },
   {
-    id: 'steelpan', name: 'Steel Pan', section: 'traditional', ready: true, version: '0.7.0', trim: 2.5,
+    id: 'steelpan', name: 'Steel Pan', section: 'traditional', ready: true, version: '0.8.0', trim: 2.5,
     plugin: { code: 'Stee', ready: true },
     after: 'the Trinidad steelpan (1940s)',
     tagline: 'Domed note areas sunk into an oil drum, hammered until octave and twelfth ring true; struck hard, the dome pumps the octave out of the fundamental.',
@@ -180,7 +180,7 @@ export const INSTRUMENTS = [
     accent: '#d9874a',
   },
   {
-    id: 'marimba', name: 'Marimba and Xylophone', section: 'traditional', ready: true, version: '0.3.0', trim: 4.5,
+    id: 'marimba', name: 'Marimba and Xylophone', section: 'traditional', ready: true, version: '0.4.0', trim: 4.5,
     plugin: { code: 'Mrmb', ready: true },
     after: 'the concert marimba and the orchestral xylophone',
     tagline: 'Rosewood bars, undercut so their partials land on a chord (1 : 4 : 10 for the marimba, a twelfth for the xylophone), over stopped tubes that drink the sound out of them. Roll a held note to sustain it.',
@@ -189,7 +189,7 @@ export const INSTRUMENTS = [
     accent: '#c8784a',
   },
   {
-    id: 'gamelan', name: 'Gamelan', section: 'traditional', ready: true, version: '0.3.0', trim: 2,
+    id: 'gamelan', name: 'Gamelan', section: 'traditional', ready: true, version: '0.4.0', trim: 2,
     plugin: { code: 'Gmln', ready: true },
     after: 'the gamelan of Java and Bali',
     tagline: 'Bronze bars over bamboo tubes and bossed gongs, in pélog and sléndro; in Bali every bar has a partner tuned a few hertz away, so each note shimmers as the pair beats.',
@@ -198,7 +198,7 @@ export const INSTRUMENTS = [
     accent: '#e0a43c',
   },
   {
-    id: 'cimbalom', name: 'Cimbalom', section: 'traditional', ready: true, version: '0.2.0', trim: 7,
+    id: 'cimbalom', name: 'Cimbalom', section: 'traditional', ready: true, version: '0.3.0', trim: 7,
     plugin: { code: 'Cimb', ready: true },
     after: 'Schunda’s concert cimbalom (Budapest, 1874) and the hammered dulcimer',
     tagline: 'Courses of four strings struck by hammers thrown from the player’s hands: their slight mistuning makes each note bloom and fade in two stages, and on the dulcimer the bridge splits each string into two notes a fifth apart.',
@@ -216,7 +216,7 @@ export const INSTRUMENTS = [
     accent: '#9cc8e8',
   },
   {
-    id: 'tubular', name: 'Tubular Bells', section: 'traditional', ready: true, version: '0.3.0', trim: 7.5,
+    id: 'tubular', name: 'Tubular Bells', section: 'traditional', ready: true, version: '0.4.0', trim: 7.5,
     plugin: { code: 'Tubu', ready: true },
     after: 'orchestral chimes',
     tagline: 'Brass tubes hung from a frame and struck on their caps. The pitch you hear is played by no mode of the tube: it is the note whose harmonics modes 4, 5 and 6 nearly are, an octave below the fourth.',
@@ -225,7 +225,7 @@ export const INSTRUMENTS = [
     accent: '#e8cf7a',
   },
   {
-    id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.14.0', trim: 3.5,
+    id: 'grand', name: 'Electric Grand', section: 'electric', ready: true, version: '0.15.0', trim: 3.5,
     plugin: { code: 'EGrd', ready: true },
     after: 'the Yamaha CP-70',
     tagline: 'A real piano action with no soundboard: piezo pickups under the bridge hear the strings directly.',
@@ -234,7 +234,7 @@ export const INSTRUMENTS = [
     accent: '#7fb2ff',
   },
   {
-    id: 'organ', name: 'Tonewheel Organ', section: 'electric', ready: true, version: '0.13.0', trim: 2,
+    id: 'organ', name: 'Tonewheel Organ', section: 'electric', ready: true, version: '0.14.0', trim: 2,
     plugin: { code: 'Tonw', ready: true },
     after: 'the Hammond B-3 and Leslie',
     tagline: '91 spinning gear-driven wheels, bouncing key contacts, a scanner on an LC delay line and a rotating Doppler horn.',
@@ -243,7 +243,7 @@ export const INSTRUMENTS = [
     accent: '#f0b35a',
   },
   {
-    id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.15.0', trim: -3,
+    id: 'tines', name: 'Tine Piano', section: 'electric', ready: true, version: '0.16.0', trim: -3,
     plugin: { code: 'Tine', ready: true },
     after: 'the Fender Rhodes',
     tagline: 'Each key an asymmetric tuning fork of steel tine and brass bar, heard through a nonlinear magnetic pickup.',
@@ -252,7 +252,7 @@ export const INSTRUMENTS = [
     accent: '#ef5a4a',
   },
   {
-    id: 'reeds', name: 'Reed Piano', section: 'electric', ready: true, version: '0.14.0', trim: -1,
+    id: 'reeds', name: 'Reed Piano', section: 'electric', ready: true, version: '0.15.0', trim: -1,
     plugin: { code: 'Reed', ready: true },
     after: 'the Wurlitzer 200A',
     tagline: 'Struck steel reeds tuned with solder, sensed as one plate of a charged capacitor.',
@@ -270,7 +270,7 @@ export const INSTRUMENTS = [
     accent: '#c6e36a',
   },
   {
-    id: 'pianet', name: 'Sticky-Pad Piano', section: 'electric', ready: true, version: '0.13.0', trim: -4.5,
+    id: 'pianet', name: 'Sticky-Pad Piano', section: 'electric', ready: true, version: '0.14.0', trim: -4.5,
     plugin: { code: 'Pnet', ready: true },
     after: 'the Hohner Pianet',
     tagline: 'No hammers at all: tacky pads grab each reed and let it go.',
@@ -279,7 +279,7 @@ export const INSTRUMENTS = [
     accent: '#ffcf70',
   },
   {
-    id: 'trautonium', name: 'Trautonium', section: 'electric', ready: true, version: '0.4.0', trim: -4,
+    id: 'trautonium', name: 'Trautonium', section: 'electric', ready: true, version: '0.5.0', trim: -4,
     plugin: { code: 'Trau', ready: true },
     after: 'Friedrich Trautwein’s Trautonium (1930) and Oskar Sala’s Mixtur-Trautonium',
     tagline: 'A neon lamp flashing as its capacitor charges through a wire pressed onto a rail: the finger slides the pitch, lamps that fire on every n-th flash add the subharmonics, and every flash rings fixed resonant circuits like a voice’s formants.',
@@ -288,7 +288,7 @@ export const INSTRUMENTS = [
     accent: '#7ee0ff',
   },
   {
-    id: 'telharmonium', name: 'Telharmonium', section: 'electric', ready: true, version: '0.3.0', trim: -4.5,
+    id: 'telharmonium', name: 'Telharmonium', section: 'electric', ready: true, version: '0.4.0', trim: -4.5,
     plugin: { code: 'Telh', ready: true },
     after: 'Thaddeus Cahill’s Telharmonium (1906), the electric music plant on Broadway',
     tagline: 'Alternators on twelve geared shafts make every note and its harmonics, stops mix them on shared buses that rob one another, and telephone lines carry the music to receivers with paper horns.',
@@ -315,7 +315,7 @@ export const INSTRUMENTS = [
     accent: '#ffc46b',
   },
   {
-    id: 'cellulophone', name: 'Cellulophone', section: 'electric', ready: true, version: '0.3.0', trim: -7,
+    id: 'cellulophone', name: 'Cellulophone', section: 'electric', ready: true, version: '0.4.0', trim: -7,
     plugin: { code: 'Cell', ready: true },
     vibrates: 'circuits', notes: 'hold',
     after: 'Pierre Toulon’s Cellulophone (Paris, 1927), the photoelectric organ',
@@ -342,7 +342,7 @@ export const INSTRUMENTS = [
     accent: '#9fe7ff',
   },
   {
-    id: 'clavicylinder', name: 'Clavicylinder', section: 'experimental', ready: true, version: '0.5.0', trim: 2,
+    id: 'clavicylinder', name: 'Clavicylinder', section: 'experimental', ready: true, version: '0.6.0', trim: 2,
     plugin: { code: 'Clcy', ready: true },
     after: "Ernst Chladni's clavicylinder (1800)",
     tagline: 'Iron bars pressed by their keys against a turning wet glass cylinder: cloth sticks and slips on the glass and keeps each bar singing as long as the key is down.',
@@ -351,7 +351,7 @@ export const INSTRUMENTS = [
     accent: '#9fd8c4',
   },
   {
-    id: 'hurdygurdy', name: 'Hurdy-Gurdy', section: 'experimental', ready: true, version: '0.3.0', trim: -2.5,
+    id: 'hurdygurdy', name: 'Hurdy-Gurdy', section: 'experimental', ready: true, version: '0.4.0', trim: -2.5,
     plugin: { code: 'Hrdy', ready: true },
     after: 'the French vielle à roue (18th century), in G/C',
     tagline: 'A cranked, rosined wheel bows the melody strings and the drones; turn it faster and the trompette lifts its loose bridge, the chien, which buzzes on the soundboard in time with the hand.',
@@ -387,7 +387,7 @@ export const INSTRUMENTS = [
     accent: '#f08a8a',
   },
   {
-    id: 'cristal', name: 'Cristal Baschet', section: 'experimental', ready: true, version: '0.3.0', trim: 0,
+    id: 'cristal', name: 'Cristal Baschet', section: 'experimental', ready: true, version: '0.4.0', trim: 0,
     plugin: { code: 'Cris', ready: true },
     after: 'Bernard and François Baschet’s cristal (Paris, 1952)',
     tagline: 'Wet fingers stroke glass rods, and stick–slip friction bends the steel stem each rod is clamped on at its note; the stems’ collector carries it to fibreglass cones, a cut-steel flame and long steel whiskers that ring in sympathy.',
@@ -404,7 +404,7 @@ export const INSTRUMENTS = [
     accent: '#ff8a3d',
   },
   {
-    id: 'gongs', name: 'Gong Keyboard', section: 'phenomena', ready: true, version: '0.13.0', trim: 7,
+    id: 'gongs', name: 'Gong Keyboard', section: 'phenomena', ready: true, version: '0.14.0', trim: 7,
     plugin: { code: 'Gong', ready: true },
     tagline: 'Thin plates whose stiffness grows with amplitude: strike softly for a bell, hard for a crash.',
     physics: 'Von Kármán plates · wave turbulence',
@@ -412,7 +412,7 @@ export const INSTRUMENTS = [
     accent: '#e6c15a',
   },
   {
-    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.11.0', trim: 14,
+    id: 'blackhole', name: 'Black-Hole Keyboard', section: 'phenomena', ready: true, version: '0.12.0', trim: 14,
     plugin: { code: 'BHol', ready: true },
     tagline: 'Every key a Kerr black hole, ringing in quasinormal modes computed from the Teukolsky equation.',
     physics: 'General relativity · quasinormal modes',
@@ -420,7 +420,7 @@ export const INSTRUMENTS = [
     accent: '#b18cff',
   },
   {
-    id: 'quantum', name: 'Quantum Keyboard', section: 'phenomena', ready: true, version: '0.11.0', trim: 9.5,
+    id: 'quantum', name: 'Quantum Keyboard', section: 'phenomena', ready: true, version: '0.12.0', trim: 9.5,
     plugin: { code: 'Qntm', ready: true },
     tagline: 'Each key a wavepacket in a potential well: notes that collapse, return an octave up as the packet splits, and revive on the beat.',
     physics: 'Schrödinger equation · quantum revivals',
@@ -476,7 +476,7 @@ export const INSTRUMENTS = [
     accent: '#9fb4ff',
   },
   {
-    id: 'showers', name: 'Collider Showers', section: 'devices', ready: true, version: '0.5.0', trim: 4,
+    id: 'showers', name: 'Collider Showers', section: 'devices', ready: true, version: '0.6.0', trim: 4,
     plugin: { code: 'Shwr', ready: true },
     tagline: 'Every key a crystal of a collider\'s calorimeter, rung by the heat of the particle shower inside it: deeper showers for higher energies, a darker note.',
     physics: 'Calorimetry · electromagnetic and hadronic showers · the thermo-acoustic effect',
@@ -484,7 +484,7 @@ export const INSTRUMENTS = [
     accent: '#8fd4ff',
   },
   {
-    id: 'whistlers', name: 'Whistlers', section: 'phenomena', ready: true, version: '0.5.0', trim: 4.5,
+    id: 'whistlers', name: 'Whistlers', section: 'phenomena', ready: true, version: '0.6.0', trim: 4.5,
     plugin: { code: 'Whis', ready: true },
     tagline: 'Lightning\'s radio crack, drawn out along the Earth\'s magnetic field into falling tones: every key a field line, its whistler\'s nose the note.',
     physics: 'Magnetospheric physics · whistler-mode dispersion · the plasmasphere',
@@ -508,7 +508,7 @@ export const INSTRUMENTS = [
     accent: '#ff5a6e',
   },
   {
-    id: 'project8', name: 'Project 8', section: 'devices', ready: true, version: '0.5.0', trim: -2,
+    id: 'project8', name: 'Project 8', section: 'devices', ready: true, version: '0.6.0', trim: -2,
     plugin: { code: 'Proj', ready: true },
     tagline: 'Every key a magnetic trap holding one electron, heard by its cyclotron radiation as the Project 8 neutrino-mass experiment hears it: a tone that chirps up as the electron cools, wavers as it bounces, and stops when it escapes.',
     physics: 'Cyclotron radiation emission spectroscopy · relativistic radiation reaction · magnetic bottles',
@@ -516,7 +516,7 @@ export const INSTRUMENTS = [
     accent: '#c99bff',
   },
   {
-    id: 'abracadabra', name: 'ABRACADABRA', section: 'devices', ready: true, version: '0.7.0', trim: 3,
+    id: 'abracadabra', name: 'ABRACADABRA', section: 'devices', ready: true, version: '0.8.0', trim: 3,
     plugin: { code: 'Abra', ready: true },
     tagline: 'Every key a universe whose dark matter is an axion of that key\'s mass, heard as the ABRACADABRA experiment would hear it: a toroidal magnet turns the axion into a faint flux through a pickup loop, a tone that swells and fades as the halo\'s waves drift in and out of step, over the hiss of the SQUID.',
     physics: 'Axion electrodynamics · the Standard Halo Model · SQUID readout',
@@ -524,7 +524,7 @@ export const INSTRUMENTS = [
     accent: '#7fd8c4',
   },
   {
-    id: 'tess', name: 'TESS', section: 'devices', ready: true, version: '0.4.1', trim: 7,
+    id: 'tess', name: 'TESS', section: 'devices', ready: true, version: '0.5.0', trim: 7,
     plugin: { code: 'Tess', ready: true },
     tagline: 'Every key a planet crossing its star, its light played as NASA\'s Transiting Exoplanet Survey Satellite records it, sped up until each year is a note: the dips are the waveform, the star\'s limb darkening rounds them, and the photon noise hisses under faint stars.',
     physics: 'Exoplanet transits · Kepler\'s third law · limb darkening · photon-counting noise',
@@ -532,7 +532,7 @@ export const INSTRUMENTS = [
     accent: '#ff7b6b',
   },
   {
-    id: 'cuore', name: 'CUORE', section: 'devices', ready: true, version: '0.5.0', trim: 11,
+    id: 'cuore', name: 'CUORE', section: 'devices', ready: true, version: '0.6.0', trim: 11,
     plugin: { code: 'Cuor', ready: true },
     tagline: 'Every key one of CUORE\'s tellurium dioxide crystals, ten thousandths of a degree above absolute zero under the Gran Sasso: its heater fires pulses of heat at the note\'s rate, sped up, and a germanium thermistor turns each into a voltage, rising as the electrons warm and fading as the crystal cools through its Teflon holders.',
     physics: 'Cryogenic calorimetry · Debye\'s T³ heat capacity · hopping conduction in NTD germanium · electrothermal feedback',
@@ -548,7 +548,7 @@ export const INSTRUMENTS = [
     accent: '#a98bff',
   },
   {
-    id: 'chladni', name: 'Chladni Plate', section: 'phenomena', ready: true, version: '0.3.0', trim: -3.5,
+    id: 'chladni', name: 'Chladni Plate', section: 'phenomena', ready: true, version: '0.4.0', trim: -3.5,
     plugin: { code: 'Chla', ready: true },
     tagline: 'Every key a square brass plate clamped at its centre and bowed at its edge, as Chladni bowed his: a finger on a nodal line picks the figure, and sand on the plate runs to the lines that stay still.',
     physics: 'Kirchhoff plates · Rayleigh–Ritz modes · stick–slip bowing · Chladni figures',
@@ -564,7 +564,7 @@ export const INSTRUMENTS = [
     accent: '#f4d438',
   },
   {
-    id: 'planets', name: 'Ringing Planets', section: 'phenomena', ready: true, version: '0.2.0', trim: 12.5,
+    id: 'planets', name: 'Ringing Planets', section: 'phenomena', ready: true, version: '0.3.0', trim: 12.5,
     plugin: { code: 'Plnt', ready: true },
     after: 'the free oscillations of the Earth',
     tagline: 'Every key the whole Earth, Mars or Moon ringing after a great quake, sped up until its gravest tone, the hour-long football mode, is the note: hundreds of standing waves of the planet, each split by its spin into tones that beat.',
@@ -573,7 +573,7 @@ export const INSTRUMENTS = [
     accent: '#5fb3a1',
   },
   {
-    id: 'pulsars', name: 'Pulsars', section: 'phenomena', ready: true, version: '0.3.0', trim: -0.5,
+    id: 'pulsars', name: 'Pulsars', section: 'phenomena', ready: true, version: '0.4.0', trim: -0.5,
     plugin: { code: 'Puls', ready: true },
     tagline: 'Every key a spinning neutron star whose radio beam sweeps past the Earth at the note, as fast as the millisecond pulsars spin: the shape of the beam and where our sightline cuts it set the tone, and the Galaxy\'s plasma smears and sweeps each pulse on its way.',
     physics: 'Neutron stars · the rotating vector model · interstellar dispersion and scattering · dedispersion',
@@ -589,7 +589,7 @@ export const INSTRUMENTS = [
     accent: '#e8a65c',
   },
   {
-    id: 'nmr', name: 'NMR Spin Echo', section: 'devices', ready: true, version: '0.3.0', trim: 6.5,
+    id: 'nmr', name: 'NMR Spin Echo', section: 'devices', ready: true, version: '0.4.0', trim: 6.5,
     plugin: { code: 'Nmrs', ready: true },
     tagline: 'Every key a tube of liquid in an NMR magnet, its field set so the sample\'s lowest line is the note: a pulse tips the protons\' spins, each chemical group rings at its own shift, so ethanol is a chord whose J couplings beat, the note fades as the spins drift out of step, and the pedal\'s π pulse calls them back as Hahn\'s echo.',
     physics: 'Nuclear magnetic resonance · chemical shifts and J couplings, solved exactly · Hahn echoes and CPMG trains · T₁ and T₂',
