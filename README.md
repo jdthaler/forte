@@ -122,24 +122,27 @@ black hole, where there is nothing to hold.
 **Enable MIDI** connects a MIDI keyboard (Chrome, Edge and Firefox;
 Safari, and every browser on iPhone or iPad, has no Web MIDI, so the button
 is hidden there),
-including velocity (with a Soft, Normal or Hard curve), the sustain,
+including velocity (with a Soft, Normal or Hard curve, in Global settings'
+Velocity section), the sustain,
 sostenuto and soft pedals, aftertouch and, where it means something, the
 mod wheel and pitch bend. Once MIDI is on, every other instrument page
 turns it on by itself.
 
 **The MIDI devices drawer**, at the right of every page where the browser
-has Web MIDI (Chrome, Edge, Firefox; not Safari, iPhone or iPad), lists the
-devices plugged in, each with a lamp that lights as it plays, and below
-them a Seaboard RISE's panel and an FC-300's (below), then **the MIDI
-settings**. Once MIDI is on, its status in the header opens it (on a phone,
-as a sheet from the right); before, its *Enable MIDI* button turns MIDI
-on. On a desktop it stays as you leave it, open at first once a device is
-plugged in, and folds to a rail like the drawer at the left. The MIDI
-settings are the velocity curve (Touch), MPE (below), Octave and Transpose. Octave and
+has Web MIDI (Chrome, Edge, Firefox; not Safari, iPhone or iPad), is the
+page's MIDI status: it lists the devices plugged in, each with a lamp that
+lights as it plays, under the **MPE switch** (below), then a Seaboard
+RISE's panel and an FC-300's (below), then **the MIDI settings**, Octave
+and Transpose. Folded to a rail, it keeps one lamp that lights as any
+device plays. Before MIDI is on, *Enable MIDI* in the header and in the
+drawer turns it on; after, the header has nothing of MIDI's. On a phone it
+opens as a sheet from the MIDI button at the right of the header. On a
+desktop it stays as you leave it, open at first once a device is plugged
+in, and folds to a rail like the drawer at the left. Octave and
 Transpose move the MIDI keys up to four octaves and twelve semitones either
 way, so a 25-key controller reaches all 88 keys, or a piece fingered in C
 sounds in D. Every page keeps what you set there, and while the keys are
-moved the status says so, in the instrument's colour. A note held while you change them ends where it
+moved the drawer says so, in the instrument's colour. A note held while you change them ends where it
 began. The keys on the screen and the computer keys play what they show
 (`←`/`→` move the computer keys). The plugins have the same two as their
 Transpose and Octave parameters, which the Forte app keeps when you change
@@ -150,13 +153,19 @@ Seaboard, a LinnStrument, an Expressive E Osmose) bends, slides and presses
 each note alone, wherever the instrument can: a reed, a pipe, a string or a
 bow bends; a struck string, bar or bell bends only as far as a hand on it
 takes it (a semitone at most, a few cents for most bars), and its slide
-(CC74) moves what the mod wheel moves, for that note. MPE in the MIDI settings is on
-Auto, which turns MPE on when the controller announces it (its
-MPE Configuration Message) and leaves any other keyboard as it was; On
-reads channels 2–16 as MPE without the announcement, and Off never does.
-The plugins have the same choice as their MPE parameter, and also take
-CLAP's per-note expressions. A Seaboard plays as MPE from the moment MIDI
-connects it, since it may not announce itself.
+(CC74) moves what the mod wheel moves, for that note. The MPE switch, at
+the top of the MIDI devices drawer, is one switch for every instrument and
+page. On, MPE is on when the controller announces it (its MPE
+Configuration Message), and any other keyboard plays as it was. Off, a
+controller that sends MPE plays notes alone, each as hard as it was
+struck: its glide, slide and press move nothing, neither its own note nor
+all of them. (The instrument's Expression switches, in Global settings,
+turn each of those off for one instrument and its presets.) The plugins
+have it as their MPE parameter, Auto, On or Off, where On reads channels
+2–16 as MPE without the announcement (a host may not pass it on: in
+MainStage, choose On), and Off leaves CLAP's per-note expressions out too.
+A Seaboard plays as MPE from the moment MIDI connects it, since it may
+not announce itself.
 
 **Faders and an XY pad:** a ROLI Seaboard RISE's three touch faders and its
 XY pad (CC 107, 109 and 111, and 113 and 114 for X and Y, as it sends them
@@ -409,9 +418,9 @@ play the plugins in a DAW with a small buffer.
 
 Each instrument page reads top to bottom. At the top, the instrument's
 name opens the menu of every instrument (and Forte's home page), next to
-**How it works**. At the left is the drawer, with the presets and what
-every instrument has alike (below), and at the right, where the browser
-has Web MIDI, the MIDI devices drawer. In the middle are the views, pictures
+**How it works**. At the left is the drawer of **Global settings**, with
+the presets and what every instrument has alike (below), and at the right,
+where the browser has Web MIDI, the MIDI devices drawer. In the middle are the views, pictures
 of the physics as it plays, and below them the instrument's own controls,
 grouped. Each has a bar on top: the views' turns each view on or off and
 holds the mode, the controls' turns each group of controls on or off.
@@ -425,9 +434,11 @@ Explanations wait behind ⓘ buttons. The button at the left of that bar
 folds the keys away when a MIDI keyboard is doing the playing (the computer
 keys still play), and brings them back.
 
-**The drawer** holds, from the top, the **Presets** menu with its Morph switch,
-then the groups every instrument has: Output (the room, the venue and the volume),
-Tuning and Expression. Each folds away, and the page remembers which. On a desktop it is a column at the left, which its
+**Global settings**, the drawer at the left, holds, from the top, the **Presets**
+menu with its Morph switch, then what every instrument has: Output (the room, the
+venue and the volume), **Velocity** (the computer keys' velocity, the one above the
+keys too, and with Web MIDI the MIDI keys' velocity curve, Soft, Normal or Hard,
+which every instrument shares), Tuning and Expression. Each folds away, and the page remembers which. On a desktop it is a column at the left, which its
 chevron folds to a thin rail (a tap on the rail opens it again); in a
 narrower window or on an iPad held upright it opens over the views from that
 rail, and on a phone from the button at the left of the header. Over the
@@ -568,7 +579,7 @@ A plugin's window also shows the instrument's views from its page: press **Views
 the pedal, and they draw what the plugin plays, whether the notes come from the DAW, a MIDI
 keyboard or the window's keys.
 
-In a plugin's window (and the Forte app's) the drawer at the left holds Presets (the Morph switch, with the top's and the bottom's menus, the slider between them, Swap and Keep this mix; the Presets menu itself stays at the top of the window, naming the preset the controls are set to, or Custom configuration), Output, Tuning, Expression, MIDI and CPU, as a page's two do (the host has the MIDI devices, so there is no drawer of them), and the keys fold away from the button at the left of their bar. Its Presets menu has your own presets too: *Save these settings…* writes
+In a plugin's window (and the Forte app's) Global settings, the drawer at the left, holds Presets (the Morph switch, with the top's and the bottom's menus, the slider between them, Swap and Keep this mix; the Presets menu itself stays at the top of the window, naming the preset the controls are set to, or Custom configuration), Output, Velocity (the computer keys' and the MIDI keys' velocity curve), Tuning, Expression, MIDI (MPE, Transpose, Octave) and CPU, as a page's two do (the host has the MIDI devices, so there is no drawer of them), and the keys fold away from the button at the left of their bar. Its Presets menu has your own presets too: *Save these settings…* writes
 one as a file in a presets folder for that instrument (`~/Library/Audio/Presets/Forte/<id>` on a
 Mac, `%APPDATA%\Forte\Presets\<id>` on Windows, `~/.local/share/forte/presets/<id>` on
 Linux), and *Open the presets folder* shows it, so a file saved on the site can go there too.

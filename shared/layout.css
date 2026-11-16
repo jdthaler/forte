@@ -57,9 +57,11 @@ body[data-instrument] #start.running,
 body[data-instrument] #start:not(.running) ~ :is(#cpu, #voices),
 body[data-instrument] #start:not(.running) ~ .forte-load > :is(#cpu, #voices) { display: none; }
 .pill[hidden] { display: none; }
-/* the MIDI status opens the MIDI settings once MIDI is on (shared/midi.js midiMenu): the velocity
-   curve, MPE, Octave and Transpose; it says how far the keys are moved, in the accent, while they are.
-   It is a dropdown's button, as every one is (below) */
+/* where a page has no MIDI devices drawer, the MIDI status opens the MIDI settings once MIDI is on
+   (shared/midi.js midiMenu): the velocity curve, MPE, Octave and Transpose; it says how far the keys
+   are moved, in the accent, while they are. It is a dropdown's button, as every one is (below). With
+   the drawer, that is the status (shared/layout.js): the header has none */
+body.has-midi-drawer #midi { display: none; }
 .forte-midi-pill { cursor: pointer; white-space: nowrap; }
 body[data-instrument] .forte-midi-pill {
   --face: linear-gradient(180deg, #3a3a42, #28282e 55%, #1e1e23);
@@ -935,9 +937,10 @@ details.forte-drawer-own:not([open]) > summary::after { content: "▸"; }
 .forte-fader:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (pointer: coarse) { .forte-fader { --cap: 18px; width: 44px; height: 128px; } .forte-fader > i { width: 34px; margin-left: -17px; } }
 /* Morph's switch: a slide switch, its cap sliding along a slot cut into the panel to light Morph */
-.forte-morph-switch { display: inline-flex; align-items: center; gap: 8px; flex: none; }
-.forte-morph-switch > span { color: var(--muted); cursor: pointer; user-select: none; -webkit-user-select: none; }
-.forte-morph-switch.on > span { color: var(--accent); text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 45%, transparent); }
+/* (and MPE's, at the head of the MIDI devices: shared/midi.js mpeSwitch) */
+:is(.forte-morph-switch, .forte-mpe-switch) { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+:is(.forte-morph-switch, .forte-mpe-switch) > span { color: var(--muted); cursor: pointer; user-select: none; -webkit-user-select: none; }
+:is(.forte-morph-switch, .forte-mpe-switch).on > span { color: var(--accent); text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 45%, transparent); }
 body[data-instrument] .forte-slide {
   position: relative; width: 42px; height: 22px; min-height: 0; padding: 0; flex: none; cursor: pointer; border: 1px solid #060608; border-radius: 7px;
   background: linear-gradient(180deg, #08080a, #141417); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.75), 0 1px 0 rgb(255 255 255 / 0.06);
@@ -964,7 +967,8 @@ body[data-instrument] .forte-slide:focus-visible { outline: 2px solid var(--acce
 .forte-drawer .param.scala button { width: 100%; }
 /* the MIDI devices plugged in: a lamp lit as each sends, its name, what it is here */
 .forte-midi-devices { display: grid; gap: 7px; padding: 8px 0 10px; }
-.forte-midi-devices > h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.forte-midi-devices-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 22px; }
+.forte-midi-devices-head > h3 { margin: 0; font-size: 13px; font-weight: 600; }
 .forte-midi-devices ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .forte-midi-devices ul[hidden], .forte-midi-devices > [hidden] { display: none; }
 .forte-midi-devices li { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; min-width: 0; font-size: 12.5px; }
@@ -973,6 +977,13 @@ body[data-instrument] .forte-slide:focus-visible { outline: 2px solid var(--acce
 .forte-midi-lamp { width: 8px; height: 8px; border-radius: 50%; background: #3b3530; box-shadow: inset 0 1px 1px rgb(0 0 0 / 0.6); }
 .forte-midi-lamp.on { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
 .forte-midi-devices > p { margin: 0; font-size: 11.5px; line-height: 1.4; color: var(--muted); }
+.forte-midi-devices > p.forte-midi-shift { color: var(--accent); } /* how far the MIDI keys are moved (Octave, Transpose) */
+/* the rail's lamp for every device (shared/midi.js midiLamp): the MIDI status at a glance */
+.forte-drawer-head > .forte-midi-any { flex: none; }
+.forte-drawer.is-open .forte-drawer-head > .forte-midi-any { display: none; } /* open, each device has its own */
+/* Velocity: the computer keys' and the MIDI keys' (shared/midi.js touchControl), while there is either */
+.forte-drawer-velocity:not(:has(.param)) { display: none; }
+.forte-drawer .param.forte-touch select { width: 100%; }
 .forte-midi-devices > button { justify-self: start; }
 /* the MIDI settings: a name and a dropdown on each line */
 .forte-midi-settings { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 12px; align-items: center; padding: 4px 0 2px; }
@@ -980,8 +991,10 @@ body[data-instrument] .forte-slide:focus-visible { outline: 2px solid var(--acce
 .forte-midi-settings label > span { color: var(--muted); }
 .forte-midi-settings select { min-width: 0; width: 100%; }
 /* the presets' opener in the header, and the shade over the page: only where a drawer opens over it */
-body[data-instrument] .forte-drawer-open { display: none; }
-.forte-drawer-open svg { width: 18px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+body[data-instrument] :is(.forte-drawer-open, .forte-midi-open) { display: none; }
+:is(.forte-drawer-open, .forte-midi-open) svg { width: 18px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+.forte-midi-open svg { width: 18px; height: 18px; }
+.forte-midi-open svg .pin { fill: currentColor; stroke: none; }
 .forte-drawer-shade { display: none; }
 /* a narrower window: the rails stay, and a drawer opens over the views and the controls */
 @media (max-width: 1099px) {
@@ -993,7 +1006,7 @@ body[data-instrument] .forte-drawer-open { display: none; }
   body.drawer-over .forte-drawer-shade.is-open { display: block; position: absolute; z-index: 31; inset: 0; background: rgb(0 0 0 / 0.3); }
 }
 /* an instrument page in a plugin's window: no drawer (the window has its own controls) */
-html.in-plugin :is(.forte-drawer, .forte-drawer-shade, .forte-drawer-open, .forte-rise, .forte-fc300) { display: none; }
+html.in-plugin :is(.forte-drawer, .forte-drawer-shade, .forte-drawer-open, .forte-midi-open, .forte-rise, .forte-fc300) { display: none; }
 html.in-plugin body.has-drawer > main { grid-template-columns: minmax(0, 1fr); }
 html.in-plugin body.has-drawer > main > * { grid-column: 1; }
 
@@ -1114,13 +1127,13 @@ body[data-instrument] .forte-rise-dim > input.forte-rise-switch:focus-visible { 
 .forte-rise-srow output { text-align: right; font-variant-numeric: tabular-nums; color: var(--accent); }
 .forte-rise-snote { margin: 2px 0 0; font-size: 10.5px; color: var(--muted); }
 
-/* phones: each drawer is a sheet over the page down to the keys, the presets' from the header's
-   button at the left, the MIDI devices' from the MIDI status, at the right */
+/* phones: each drawer is a sheet over the page down to the keys, from the header's buttons: Global
+   settings' at the left, the MIDI devices' (a MIDI socket) at the right */
 @media (max-width: 600px), (max-width: 1050px) and (max-height: 500px) {
   body.has-drawer > main { grid-template-columns: minmax(0, 1fr); }
   body.has-drawer > main > :not(.forte-drawer, .forte-drawer-shade), body.has-drawer :is(#views, #controls) { grid-column: 1; }
-  body[data-instrument] .forte-drawer-open { display: grid; place-items: center; flex: none; width: 36px; min-height: 32px; padding: 0; color: var(--muted); }
-  body[data-instrument].drawer-open .forte-drawer-open { color: var(--accent); border-color: var(--accent); }
+  body[data-instrument] :is(.forte-drawer-open, .forte-midi-open) { display: grid; place-items: center; flex: none; width: 36px; min-height: 32px; padding: 0; color: var(--muted); }
+  body[data-instrument].drawer-open .forte-drawer-open, body[data-instrument].midi-open .forte-midi-open { color: var(--accent); border-color: var(--accent); }
   body.has-drawer .forte-drawer {
     position: fixed; z-index: 40; left: 0; top: 0; bottom: var(--footer-h, 0px); width: min(340px, 86vw);
     padding: env(safe-area-inset-top) 0 0 env(safe-area-inset-left); overflow-y: auto; cursor: auto;

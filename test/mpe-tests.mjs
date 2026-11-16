@@ -112,17 +112,26 @@ await test('RPN 0 on a member sets its zone\'s bend range (semitones, and cents 
   mcm(0, 15);
   assert.equal(mpe.memberBend(0), 48);
 });
-await test('On is the lower zone of 15 with no configuration message; Off never decodes; Auto is the default', () => {
+await test('On is the lower zone of 15 with no configuration message; Off plays a controller\'s notes, its own bend, pressure and slide no one\'s; Auto is the default', () => {
   assert.equal(decoder().mpe.mode, 'auto');
   const on = decoder('on');
   assert.equal(on.mpe.members(0), 15);
   assert.equal(on.bend(1, 3), true);
   const off = decoder('off');
+  assert.equal(off.bend(1, 3), false, 'no zone announced: plain MIDI, as Auto');
   off.mcm(0, 15);
   assert.equal(off.mpe.active(), false);
-  assert.equal(off.bend(1, 3), false);
+  assert.equal(off.mpe.isMember(1), false, 'a member\'s note is a key\'s like any other');
+  assert.equal(off.mpe.midi([0x91, 60, 100]), false, 'its note plays');
+  assert.equal(off.bend(1, 3), true, 'its bend: no one\'s');
+  assert.equal(off.mpe.midi([0xd1, 90, 0]), true, 'its pressure: no one\'s');
+  assert.equal(off.mpe.midi([0xb1, 74, 100]), true, 'its slide: no one\'s');
+  assert.equal(off.mpe.midi([0x81, 60, 0]), false, 'its note-off plays');
+  assert.deepEqual(off.take(), [], 'nothing handed to any note');
+  assert.equal(off.bend(0, 1, 2), false, 'the master\'s bend is every note\'s, as ever');
   off.mpe.mode = 'auto';
-  assert.equal(off.mpe.active(), false, 'what came on Off is forgotten');
+  assert.equal(off.mpe.active(), true, 'what came on Off is kept for Auto');
+  assert.equal(off.mpe.members(0), 15);
 });
 await test('a note\'s bend follows the tuning: 2^(s/12) in equal temperament; a slide to another key lands on its tuned pitch in meantone, at 415 Hz and in a custom temperament', () => {
   for (const s of [-48, -1, 0, 0.5, 7, 48]) assert.equal(bendRatio({ pitch: 440, temperament: 'equal' }, 60, s), 2 ** (s / 12));

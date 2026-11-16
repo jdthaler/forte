@@ -28,9 +28,17 @@ int MpeDecoder::members(int zone) const {
   return 0;
 }
 
+// members per zone from configuration messages alone (Off still hears them)
+int MpeDecoder::heard(int zone) const { return zone_[zone] < 0 ? 0 : zone_[zone]; }
+
 int MpeDecoder::zoneOf(int c) const {
   if (c >= 1 && c <= members(0)) return 0;
   if (c <= 14 && c >= 15 - members(1)) return 1;
+  return -1;
+}
+int MpeDecoder::heardZoneOf(int c) const {
+  if (c >= 1 && c <= heard(0)) return 0;
+  if (c <= 14 && c >= 15 - heard(1)) return 1;
   return -1;
 }
 bool MpeDecoder::isMember(int c) const { return zoneOf(c) >= 0; }
@@ -39,17 +47,17 @@ bool MpeDecoder::isMember(int c) const { return zoneOf(c) >= 0; }
 // members bend ±48 again.
 void MpeDecoder::configure(int zone, int count) {
   count = count < 0 ? 0 : count > 15 ? 15 : count;
-  const int other = members(1 - zone);
+  const int other = mode_ == mpe::off ? heard(1 - zone) : members(1 - zone);
   zone_[zone] = count;
   zone_[1 - zone] = count > 0 && other > 14 - count ? (14 - count < 0 ? 0 : 14 - count) : other;
   range_[zone] = mpe::kMemberBend;
 }
 
 bool MpeDecoder::midi(const uint8_t *d, Sink &sink) {
-  if (mode_ == mpe::off) return false;
   const int cmd = d[0] & 0xf0, c = d[0] & 0x0f;
+  const bool off = mode_ == mpe::off;
   Channel &C = ch_[c];
-  const int zone = zoneOf(c);
+  const int zone = off ? heardZoneOf(c) : zoneOf(c); // Off: the zones announced, for their members' own
   if (cmd == 0xb0) {
     // RPNs: 101 and 100 choose one, 6 (and 38) set it; 6 on a master for RPN 6 configures its zone
     if (d[1] == 101) { C.rpnMsb = d[2]; C.dataMsb = -1; return false; }
@@ -62,6 +70,7 @@ bool MpeDecoder::midi(const uint8_t *d, Sink &sink) {
       return false;
     }
     if (d[1] == 74 && zone >= 0) {
+      if (off) return true; // a member's slide, no one's
       C.slide = d[2] / 127.0;
       if (C.key >= 0) {
         if (!(C.land == C.land)) C.land = C.slide; // the first since the note-on: where it landed
@@ -72,6 +81,7 @@ bool MpeDecoder::midi(const uint8_t *d, Sink &sink) {
     return false;
   }
   if (zone < 0) return false;
+  if (off) return cmd == 0xe0 || cmd == 0xd0; // a member's bend and pressure, no one's; its notes play as any key's
   if (cmd == 0x90 && d[2] > 0) {
     C.key = d[1];
     C.land = C.slide; // the CC74 sent just before it (NaN: the next one)
