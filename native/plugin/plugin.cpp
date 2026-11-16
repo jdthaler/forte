@@ -53,7 +53,8 @@ constexpr double kTouchGamma[] = {0.6, 1, 1.6};
 // freeze) gets High whatever it is set to.
 constexpr uint32_t kQualityId = 0x7ffffffc;
 const char *const kQualityChoices[] = {"High", "Medium", "Low"};
-// MPE (forte/mpe.h): Auto (from the controller's configuration message), On or Off. Every plugin has it.
+// MPE (forte/mpe.h): Auto (from the controller's configuration message), On or Off (a controller's
+// notes play, but nothing of a note's own: its MPE channel's, or a host's note expressions). Every plugin has it.
 constexpr uint32_t kMpeId = 0x7ffffffb;
 // Octave (±4) and Transpose (±12 semitones) move the MIDI keys, as the pages' menus do
 // (shared/midi.js keyShift): a note-off, a note's pressure and its expressions go where its
@@ -658,7 +659,7 @@ struct Plugin : Instance, MpeDecoder::Sink {
             const uint8_t d[3] = {(uint8_t)(0xd0 | ch), (uint8_t)std::clamp((int)std::lround(e->value * 127), 0, 127), 0};
             midi(d, out);
           }
-        } else if (const int key = at(ch, e->key); key < 0) break;
+        } else if (const int key = at(ch, e->key); key < 0 || mpe.mode() == mpe::off) break; // MPE off: no note moves on its own
         else if (e->expression_id == CLAP_NOTE_EXPRESSION_PRESSURE) notePressure(key, e->value);
         else if (e->expression_id == CLAP_NOTE_EXPRESSION_TUNING) noteBend(key, e->value);
         else if (e->expression_id == CLAP_NOTE_EXPRESSION_BRIGHTNESS) { // as MPE's CC74: from where the note began

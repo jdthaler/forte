@@ -1,7 +1,8 @@
 // layout.js — the layout of every instrument page, the same on a phone, a tablet
 // and a desktop. Top to bottom:
 //   header    the instrument's name, which is also the menu (shared/nav.js); How it
-//             works; audio, MIDI and Panic;
+//             works; audio, Enable MIDI (until MIDI is on: the MIDI devices drawer is its
+//             status) and Panic;
 //   views     a bar, then the pictures only, the ones turned on sharing the space in rows.
 //             The bar has a toggle for each view (a tap turns it on or off: at first the
 //             main views, cards marked data-perform, are on and the rest off), then its
@@ -37,7 +38,7 @@ import { rotaryKnob } from './faces.js';
 import { focusedByPointer, unfocus } from './focus.js';
 import { installDropdowns } from './dropdown.js';
 import { inPlugin } from './in-plugin.js';
-import { midiSettings, midiDevices } from './midi.js';
+import { midiSettings, midiDevices, midiLamp, touchControl } from './midi.js';
 
 const body = document.body;
 installDropdowns(); // what a dropdown opens, as a panel (shared/dropdown.js)
@@ -611,7 +612,7 @@ function placePedal() {
   const groups = [...sidebar.querySelectorAll('details.group')].filter((g) => g.querySelector('.param'));
   const titled = (re) => groups.find((g) => re.test(g.querySelector('summary')?.textContent ?? ''));
   const home = titled(/damp|pedal|mute|hands/i) ?? groups.find((g) => g.querySelector('.param[data-pedal]'))
-    ?? titled(/\bkeys?\b|touch|playing/i) ?? groups.find((g) => g.querySelector('[id^="p-velocity"]')) ?? groups[0];
+    ?? titled(/\bkeys?\b|touch|playing/i) ?? groups.find((g) => g.querySelector('[id^="p-velocity"]') || g.hasAttribute('data-velocity')) ?? groups[0];
   if (!home) return;
   const after = home.querySelector('.param[data-pedal]');
   if (after) after.after(pedalRow); else home.appendChild(pedalRow);
@@ -659,10 +660,13 @@ function placeControls() {
       else if (p.classList.contains('check')) lab.after(info);
       else { const head = el('div', 'forte-param-head'); lab.before(head); head.append(lab, info); }
     }
+    // the computer keys' velocity: in the drawer's Velocity section, where there is one
+    const keysVelocity = velocityBox && p.querySelector('#p-velocity');
+    if (keysVelocity) p.closest('details.group')?.setAttribute('data-velocity', '');
     if (p.hasAttribute('data-perform')) {
-      const t = twin(p); // its twin stays in the panel, in its group
+      const t = twin(p); // its twin stays in the panel, in its group (the velocity's goes to the drawer)
       if (t) {
-        p.before(t);
+        if (keysVelocity) velocityBox.append(t); else p.before(t);
         const ti = t.querySelector('.forte-info');
         ti?.addEventListener('click', () => { ti.setAttribute('aria-expanded', String(t.classList.toggle('hint-open'))); unfocus(ti); });
       }
@@ -688,8 +692,9 @@ function placeControls() {
       // velocity for the computer keys: a touch sets it by where it strikes, MIDI by the note
       if (p.querySelector('#p-velocity')) p.classList.add('keys-only');
       strip.appendChild(p);
-    } else if (info) {
-      info.addEventListener('click', () => { info.setAttribute('aria-expanded', String(p.classList.toggle('hint-open'))); unfocus(info); });
+    } else {
+      if (info) info.addEventListener('click', () => { info.setAttribute('aria-expanded', String(p.classList.toggle('hint-open'))); unfocus(info); });
+      if (keysVelocity) velocityBox.append(p);
     }
   }
 }
@@ -743,18 +748,21 @@ if (presets) {
   }, true);
 }
 // ---------------------------------------------------------------------------
-// the drawers, each folding to a rail. At the left of every instrument page, what every
-// instrument has alike: the Presets menu (in Perform it goes above the keys instead) with Morph's
-// switch at its head and, while Morph is on, To and its slider under it (shared/morph.js), and
-// the Output, Tuning and Expression groups (moved here from the Controls panel, which keeps the
-// instrument's own). At the right, where the browser has Web MIDI, the MIDI devices: those
-// plugged in, each with a lamp that lights as it plays (shared/midi.js midiDevices), a Seaboard
-// RISE's panel while one is plugged in (shared/rise.js), a Roland FC-300's once one is seen
-// (shared/fc300.js), and the MIDI settings (midiSettings); the MIDI status opens it. Each section
-// folds, as the browser remembers. On a desktop each drawer is a column beside the views and the
-// controls, or folded a rail; in a narrower window (a tablet upright) the rails stay and a drawer
-// opens over the views; on a phone it is a sheet over all but the keys, the presets' from the
-// header's button and the MIDI devices' from the MIDI status. Either way the keys stay playable
+// the drawers, each folding to a rail. At the left of every instrument page, Global settings: what
+// every instrument has alike: the Presets menu (in Perform it goes above the keys instead) with
+// Morph's switch at its head and, while Morph is on, To and its slider under it (shared/morph.js),
+// the Output group, Velocity (the computer keys' velocity, the one above the keys, and where the
+// browser has Web MIDI the MIDI keys' velocity curve: shared/midi.js touchControl), and the Tuning
+// and Expression groups (the groups moved here from the Controls panel, which keeps the
+// instrument's own). At the right, where the browser has Web MIDI, the MIDI devices, which are the
+// page's MIDI status (the header has none): those plugged in, each with a lamp that lights as it
+// plays, under the MPE switch (shared/midi.js midiDevices, mpeSwitch), a Seaboard RISE's panel while
+// one is plugged in (shared/rise.js), a Roland FC-300's once one is seen (shared/fc300.js), and the
+// MIDI settings, Octave and Transpose (midiSettings); folded, its rail has a lamp for them all. Each
+// section folds, as the browser remembers. On a desktop each drawer is a column beside the views and
+// the controls, or folded a rail; in a narrower window (a tablet upright) the rails stay and a drawer
+// opens over the views; on a phone it is a sheet over all but the keys, each from its button in
+// the header (the MIDI devices' at its right). Either way the keys stay playable
 // while one is open, to try presets with. Docked, each stays as it was left (at first, in
 // Discover the presets' open and the MIDI devices' open once a device is plugged in; in Perform
 // both folded); over the page, one opens at a time, and only when asked.
@@ -765,18 +773,21 @@ const drawerMode = () => (phoneQuery.matches ? 'sheet' : narrowQuery.matches ? '
 const SHARED = ['output', 'tuning', 'expression'];
 // each drawer's sections: their place in it, and whether each starts open (a key not in either
 // goes last in the presets' drawer, open). A controller's panel comes after the devices plugged in.
-const LEFT = { presets: [10, true], output: [40, true], tuning: [50, false], expression: [60, false] };
+const LEFT = { presets: [10, true], output: [40, true], velocity: [45, true], tuning: [50, false], expression: [60, false] };
 const RIGHT = { devices: [10, true], rise: [30, true], fc300: [35, true], midi: [70, true] };
 const SIDE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5"/></svg>';
+// a MIDI socket: five pins in a ring, its key at the bottom
+const SOCKET = '<svg viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="7.2"/><path d="M7.6 16.1v-1.8h2.8v1.8"/><circle class="pin" cx="4.6" cy="9.4" r="0.9"/><circle class="pin" cx="13.4" cy="9.4" r="0.9"/><circle class="pin" cx="5.9" cy="5.6" r="0.9"/><circle class="pin" cx="12.1" cy="5.6" r="0.9"/><circle class="pin" cx="9" cy="4.4" r="0.9"/></svg>';
 const PANEL = '<svg viewBox="0 0 18 16" aria-hidden="true"><rect x="1.5" y="2" width="15" height="12" rx="2"/><path d="M6.5 2v12M3.4 5.2h1.4M3.4 7.6h1.4M3.4 10h1.4"/></svg>';
 const drawers = [];
-let drawer = null, drawerBody = null; // the presets' drawer, and its body (placeTools, placeDrawer)
+let drawer = null, drawerBody = null; // Global settings, and its body (placeTools, placeDrawer)
+let velocityBox = null; // its Velocity section's place for the computer keys' velocity (placeControls)
 let midiDrawer = null; // the MIDI devices', where there is Web MIDI
 let devicesIn = false; // a MIDI device plugged in (shared/midi.js's forte-midi-devices event)
 
 // a drawer: side 'left' or 'right'; opens() whether it starts open, docked in Discover, until
 // the player opens or folds it (then as they left it); flag the body's class while it is open
-function makeDrawer({ id, side, name, fold: foldText, store, sections, opens, flag }) {
+function makeDrawer({ id, side, name, fold: foldText, store, sections, opens, flag, lamp = null }) {
   let s = {};
   try { s = JSON.parse(localStorage.getItem(store) || '{}') || {}; } catch { /* corrupt */ }
   const bool = (v) => (typeof v === 'boolean' ? v : null);
@@ -792,7 +803,7 @@ function makeDrawer({ id, side, name, fold: foldText, store, sections, opens, fl
   fold.className = 'forte-fold forte-drawer-fold';
   fold.innerHTML = SIDE;
   fold.setAttribute('aria-controls', id);
-  head.append(el('b', '', name), fold);
+  head.append(el('b', '', name), ...(lamp ? [lamp] : []), fold);
   const inner = el('div', 'forte-drawer-body');
   aside.append(head, inner);
   // over the page: a tap outside it (but on the keys) folds it
@@ -868,7 +879,7 @@ function placeDrawer() {
 }
 if (mainEl && sidebar && !inPlugin) {
   drawer = makeDrawer({
-    id: 'forte-drawer', side: 'left', name: 'Presets and settings', fold: 'Fold the presets and settings away',
+    id: 'forte-drawer', side: 'left', name: 'Global settings', fold: 'Fold the global settings away',
     store: 'forte/drawer/v1', sections: LEFT, opens: () => true, flag: 'drawer-open',
   });
   drawerBody = drawer.body;
@@ -892,11 +903,22 @@ if (mainEl && sidebar && !inPlugin) {
     sec.append(top, el('div', 'forte-drawer-menu'));
     drawer.section('presets', sec);
   }
-  // the MIDI devices, where there is Web MIDI: those plugged in, then the MIDI settings
+  // Velocity: the computer keys' (placeControls brings it from the Controls panel), then the MIDI
+  // keys' velocity curve where there is Web MIDI; hidden while it has neither
+  {
+    const det = details('Velocity');
+    det.classList.add('forte-drawer-velocity');
+    velocityBox = el('div', 'forte-velocity-keys');
+    det.append(velocityBox);
+    if (navigator.requestMIDIAccess) det.append(touchControl());
+    drawer.section('velocity', det);
+  }
+  // the MIDI devices, where there is Web MIDI: those plugged in, then the MIDI settings. They are
+  // the MIDI status: the header's goes, and folded, the rail has a lamp that lights as any plays
   if (navigator.requestMIDIAccess) {
     midiDrawer = makeDrawer({
       id: 'forte-midi', side: 'right', name: 'MIDI devices', fold: 'Fold the MIDI devices away',
-      store: 'forte/midi-drawer/v1', sections: RIGHT, opens: () => devicesIn, flag: 'midi-open',
+      store: 'forte/midi-drawer/v1', sections: RIGHT, opens: () => devicesIn, flag: 'midi-open', lamp: midiLamp(),
     });
     body.classList.add('has-midi-drawer');
     midiDrawer.section('devices', midiDevices());
@@ -907,6 +929,17 @@ if (mainEl && sidebar && !inPlugin) {
       const any = e.detail > 0;
       if (any !== devicesIn) { devicesIn = any; showDrawers(); }
     });
+    // on a phone, the header's right end opens it, as its left end opens Global settings
+    const status = header?.querySelector('.status');
+    if (status) {
+      const opener = button('');
+      opener.className = 'forte-midi-open';
+      opener.innerHTML = SOCKET;
+      opener.setAttribute('aria-controls', midiDrawer.el.id);
+      opener.addEventListener('click', () => { midiDrawer.set(!midiDrawer.isOpen()); unfocus(opener); });
+      status.append(opener);
+      midiDrawer.openers.push(opener);
+    }
   }
   // over the page, Esc folds it
   document.addEventListener('keydown', (e) => {
@@ -963,9 +996,11 @@ if (header) {
     if (status) status.prepend(fs); else header.appendChild(fs);
   }
   // "MIDI off" says no more than "Enable MIDI" does: the status shows once MIDI is asked for
-  // (by the button, or by MIDI turning itself on again, which hides the button with no click)
+  // (by the button, or by MIDI turning itself on again, which hides the button with no click);
+  // with a MIDI devices drawer, never: that is the status
   const midi = header.querySelector('#midi');
-  if (midi && header.querySelector('#midi-btn')) {
+  if (midi && midiDrawer) midi.hidden = true;
+  else if (midi && header.querySelector('#midi-btn')) {
     midi.hidden = true;
     new MutationObserver(() => { midi.hidden = false; }).observe(midi, { childList: true, characterData: true, subtree: true });
   }

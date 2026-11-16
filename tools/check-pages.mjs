@@ -10,7 +10,8 @@
 // bar instead of the controls' bar, and the screen kept awake there once audio runs, and not in
 // Discover), that the drawer opens (from its rail, or on a phone from the header), plays a preset
 // and folds away again, that the MIDI devices drawer is there only where the browser has Web MIDI,
-// opens from its rail with the devices and the MIDI settings in sight and folds away again, and
+// opens from its rail (or a phone's header) with the devices, the MPE switch and the MIDI settings
+// in sight and folds away again, and that the header has no MIDI status beside it, and
 // that the keys fold away and come back, at every size, the guided tour (Tour in the header, each step showing its views, and every control
 // as it was once it ends; on the desktop and the phone), Songs (♪ in the header; a song plays its
 // keys and stops when closed; on the desktop and the phone), what a screen reader finds (every
@@ -110,6 +111,7 @@ const COUNT = () => {
     viewsOn: n('.forte-view-toggles button[aria-pressed="true"]'),
     mode: [...document.querySelectorAll('.forte-views-bar .forte-mode button')].filter((e) => e.checkVisibility()).length,
     drawerPresets: n('#forte-drawer [data-drawer="presets"]'),
+    drawerVelocity: n('#forte-drawer [data-drawer="velocity"] .param'),
     midiDrawer: n('#forte-midi'),
     listen: n('button[data-src]'),
     quality: [...document.querySelectorAll('header #quality')].filter((e) => e.checkVisibility()).length,
@@ -268,29 +270,33 @@ async function drawerAndKeys(tab) {
 }
 
 // The MIDI devices drawer (shared/layout.js), where the browser has Web MIDI: it opens from its
-// rail (or a phone's MIDI status, once MIDI is on: not here), with the devices plugged in (MIDI
-// off: its button) and the MIDI settings in sight, and folds away again, as it was left.
+// rail (or a phone's header), with the devices plugged in (MIDI off: its button), the MPE switch
+// and the MIDI settings in sight, and folds away again, as it was left. It is the MIDI status: the
+// header shows none.
 const MIDI_DRAWER = () => ({
   open: document.body.classList.contains('midi-open'),
   w: Math.round(document.querySelector('#forte-midi')?.getBoundingClientRect().width ?? 0),
   devices: document.querySelector('#forte-midi .forte-midi-devices')?.checkVisibility() ? 1 : 0,
-  settings: document.querySelector('#forte-midi #touch')?.checkVisibility() ? 1 : 0,
+  mpe: document.querySelector('#forte-midi .forte-mpe-switch [role="switch"]')?.checkVisibility() ? 1 : 0,
+  settings: document.querySelector('#forte-midi #octave')?.checkVisibility() ? 1 : 0,
+  status: document.querySelector('body > header #midi')?.checkVisibility() ? 1 : 0,
 });
 async function midiDrawer(tab) {
   const out = [];
   const rail = tab.locator('#forte-midi .forte-drawer-fold');
-  if (!(await rail.isVisible().catch(() => false))) return out; // a phone: from the MIDI status, once MIDI is on
+  const opener = (await rail.isVisible().catch(() => false)) ? rail : tab.locator('.forte-midi-open'); // a phone: from the header
   const was = await tab.evaluate(MIDI_DRAWER);
-  if (!was.open) { await rail.click(CLICK).catch(() => {}); await tab.waitForTimeout(350); }
+  if (was.status) out.push('a MIDI status in the header, beside the MIDI devices drawer');
+  if (!was.open) { await opener.click(CLICK).catch(() => {}); await tab.waitForTimeout(350); }
   const s = await tab.evaluate(MIDI_DRAWER);
-  if (!s.open || s.w < 200 || !s.devices || !s.settings) out.push(`the MIDI devices drawer doesn't open with the devices and the settings in sight (${s.w}px wide, the devices ${s.devices ? 'shown' : 'hidden'}, the settings ${s.settings ? 'shown' : 'hidden'})`);
+  if (!s.open || s.w < 200 || !s.devices || !s.mpe || !s.settings) out.push(`the MIDI devices drawer doesn't open with the devices, the MPE switch and the settings in sight (${s.w}px wide, the devices ${s.devices ? 'shown' : 'hidden'}, MPE ${s.mpe ? 'shown' : 'hidden'}, the settings ${s.settings ? 'shown' : 'hidden'})`);
   if (await tab.evaluate(WIDE) > 0) out.push('scrolls sideways with the MIDI devices drawer open');
-  await rail.click(CLICK).catch(() => {});
+  await tab.locator('#forte-midi .forte-drawer-fold').click(CLICK).catch(() => {});
   await tab.waitForTimeout(350);
   const f = await tab.evaluate(MIDI_DRAWER);
   if (f.open || f.settings) out.push('the MIDI devices drawer doesn\'t fold away (the settings still shown)');
   if (await tab.evaluate(WIDE) > 0) out.push('scrolls sideways with the MIDI devices drawer folded');
-  if (was.open) { await rail.click(CLICK).catch(() => {}); await tab.waitForTimeout(350); }
+  if (was.open) { await opener.click(CLICK).catch(() => {}); await tab.waitForTimeout(350); }
   return out;
 }
 

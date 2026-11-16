@@ -12,15 +12,19 @@
 //     MIDI turned on by resumeMIDI comes before any click).
 //   wheelValue(p, cc, max?) maps the mod wheel onto a parameter: at rest (0) its default, fully up
 //   its maximum, so a wheel at rest never drags the instrument to the bottom of its range.
-//   touch() is the velocity curve the player chose (every page shares it, from the MIDI settings:
-//   midiSettings, in the page's MIDI devices drawer, which the #midi status opens once startMIDI
-//   turns MIDI on; midiDevices, at its top, lists the devices plugged in, each with a lamp),
-//   touched(v) a MIDI velocity (0..1) through it; SOFT_PEDAL
-//   scales the velocity of keys struck under CC67; createSostenuto() keeps the keys CC66 holds.
-//   mpeMode() is MPE's mode the player chose (shared/mpe.js: 'auto', 'on' or 'off'; every page
-//   shares it, from the same menu); pageMpe() decodes it for a page.
+//   touch() is the velocity curve the player chose (every page shares it: touchControl, in the
+//   Velocity section of the page's Global settings drawer, shared/layout.js), touched(v) a MIDI
+//   velocity (0..1) through it; SOFT_PEDAL scales the velocity of keys struck under CC67;
+//   createSostenuto() keeps the keys CC66 holds.
+//   mpeMode() is MPE's mode (shared/mpe.js: 'auto', 'on' or 'off'; every page shares it), which
+//   the MPE switch at the top of the page's MIDI devices drawer turns on (Auto) and off (mpeSwitch;
+//   a 'forte-mpe' event on document says so); pageMpe() decodes it for a page. That drawer is the
+//   MIDI status too: midiDevices lists the devices plugged in, each with a lamp (or why there are
+//   none: MIDI off, with its button, or not allowed), and says how far the keys are moved, and
+//   midiLamp() lights on its rail as any of them plays (shared/layout.js puts it there).
 //   keyShift() is how far the MIDI keys are moved: the player's Octave (±4) and Transpose (±12
-//   semitones), from the same menu, which every page shares (setShift). startMIDI moves
+//   semitones), from the MIDI settings at the bottom of the same drawer (midiSettings), which every
+//   page shares (setShift). startMIDI moves
 //   each note as it comes in, and its note-off and poly pressure by as much as its note-on was
 //   moved, so a note held while the menus change ends as it began. The on-screen and computer
 //   keys play what they show (the ◀ ▶ buttons and arrow keys move the computer keys).
@@ -72,9 +76,10 @@ let mpe = 'auto';
 try { const m = localStorage.getItem(MPE_KEY); if (MODES.some(([id]) => id === m)) mpe = m; } catch { /* storage blocked, or Node */ }
 export const mpeMode = () => mpe;
 export function setMpeMode(m) {
-  if (!MODES.some(([id]) => id === m)) return;
+  if (!MODES.some(([id]) => id === m) || m === mpe) return;
   mpe = m;
   try { localStorage.setItem(MPE_KEY, m); } catch { /* storage blocked */ }
+  if (typeof document !== 'undefined' && document.dispatchEvent) document.dispatchEvent(new CustomEvent('forte-mpe', { detail: m }));
 }
 // Octave and Transpose: how far the MIDI keys are moved, an octave and a semitone at a time
 export const OCTAVES = 4, SEMITONES = 12;
@@ -379,42 +384,67 @@ export function createInput(send, controllers = {}, { shift = false, device = sh
 let page = null;
 export function pageMIDI(handler) { if (handler) page = handler; return page; }
 
-// The MIDI devices plugged in, at the top of the page's MIDI devices drawer (shared/layout.js): each
-// one's name, what it is here (a Seaboard sends MPE; an FC-300 has its panel), and a lamp that
-// lights as it sends (but for the clock and active sensing, which some send all the time); with
-// none, why: MIDI off (with a button to turn it on), not allowed, or nothing plugged in. startMIDI
-// keeps it up to date, and says how many there are with a forte-midi-devices event on document.
-const plugged = { box: null, state: 'off', devices: [], lamps: new Map() };
+// The MIDI devices plugged in, at the top of the page's MIDI devices drawer (shared/layout.js), which
+// is the page's MIDI status: each one's name, what it is here (a Seaboard sends MPE; an FC-300 has its
+// panel), and a lamp that lights as it sends (but for the clock and active sensing, which some send
+// all the time); with none, why: MIDI off (with a button to turn it on), not allowed, or nothing
+// plugged in. At its head the MPE switch (mpeSwitch); under the list, in the accent, how far the
+// MIDI keys are moved while they are (Octave and Transpose). midiLamp() is one lamp for them all,
+// for the drawer's rail, its title the status. startMIDI keeps them up to date, and says how many
+// devices there are with a forte-midi-devices event on document.
+const plugged = { box: null, state: 'off', devices: [], lamps: new Map(), any: new Set() };
 function setDevices(state, devices) {
   plugged.state = state; plugged.devices = devices;
   drawDevices();
   if (typeof document !== 'undefined' && document.dispatchEvent) document.dispatchEvent(new CustomEvent('forte-midi-devices', { detail: devices.length }));
 }
-function lamp(id, d) {
-  const l = plugged.lamps.get(id);
-  if (!l || d[0] >= 0xf8) return;
+// a lamp lit for 120 ms
+const flash = (l) => {
   if (!l.lit) { l.lit = true; l.el.classList.add('on'); }
   clearTimeout(l.t);
   l.t = setTimeout(() => { l.lit = false; l.el.classList.remove('on'); }, 120);
+};
+function lamp(id, d) {
+  if (d[0] >= 0xf8) return;
+  const l = plugged.lamps.get(id);
+  if (l) flash(l);
+  for (const a of plugged.any) flash(a);
+}
+// what the status says: MIDI off, not allowed, nothing plugged in, or the devices by name
+const statusText = () => {
+  const { state, devices } = plugged;
+  return state === 'off' ? 'MIDI off' : state === 'denied' ? 'MIDI: not allowed'
+    : devices.length ? `MIDI: ${devices.map((d) => d.name || 'a device').join(', ')}` : 'MIDI: nothing plugged in';
+};
+const make = (tag, cls, text) => Object.assign(document.createElement(tag), cls ? { className: cls } : {}, text ? { textContent: text } : {});
+export function midiLamp() {
+  const l = { el: make('i', 'forte-midi-lamp forte-midi-any'), lit: false, t: 0 };
+  l.el.setAttribute('aria-hidden', 'true');
+  plugged.any.add(l);
+  drawDevices();
+  return l.el;
 }
 export function midiDevices() {
   if (plugged.box) return plugged.box;
-  const make = (tag, cls, text) => Object.assign(document.createElement(tag), cls ? { className: cls } : {}, text ? { textContent: text } : {});
   const box = plugged.box = make('div', 'forte-midi-devices');
-  const list = make('ul');
+  const head = make('div', 'forte-midi-devices-head'), list = make('ul');
+  head.append(make('h3', '', 'Plugged in'), mpeSwitch());
   list.setAttribute('aria-label', 'MIDI devices plugged in');
-  const note = make('p'), on = make('button', '', 'Enable MIDI');
+  const note = make('p'), on = make('button', '', 'Enable MIDI'), moved = make('p', 'forte-midi-shift');
+  for (const e of [list, note, moved]) e.setAttribute('aria-live', 'polite'); // MIDI on, a device plugged in or gone, the keys moved
   on.type = 'button';
   on.title = 'Let this page hear your MIDI devices (the browser asks first)';
   on.addEventListener('click', () => { document.querySelector('#midi-btn')?.click(); unfocus(on); });
-  box.append(make('h3', '', 'Plugged in'), list, note, on);
-  plugged.parts = { list, note, on, make };
+  box.append(head, list, note, on, moved);
+  plugged.parts = { list, note, on, moved };
   drawDevices();
+  showShift();
   return box;
 }
 function drawDevices() {
+  for (const a of plugged.any) a.el.title = statusText();
   if (!plugged.box) return;
-  const { list, note, on, make } = plugged.parts, { state, devices } = plugged;
+  const { list, note, on } = plugged.parts, { state, devices } = plugged;
   for (const l of plugged.lamps.values()) clearTimeout(l.t);
   plugged.lamps.clear();
   list.replaceChildren(...devices.map((d) => {
@@ -433,11 +463,53 @@ function drawDevices() {
   on.hidden = state === 'on';
 }
 
-// The MIDI settings: the velocity curve, MPE, Octave and Transpose, each a labelled dropdown
-// (midiSettings, which the page's MIDI devices drawer shows, shared/layout.js). Once MIDI is on, the
-// MIDI status opens that drawer, where the page has one, else these in a menu under it. The status
-// says how far the keys are moved, in the accent, while they are.
-export function midiSettings() {
+// MPE's switch: on, a controller that sends MPE (a Seaboard: startMIDI says so for it) bends, slides
+// and presses each note on its own; off, it plays notes and nothing more, on every page (shared/mpe.js
+// Off). On is Auto (an ordinary keyboard plays as ever); one chosen On before reads as on, and stays.
+export function mpeSwitch() {
+  const box = make('div', 'forte-mpe-switch');
+  const name = make('span', '', 'MPE'), sw = make('button', 'forte-slide');
+  sw.type = 'button';
+  sw.setAttribute('role', 'switch');
+  sw.title = 'MPE, on every instrument: on, each finger on a controller that sends MPE (a Seaboard) bends, slides and presses its own note, as the instrument’s Expression switches let it; off, the controller plays notes alone, each as hard as it was struck, and its glide, slide and press move nothing';
+  sw.setAttribute('aria-label', 'MPE');
+  sw.append(make('i'));
+  const show = () => {
+    const on = mpe !== 'off';
+    sw.setAttribute('aria-checked', String(on));
+    box.classList.toggle('on', on);
+  };
+  const flip = () => {
+    setMpeMode(mpe === 'off' ? 'auto' : 'off');
+    import('./shell.js').then(({ toast }) => toast(mpe === 'off' ? 'MPE off: a controller plays notes alone, its glide, slide and press move nothing'
+      : 'MPE on: each finger bends, slides and presses its own note, where the instrument lets it'), () => {});
+  };
+  sw.addEventListener('click', () => { flip(); unfocus(sw); });
+  name.addEventListener('click', () => sw.click());
+  document.addEventListener('forte-mpe', show);
+  box.append(name, sw);
+  show();
+  return box;
+}
+
+// The MIDI keys' velocity curve (every page shares it): a control as the instrument's are, with the
+// computer keys' velocity in the Velocity section of the page's Global settings drawer (shared/layout.js)
+export function touchControl() {
+  const box = make('div', 'param forte-touch');
+  const label = make('label', '', 'Velocity curve (MIDI keys)'), el = make('select');
+  el.id = 'touch'; label.htmlFor = el.id;
+  TOUCH.forEach((t, i) => el.add(new Option(t.name, i)));
+  el.value = String(touchIndex);
+  el.addEventListener('change', () => { setTouch(+el.value); unfocus(el); });
+  box.append(label, el, make('div', 'hint', 'The velocity curve of every instrument: how hard a MIDI key has to be struck. Soft makes a light touch louder, Hard asks for a firmer one; Normal is the velocity as the keyboard sends it.'));
+  return box;
+}
+
+// The MIDI settings: Octave and Transpose (and where a page has no drawer, the velocity curve and
+// MPE too), each a labelled dropdown (midiSettings, at the bottom of the page's MIDI devices drawer,
+// shared/layout.js). Where there is no drawer, the MIDI status opens them in a menu under it, and
+// says how far the keys are moved, in the accent, while they are; in the drawer, midiDevices does.
+export function midiSettings(ids = ['octave', 'transpose']) {
   const box = document.createElement('div');
   box.className = 'forte-midi-settings';
   box.setAttribute('role', 'group'); box.setAttribute('aria-label', 'MIDI settings');
@@ -445,13 +517,14 @@ export function midiSettings() {
   for (const [id, name, title, options, value, set] of [
     ['touch', 'Touch', 'The velocity curve: how hard a MIDI key has to be struck. Soft makes a light touch louder, Hard asks for a firmer one.',
       TOUCH.map((t, i) => [i, t.name]), touchIndex, (v) => setTouch(+v)],
-    ['mpe', 'MPE', 'MPE: a controller that gives each note a MIDI channel of its own, so each finger bends, slides and presses its own note. Auto turns it on when the controller says it sends MPE.',
-      MODES, mpe, setMpeMode],
+    ['mpe'],
     ['octave', 'Octave', 'Plays the MIDI keys up to four octaves higher or lower, so a small keyboard reaches all 88 keys. The keys on the screen and the computer keys play what they show.',
       steps(OCTAVES), shift.octave, (v) => setShift({ octave: +v })],
     ['transpose', 'Transpose', 'Plays the MIDI keys up to twelve semitones higher or lower, so a piece fingered in one key sounds in another. The keys on the screen and the computer keys play what they show.',
       steps(SEMITONES).map(([v, t]) => [v, v ? `${t} semitone${Math.abs(v) > 1 ? 's' : ''}` : t]), shift.transpose, (v) => setShift({ transpose: +v })],
   ]) {
+    if (!ids.includes(id)) continue;
+    if (id === 'mpe') { const sw = mpeSwitch(); box.append(sw); continue; }
     const row = document.createElement('label');
     row.title = title;
     const el = document.createElement('select');
@@ -466,20 +539,12 @@ export function midiSettings() {
 }
 function midiMenu() {
   const pill = document.querySelector('#midi');
-  if (!pill || pill.classList.contains('forte-midi-pill')) return;
+  // with a MIDI devices drawer (shared/layout.js), that is the status: no pill
+  if (!pill || pill.classList.contains('forte-midi-pill') || document.querySelector('#forte-midi')) { showShift(); return; }
   pill.classList.add('forte-midi-pill');
   pill.setAttribute('role', 'button'); pill.tabIndex = 0;
-  const drawer = document.querySelector('#forte-midi');
-  pill.title = drawer ? 'MIDI devices, and the settings: touch, MPE, octave and transpose' : 'MIDI settings: touch, MPE, octave and transpose';
-  if (drawer) { // the MIDI devices drawer, opened (shared/layout.js)
-    pill.setAttribute('aria-controls', drawer.id);
-    const go = () => document.dispatchEvent(new CustomEvent('forte-drawer', { detail: 'devices' }));
-    pill.addEventListener('click', go);
-    pill.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); go(); } });
-    showShift();
-    return;
-  }
-  const menu = midiSettings();
+  pill.title = 'MIDI settings: touch, MPE, octave and transpose';
+  const menu = midiSettings(['touch', 'mpe', 'octave', 'transpose']);
   menu.id = 'midi-menu'; menu.classList.add('forte-midi-menu'); menu.hidden = true;
   pill.after(menu);
   pill.setAttribute('aria-haspopup', 'true'); pill.setAttribute('aria-controls', menu.id); pill.setAttribute('aria-expanded', 'false');
@@ -500,13 +565,16 @@ function midiMenu() {
   window.addEventListener('scroll', () => open(false), { passive: true }); // a phone's page: it would float away from the status
   showShift();
 }
-// the MIDI status says how far the keys are moved, while they are
+// the status says how far the keys are moved, while they are: the drawer's line, else the pill
 function showShift() {
-  const pill = typeof document !== 'undefined' && document.querySelector?.('#midi');
+  if (typeof document === 'undefined' || !document.querySelector) return;
+  const moved = plugged.parts?.moved, text = shiftText();
+  if (moved) { moved.textContent = text ? `MIDI keys play ${text}` : ''; moved.hidden = !text; }
+  const pill = document.querySelector('#midi');
   if (!pill) return;
   const { octave: o, transpose: t } = shift;
-  const text = [o && `Octave ${signed(o)}`, t && `Transpose ${signed(t)}`].filter(Boolean).join(', ');
-  if (text) pill.dataset.shift = text; else delete pill.dataset.shift;
+  const short = [o && `Octave ${signed(o)}`, t && `Transpose ${signed(t)}`].filter(Boolean).join(', ');
+  if (short) pill.dataset.shift = short; else delete pill.dataset.shift;
 }
 
 /**

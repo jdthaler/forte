@@ -131,7 +131,7 @@ function meanings(I, params) {
   out.slide = !I ? '' : slide && wp ? `${wp.label}, for that note alone, as far as the finger slides from where it landed` : 'nothing here';
   out.press = !I ? '' : I.aftertouch ? I.aftertouch : 'nothing here';
   out.lift = !I ? '' : I.lift ? I.lift : 'nothing here: every note is let go alike'; // (the descriptor's lift, shared/expression.js)
-  if (mpeMode() === 'off') out.glide = out.slide = out.press = 'MPE is off in the MIDI settings: every note moves together';
+  if (mpeMode() === 'off') out.glide = out.slide = out.press = 'nothing while MPE is off (its switch is above)';
   return out;
 }
 
@@ -260,12 +260,15 @@ export function risePanel() {
       const has = x.p.id in switches, on = has ? switches[x.p.id] : true;
       x.sw.hidden = !has; x.sw.checked = on;
       x.sw.title = has ? `${x.p.label}: ${on ? 'on (uncheck to turn it off)' : 'off'}` : '';
-      x.r.classList.toggle('off', !on);
-      x.what.textContent = on ? meaning[x.id] ?? '' : offText(x.p);
+      const unheard = mpeMode() === 'off' && ['glide', 'slide', 'press'].includes(x.id); // MPE off: these move nothing
+      x.r.classList.toggle('off', !on || unheard);
+      x.what.textContent = on || unheard ? meaning[x.id] ?? '' : offText(x.p);
     }
   }
   labels();
   document.addEventListener('forte-switches', (e) => { switches = e.detail ?? {}; labels(); });
+  // MPE switched on or off (shared/midi.js mpeSwitch): what Glide, Slide and Press do here
+  document.addEventListener('forte-mpe', () => { meaning = meanings(I, params); labels(); request(); });
   document.dispatchEvent(new Event('forte-switches?')); // the page's switches as they are now
 
   // A preset puts the faders' and the pad's controls somewhere new (shared/shell.js, 'forte-preset'):
@@ -353,7 +356,7 @@ export function risePanel() {
     title.textContent = names.length === 1 ? names[0].replace(/^ROLI\s+/i, '') : 'Seaboard RISE';
     const on = mpeMode() !== 'off';
     note.textContent = model.single ? 'Its notes come on channel 1: it isn\'t sending MPE, so every note glides and presses together. Set it to MPE under On the RISE below (or in ROLI Dashboard).'
-      : !on ? 'MPE is off in the MIDI settings below: turn it to Auto, and each finger bends, slides and presses its own note.'
+      : !on ? 'MPE is off, on every instrument: the RISE plays notes alone, as hard as each is struck. Switch MPE on at the top of the MIDI devices, and each finger bends, slides and presses its own note.'
       : `MPE: each finger its own channel${model.channels ? ` (${model.channels} so far)` : ''}, each glide up to ±${MEMBER_BEND} semitones.`;
     // keep drawing while something fades (Strike, Lift) or a finger is down
     if (fingers.length || t - model.when.strike < FLASH + 0.1 || t - model.when.lift < FLASH + 0.1) request();

@@ -14,11 +14,14 @@
 //
 // The mode: auto (the default) plays plain MIDI until a controller sends the configuration
 // message, so an ordinary keyboard plays as ever; on plays as if the lower zone had 15 members
-// until one says otherwise; off never decodes MPE.
+// until one says otherwise; off plays a controller that sent the message as a keyboard: its notes
+// play, and what its member channels send of their own (bend, pressure, CC74) is no one's, so no
+// note moves on its own and none moves them all. The zones it announces are kept, for on again.
 //
 //   const mpe = createMpe({ noteBend(key, semitones), noteSlide(key, value), notePressure(key, value) });
 //   mpe.midi(data)   true when the message was MPE's own (the page does nothing more with it); a
 //                    member's note-on first hands over the key's bend and slide, then returns false
+//                    (Off: a member's bend, pressure and CC74 are its own and go nowhere)
 //   mpe.mode = 'auto' | 'on' | 'off';   mpe.active();   mpe.members(0 | 1);   mpe.reset()
 //   bendRatio(P, key, semitones)  a note's bend as a frequency ratio along the keyboard's tuning
 //   slideFrom(land, u)  a slide u (0..1) from where the finger landed: NaN (none) at the landing
@@ -44,16 +47,18 @@ export function createMpe(sink) {
   let range = [MEMBER_BEND, MEMBER_BEND];
   let ch = Array.from({ length: 16 }, () => channel());
 
+  const heard = (z) => Math.max(0, zones[z]); // members per zone, from configuration messages alone
   const members = (z) => {
     if (mode === 'off') return 0;
     if (zones[z] >= 0) return zones[z];
     return mode === 'on' && z === 0 && zones[1] < 0 ? 15 : 0; // no configuration message yet
   };
-  const zoneOf = (c) => (c >= 1 && c <= members(0) ? 0 : c <= 14 && c >= 15 - members(1) ? 1 : -1);
+  const zoneIn = (c, n) => (c >= 1 && c <= n(0) ? 0 : c <= 14 && c >= 15 - n(1) ? 1 : -1);
+  const zoneOf = (c) => zoneIn(c, members);
   // a zone of `count` members: the other gives up channels it would share; its members bend ±48 again
   const configure = (z, count) => {
     count = Math.max(0, Math.min(15, count));
-    const other = members(1 - z);
+    const other = mode === 'off' ? heard(1 - z) : members(1 - z);
     zones[z] = count;
     zones[1 - z] = count > 0 && other > 14 - count ? Math.max(0, 14 - count) : other;
     range[z] = MEMBER_BEND;
@@ -73,8 +78,8 @@ export function createMpe(sink) {
     memberBend: (z) => range[z],
     reset() { zones = [-1, -1]; range = [MEMBER_BEND, MEMBER_BEND]; ch = ch.map(() => channel()); },
     midi(data) {
-      if (mode === 'off') return false;
-      const [st, d1, d2] = data, cmd = st & 0xf0, c = st & 0x0f, C = ch[c], zone = zoneOf(c);
+      const [st, d1, d2] = data, cmd = st & 0xf0, c = st & 0x0f, C = ch[c], off = mode === 'off';
+      const zone = off ? zoneIn(c, heard) : zoneOf(c); // Off: the zones announced, for their members' own
       if (cmd === 0xb0) {
         // RPNs: 101 and 100 choose one, 6 (and 38) set it; 6 on a master for RPN 6 configures its zone
         if (d1 === 101) { C.rpnMsb = d2; C.dataMsb = -1; return false; }
@@ -86,6 +91,7 @@ export function createMpe(sink) {
           return false;
         }
         if (d1 === 74 && zone >= 0) {
+          if (off) return true; // a member's slide, no one's
           C.slide = d2 / 127;
           if (C.key >= 0) {
             if (Number.isNaN(C.land)) C.land = C.slide; // the first since the note-on: where it landed
@@ -96,6 +102,7 @@ export function createMpe(sink) {
         return false;
       }
       if (zone < 0) return false;
+      if (off) return cmd === 0xe0 || cmd === 0xd0; // a member's bend and pressure, no one's; its notes play as any key's
       if (cmd === 0x90 && d2 > 0) {
         C.key = d1;
         C.land = C.slide; // the CC74 sent just before it (NaN: the next one)
