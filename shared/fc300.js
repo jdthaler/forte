@@ -1,12 +1,14 @@
 // fc300.js — a Roland FC-300 MIDI foot controller, drawn in the MIDI devices drawer at the right of an
 // instrument page (shared/layout.js) once one is seen: its ▼ ▲, CTL 1 and 2, five number pedals and two
 // expression pedals with their toe switches, each lit as it moves, with what it does on this
-// instrument. shared/midi.js opens it when an input sends the FC-300's switches (CC80–83) or comes
-// by the interface the last one came by, and hands it that input's messages.
+// instrument. shared/midi.js opens it once it knows which input is the FC-300's (it sends its
+// switches, CC80–83; it comes by the interface the last one came by; it answers here over SysEx,
+// seek; or the player says so in the list of devices), and hands it that input's messages.
 //
 //   const m = footModel();  m.midi(data), m.sysex(event)   the pure state it draws (test/fc300-tests.mjs)
 //   drive(event, state)     what a pedal does while Forte drives it: { send, preset, soft }
-//   fc300Panel()            the section (once per page); .input(id, name, connected), .midi(id, data)
+//   fc300Panel()            the section (once per page); .input(id, name, connected), .midi(id, data),
+//                           .forget(id) (the player says it isn't on that input), .seek() (ask every port for one)
 //
 // As it comes (Standard mode) it sends control and program changes, which shared/midi.js plays:
 // CTL 1 and 2 and EXP 1's toe switch are the sustain, sostenuto and soft pedals, EXP 1 the volume,
@@ -257,6 +259,7 @@ export function fc300Panel() {
 
   // ---- driving it, over SysEx ----
   let link = null, port = null, driving = false, soft = false, busy = false;
+  let found = null; // what seek() found, for the take() that follows it
   const foot = createInput((d) => pageMIDI()?.onMIDI({ data: d }), pageMIDI()?.controllers ?? {}, { device: true });
   const say = (t) => { status.textContent = t; };
   const access = () => { link ??= navigator.requestMIDIAccess({ sysex: true }).catch((e) => { link = null; throw e; }); return link; };
@@ -328,7 +331,8 @@ export function fc300Panel() {
     busy = true; driveB.disabled = true;
     if (!quiet) say('Looking for it…');
     try {
-      const got = await find();
+      const got = found ?? await find();
+      found = null;
       if (!got) { if (!quiet) say('It didn\'t answer. Is a MIDI cable from your interface\'s MIDI OUT to the FC-300\'s MIDI IN? Its replies need its MIDI OUT to the interface\'s IN, as for playing.'); return; }
       if (got.mode !== 'sysex') {
         if (auto && !prefs().drive) return; // found by itself: left as it is until asked
@@ -374,6 +378,27 @@ export function fc300Panel() {
       }
     },
     midi(id, data) { if (!inputs.has(id)) return; model.midi(data); request(); },
+    // the player says no FC-300 is on this input: its section goes with the last
+    forget(id) {
+      if (!inputs.delete(id) || inputs.size) return;
+      if (driving) { if (port) send(leave(port.dev)); remember({ drive: false }); stopDriving(''); }
+      remember({ name: null });
+      det.remove();
+    },
+    // Is an FC-300 on any port? Only where the browser already allows SysEx (no question asked),
+    // and none is known: the input that answered, { id, name }, or null. shared/midi.js then
+    // gives it as input(), whose take() uses the answer
+    async seek() {
+      if (!(await granted()) || busy || driving || inputs.size) return null;
+      busy = true;
+      try {
+        const got = await find();
+        if (!got) return null;
+        found = got;
+        setTimeout(() => { if (found === got) found = null; }, 2000); // an answer nobody took
+        return { id: got.inp.id, name: got.inp.name };
+      } catch { return null; } finally { busy = false; }
+    },
   };
   return panel;
 }

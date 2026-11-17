@@ -12,7 +12,7 @@ import { ASSETS, notes } from '../tools/plugin-release.mjs';
 import { withTags, pictureOf } from '../tools/make-previews.mjs';
 import { readNotes, parseNote, plan, bump, frontPage } from '../tools/release.mjs';
 import { compare, stateOf, contractPath, STATES } from '../tools/contract.mjs';
-import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue, FADERS, controllersOf, controlled, ccValue, SWITCHES, levelGain, pedalGain, onPedalGain, startMIDI, keyShift, setShift, shiftOf, signed, OCTAVES, SEMITONES, rangeWarning } from '../shared/midi.js';
+import { TOUCH, SOFT_PEDAL, touch, touched, createSostenuto, wheelValue, FADERS, controllersOf, controlled, ccValue, SWITCHES, levelGain, pedalGain, onPedalGain, startMIDI, midiDeviceIs, morphControl, keyShift, setShift, shiftOf, signed, OCTAVES, SEMITONES, rangeWarning } from '../shared/midi.js';
 import { LATEST, SYSTEMS, archive, downloads, downloadLinks, withPlugins, parseRelease, releaseLine } from '../shared/plugins.js';
 import { script as installerScript, SETUP, APP_ID } from '../tools/windows-installer.mjs';
 import { TUNING_GROUP } from '../shared/tuning.js';
@@ -192,6 +192,39 @@ await test('a foot controller (a Roland FC-300 as it comes): its switches are th
     assert.equal(pedalGain(), 1, 'and the volume pedal is full again');
   } finally {
     stop();
+    Object.defineProperty(globalThis, 'document', { value: was.document, configurable: true, writable: true });
+    Object.defineProperty(globalThis, 'navigator', { value: was.navigator, configurable: true, writable: true });
+  }
+});
+
+await test('an FC-300 behind a MIDI interface: known by its switches, or because the player says so; until then its EXP 2 is a mod wheel', async () => {
+  const input = { id: 'um', name: 'UM-ONE', state: 'connected', onmidimessage: null };
+  const piano = { id: 'kb', name: 'Roland Digital Piano', state: 'connected', onmidimessage: null };
+  const acc = { inputs: new Map([['um', input], ['kb', piano]]), onstatechange: null };
+  const was = { document: globalThis.document, navigator: globalThis.navigator };
+  Object.defineProperty(globalThis, 'document', { value: { querySelector: () => null, querySelectorAll: () => [] }, configurable: true, writable: true });
+  Object.defineProperty(globalThis, 'navigator', { value: { requestMIDIAccess: async () => acc }, configurable: true, writable: true });
+  const got = [], morphed = [];
+  morphControl((v) => morphed.push(v));
+  try {
+    startMIDI({ onMIDI: (ev) => got.push([...ev.data]) });
+    await new Promise((r) => setTimeout(r, 0));
+    const send = (from, ...data) => from.onmidimessage({ data: Uint8Array.from(data) });
+    send(input, 0xb0, 1, 100); send(input, 0xc0, 2);
+    assert.deepEqual([got.splice(0), morphed], [[[0xb0, 1, 100], [0xc0, 2]], []], 'EXP 2 and a number pedal alone say nothing: a mod wheel, as a keyboard\'s');
+    midiDeviceIs('um', 'fc300');
+    send(input, 0xb0, 1, 90); send(piano, 0xb0, 1, 40);
+    assert.deepEqual([got.splice(0), morphed.splice(0)], [[[0xb0, 1, 40]], [90]], 'said to be on the UM-ONE: its EXP 2 moves Morph, the piano\'s mod wheel stays one');
+    midiDeviceIs('um', '');
+    send(input, 0xb0, 80, 127); send(input, 0xb0, 1, 70);
+    assert.deepEqual([got.splice(0), morphed], [[[0xb0, 64, 127], [0xb0, 1, 70]], []], 'said not to be: its switches still play, and don\'t bring it back');
+    send(piano, 0xb0, 80, 127); send(piano, 0xb0, 1, 20);
+    assert.deepEqual([got.splice(0), morphed.splice(0)], [[[0xb0, 64, 127]], [20]], 'on a port nothing was said of, a switch (CC80–83) shows it');
+    midiDeviceIs('kb', ''); midiDeviceIs('um', 'fc300');
+    send(input, 0xb0, 1, 5); send(piano, 0xb0, 1, 6);
+    assert.deepEqual([got.splice(0), morphed.splice(0)], [[[0xb0, 1, 6]], [5]], 'and the player can move it back');
+  } finally {
+    morphControl(null);
     Object.defineProperty(globalThis, 'document', { value: was.document, configurable: true, writable: true });
     Object.defineProperty(globalThis, 'navigator', { value: was.navigator, configurable: true, writable: true });
   }

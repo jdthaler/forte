@@ -396,8 +396,16 @@ it reaches a computer through a USB MIDI interface (or a keyboard's MIDI
 IN that passes it on). In a DAW, the host may take program changes for
 itself (MainStage switches patches with them).
 
-**The FC-300 in the MIDI devices drawer:** once a page hears the FC-300's
-switches, its MIDI devices drawer draws it: each switch lit while down, each expression pedal as far
+**The FC-300 in the MIDI devices drawer:** the FC-300 reaches the computer
+through a MIDI interface (a Roland UM-ONE, say), whose name says nothing of
+what is plugged into it, so a page has to learn which device it is. It
+knows once it hears one of the FC-300's switches (press CTL 1 or CTL 2), or
+when you say so: each device in the drawer's *Plugged in* list has a small
+menu, *MIDI device* or *Roland FC-300*. The browser remembers the interface,
+and where it already lets the page talk SysEx, the page asks every port and
+finds the FC-300 by itself. Until then its pedals still play (the switches,
+the volume, the presets), but EXP 2 is a mod wheel, as a keyboard's is, not
+Morph. Once known, the drawer draws it: each switch lit while down, each expression pedal as far
 down as it is, the number pedals' lights as its own show a patch, and what
 each pedal does on that instrument. *Let Forte drive it* (the browser asks
 once to let the page talk SysEx to MIDI devices) puts it in its System
