@@ -974,6 +974,8 @@ body[data-instrument] .forte-slide:focus-visible { outline: 2px solid var(--acce
 .forte-midi-devices li { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; min-width: 0; font-size: 12.5px; }
 .forte-midi-devices li > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .forte-midi-devices li > small { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+/* what it is, where the player can say (shared/midi.js whatIs): a small dropdown at the row's end */
+body[data-instrument] .forte-midi-devices li > select.forte-midi-what { min-width: 0; max-width: 128px; margin: 0; padding: 1px 26px 1px 8px; font-size: 11px; }
 .forte-midi-lamp { width: 8px; height: 8px; border-radius: 50%; background: #3b3530; box-shadow: inset 0 1px 1px rgb(0 0 0 / 0.6); }
 .forte-midi-lamp.on { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
 .forte-midi-devices > p { margin: 0; font-size: 11.5px; line-height: 1.4; color: var(--muted); }

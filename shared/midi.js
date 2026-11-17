@@ -45,8 +45,12 @@
 //   - a program change n plays the menu's preset n + 1 (pedal 1 the first preset, then your own
 //     after the instrument's): choosePreset; a Seaboard's, from its preset arrows, steps from
 //     the preset playing instead (riseProgram), so it keeps in step with the pedals and the menu;
-//   - it gets a section of the page's MIDI devices drawer (shared/fc300.js) once its switches (CC80–83) are
-//     heard, or its interface's name is the one it came by before, which can drive it over SysEx.
+//   - it gets a section of the page's MIDI devices drawer (shared/fc300.js), which can drive it over
+//     SysEx, and its EXP 2 moves the page's Morph, once the page knows which device it is: it comes
+//     through a MIDI interface (a UM-ONE), whose name says nothing of it. One is known by its
+//     switches (CC80–83) once one is pressed, by its answer over SysEx where the browser already
+//     allows that, by the interface it came by before, or because the player says so, in the
+//     list of devices plugged in (midiDevices: each one's "what it is").
 //   The plugins do the same, but for CC7, which stays a gain after the limiter there (the host has a
 //   volume of its own to show it on) (native/plugin/plugin.cpp: kTouchGamma, kSoftPedal, sostenutoPedal,
 //   kMpeId, kTransposeId, kOctaveId, moveOn, controller, footSwitch, levels, programChange; the
@@ -221,14 +225,31 @@ export function morphControl(fn) { morphTo = fn; }
 export function footMorph(v) { if (!morphTo) return false; morphTo(v); return true; }
 
 // A Roland FC-300's section of the drawer (shared/fc300.js), loaded the first time one is seen:
-// an input that sends its switches (CC80–83), or one with the name the last one came by
-let footed = null;
+// an input that sends its switches (CC80–83), one with the name the last one came by, one that
+// answers as an FC-300 over SysEx (seekFoot), or one the player says it is on
+let footPanel = null;
 function foot(fn) {
-  footed ??= import('./fc300.js').then((m) => m.fc300Panel());
-  footed.then(fn, () => {});
+  footPanel ??= import('./fc300.js').then((m) => m.fc300Panel());
+  footPanel.then(fn, () => {});
 }
+// What is kept of it in this browser (with shared/fc300.js, which keeps `drive`): name, the
+// interface it came by; not, the one the player said it isn't on (its switches are left alone there)
 const FOOT = 'forte/fc300/v1';
-const footName = () => { try { return JSON.parse(localStorage.getItem(FOOT) || '{}')?.name ?? null; } catch { return null; } };
+let footKept = {}; // as kept, where the browser has no storage
+const footPrefs = () => { try { return { ...footKept, ...(JSON.parse(localStorage.getItem(FOOT) || '{}') || {}) }; } catch { return footKept; } };
+const footRemember = (o) => {
+  footKept = { ...footKept, ...o };
+  try { localStorage.setItem(FOOT, JSON.stringify({ ...(JSON.parse(localStorage.getItem(FOOT) || '{}') || {}), ...o })); } catch { /* storage blocked */ }
+};
+// Where the browser already lets this page talk SysEx (the player allowed it before), ask every
+// port for an FC-300 (shared/fc300.js seek): the input that answers, { id, name }, or null
+async function seekFoot() {
+  try {
+    if ((await navigator.permissions.query({ name: 'midi', sysex: true })).state !== 'granted') return null;
+    footPanel ??= import('./fc300.js').then((m) => m.fc300Panel());
+    return await (await footPanel).seek();
+  } catch { return null; }
+}
 
 // A device playing the page (a channel message: not its clock or active sensing) tells
 // shared/boot.js, which holds back a reload into a new release of Forte while someone plays,
@@ -267,9 +288,20 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
     const PROGRAM_KEY = 'forte/rise-program/v1'; // a Seaboard's last program change (riseProgram)
     let program; try { program = JSON.parse(localStorage.getItem(PROGRAM_KEY)); } catch { /* none, or storage blocked */ }
     // the devices plugged in, for the drawer's list (midiDevices), each said what it is here
+    // (a Seaboard is known by its name; any other may have an FC-300 on it: `is` says whether it has)
     const tell = () => setDevices('on', [...acc.inputs.values()].filter((inp) => inp.state !== 'disconnected')
-      .map((inp) => ({ id: inp.id, name: inp.name, what: feet.has(inp.id) ? 'Roland FC-300' : seaboards.has(inp.id) ? 'MPE' : '' })));
+      .map((inp) => (seaboards.has(inp.id) ? { id: inp.id, name: inp.name, what: 'MPE' } : { id: inp.id, name: inp.name, is: feet.has(inp.id) ? 'fc300' : '' })), choose);
     const footed = (inp) => { if (feet.has(inp.id)) return; feet.add(inp.id); foot((f) => f.input(inp.id, inp.name, true)); tell(); };
+    // the player says what a device is, in the list: an FC-300 is on it, or none is
+    const choose = (id, is) => {
+      const inp = acc.inputs.get(id);
+      if (!inp || inp.state === 'disconnected') return;
+      if (is === 'fc300') { footRemember({ not: null }); footed(inp); return; }
+      if (feet.delete(id)) foot((f) => f.forget(id));
+      footRemember({ name: null, not: inp.name ?? null });
+      tell();
+    };
+    const sought = new Set(); // the inputs an FC-300 was asked for over SysEx
     const bind = () => {
       const names = [];
       for (const inp of acc.inputs.values()) {
@@ -281,7 +313,7 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
         }
         names.push(inp.name);
         const board = /seaboard/i.test(inp.name ?? '');
-        if (inp.name && inp.name === footName()) footed(inp); // the FC-300 came by this interface before
+        if (inp.name && inp.name === footPrefs().name) footed(inp); // the FC-300 came by this interface before
         inp.onmidimessage = (ev) => {
           const d = ev.data;
           if (d[0] >= 0x80 && d[0] < 0xf0) stir();
@@ -294,7 +326,8 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
             if (to !== i) choosePreset(to);
             return;
           }
-          if ((d[0] & 0xf0) === 0xb0 && d[1] >= 80 && d[1] <= 83) footed(inp); // an FC-300's switches, as it comes
+          // an FC-300's switches, as it comes (unless the player said none is on this one)
+          if ((d[0] & 0xf0) === 0xb0 && d[1] >= 80 && d[1] <= 83 && !feet.has(inp.id) && !(inp.name && footPrefs().not === inp.name)) footed(inp);
           if (feet.has(inp.id)) foot((f) => f.midi(inp.id, d));
           if (feet.has(inp.id) && (d[0] & 0xf0) === 0xb0 && d[1] === 1 && footMorph(d[2])) return; // its EXP 2: Morph
           input(inp.id).take(d);
@@ -313,6 +346,15 @@ export function startMIDI({ onMIDI, status = () => {}, button = null, controller
       for (const id of [...feet]) if (!acc.inputs.has(id)) { feet.delete(id); foot((f) => f.input(id, '', false)); }
       status(names.length ? `MIDI: ${names.join(', ')}` : 'MIDI: no devices');
       tell();
+      // no FC-300 known, and a device not asked yet: ask, where SysEx is allowed already
+      const fresh = [...acc.inputs.values()].filter((inp) => inp.state !== 'disconnected' && !seaboards.has(inp.id) && !sought.has(inp.id));
+      for (const inp of fresh) sought.add(inp.id);
+      if (fresh.length && !feet.size) {
+        seekFoot().then((got) => {
+          const inp = got && (acc.inputs.get(got.id) ?? [...acc.inputs.values()].find((i) => i.name === got.name));
+          if (inp && inp.state !== 'disconnected' && !(inp.name && footPrefs().not === inp.name)) footed(inp);
+        });
+      }
     };
     bind();
     acc.onstatechange = bind;
@@ -385,16 +427,16 @@ let page = null;
 export function pageMIDI(handler) { if (handler) page = handler; return page; }
 
 // The MIDI devices plugged in, at the top of the page's MIDI devices drawer (shared/layout.js), which
-// is the page's MIDI status: each one's name, what it is here (a Seaboard sends MPE; an FC-300 has its
-// panel), and a lamp that lights as it sends (but for the clock and active sensing, which some send
+// is the page's MIDI status: each one's name, what it is here (a Seaboard sends MPE; any other says
+// whether a Roland FC-300 is on it, in a menu the player can set: whatIs), and a lamp that lights as it sends (but for the clock and active sensing, which some send
 // all the time); with none, why: MIDI off (with a button to turn it on), not allowed, or nothing
 // plugged in. At its head the MPE switch (mpeSwitch); under the list, in the accent, how far the
 // MIDI keys are moved while they are (Octave and Transpose). midiLamp() is one lamp for them all,
 // for the drawer's rail, its title the status. startMIDI keeps them up to date, and says how many
 // devices there are with a forte-midi-devices event on document.
-const plugged = { box: null, state: 'off', devices: [], lamps: new Map(), any: new Set() };
-function setDevices(state, devices) {
-  plugged.state = state; plugged.devices = devices;
+const plugged = { box: null, state: 'off', devices: [], lamps: new Map(), any: new Set(), choose: null };
+function setDevices(state, devices, choose = null) {
+  plugged.state = state; plugged.devices = devices; plugged.choose = choose;
   drawDevices();
   if (typeof document !== 'undefined' && document.dispatchEvent) document.dispatchEvent(new CustomEvent('forte-midi-devices', { detail: devices.length }));
 }
@@ -441,6 +483,21 @@ export function midiDevices() {
   showShift();
   return box;
 }
+// What a device is, in its row: a MIDI interface's name says nothing of what is plugged into it,
+// so the player can say a Roland FC-300 is (it then has its panel, and its EXP 2 moves Morph), or
+// that none is; the row shows what the page found by itself (startMIDI)
+const WHAT = [['', 'MIDI device'], ['fc300', 'Roland FC-300']];
+function whatIs(d) {
+  const sel = make('select', 'forte-midi-what');
+  for (const [v, text] of WHAT) sel.add(new Option(text, v));
+  sel.value = d.is ?? '';
+  sel.setAttribute('aria-label', `What ${d.name || 'this MIDI device'} is`);
+  sel.title = 'What is plugged in here. A Roland FC-300 comes through a MIDI interface, which can\'t say so: it shows by itself once one of its CTL pedals is pressed. If it doesn\'t, choose Roland FC-300 on the interface it is plugged into: it gets its panel below, and its EXP 2 pedal moves Morph';
+  sel.addEventListener('change', () => { const { choose } = plugged; unfocus(sel); choose?.(d.id, sel.value); });
+  return sel;
+}
+/** Say what a plugged-in device is, as its row's menu does: 'fc300' (a Roland FC-300 is on it) or '' (none is). */
+export function midiDeviceIs(id, is) { plugged.choose?.(id, is); }
 function drawDevices() {
   for (const a of plugged.any) a.el.title = statusText();
   if (!plugged.box) return;
@@ -452,6 +509,7 @@ function drawDevices() {
     name.title = d.name || '';
     li.append(light, name);
     if (d.what) li.append(make('small', '', d.what));
+    else if (plugged.choose) li.append(whatIs(d));
     plugged.lamps.set(d.id, { el: light, lit: false, t: 0 });
     return li;
   }));
